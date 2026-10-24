@@ -20,3 +20,13 @@ create policy "events read" on events for select to authenticated using(true);
 create policy "events manager write" on events for all to authenticated using(is_manager()) with check(is_manager());
 create policy "marks own or manager" on marks for all to authenticated using(user_id=auth.uid() or is_manager()) with check(user_id=auth.uid() or is_manager());
 -- Роль сотрудник не может сам себе поставить manager: обычный пользователь не имеет права писать в profiles (только manager).
+
+-- Добавлено 2026-10-24: табельные номера, прочитанные новости (колокольчик), переработки. Для уже работающей базы запускай supabase/migration_2026-10-24_bell_overtime.sql
+alter table public.profiles add column if not exists tab_no text;
+create table if not exists public.news_reads(user_id uuid references public.profiles on delete cascade, news_id bigint references public.news on delete cascade, read_at timestamptz default now(), primary key(user_id,news_id));
+alter table public.news_reads enable row level security;
+create policy "reads own" on public.news_reads for all to authenticated using(user_id=auth.uid()) with check(user_id=auth.uid());
+create table if not exists public.overtime(id bigint generated always as identity primary key, user_id uuid not null references public.profiles on delete cascade, day date not null, start_time text, hours numeric not null check(hours>0), note text, created_by uuid references public.profiles, created_at timestamptz default now());
+alter table public.overtime enable row level security;
+create policy "overtime read own or manager" on public.overtime for select to authenticated using(user_id=auth.uid() or is_manager());
+create policy "overtime manager write" on public.overtime for all to authenticated using(is_manager()) with check(is_manager());

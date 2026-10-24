@@ -2,7 +2,12 @@ const $=s=>document.querySelector(s),app=$('#app'),nav=$('#nav');
 const cfg=window.APP_CONFIG;
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const sb=supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
-const S={tab:'rot',me:null,team:'R',day:null,month:new Date(),viewUser:null,sel:null,people:[],marks:{},ev:null,evFilter:'all'};
+const THEMES={autumn:['🍂','Осень'],winter:['❄️','Зима'],spring:['🌸','Весна'],summer:['☀️','Лето']};
+const getTheme=()=>{try{return localStorage.getItem('dw-theme')||'autumn-warm'}catch(e){return 'autumn-warm'}};
+function applyTheme(t){document.documentElement.dataset.theme=t;try{localStorage.setItem('dw-theme',t)}catch(e){}
+  const m=document.querySelector('meta[name=theme-color]');if(m)m.content=getComputedStyle(document.documentElement).getPropertyValue('--ink').trim()||'#3B2A35'}
+applyTheme(getTheme());
+const S={unread:0,tab:'rot',me:null,team:'R',day:null,month:new Date(),viewUser:null,sel:null,people:[],marks:{},ev:null,evFilter:'all'};
 const ZC={'Веревочный лагерь':'#C9D4B0','Золото':'#E6CC8F','Гольф':'#B7CFC4','Альфа':'#D3BFD0','Боулинг':'#BCC8D6','Кино':'#E4B5A3','VR-арена':'#BFD3D3','Няня 1':'#D9C3AE','Няня 2':'#D9C3AE','Детский клуб':'#E8C1B5'};
 const STEPC={'Боулинг':'#BCC8D6','Ос':'#F3C29B','Гольф':'#B7CFC4','Золото':'#E6CC8F','Метро':'#CFC6BC','Веревочный лагерь / инд. задачи':'#C9D4B0','Веревочный лагерь':'#C9D4B0'};
 const brkBg=t=>t.startsWith('Ос')?'#F3C29B':t.startsWith('О')?'#F5E2A8':'#E4EDF4';
@@ -29,8 +34,18 @@ function loginView(err){
   $('#fg').onclick=async()=>{const e=$('#em').value.trim();if(!e)return loginView('Введи почту, пришлём ссылку');await sb.auth.resetPasswordForEmail(e);loginView('Если почта в системе, письмо отправлено')};
 }
 nav.onclick=e=>{const b=e.target.closest('button');if(b)go(b.dataset.tab)};
-function go(t){S.tab=t;nav.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));({rot:rotView,sch:schView,news:newsView,afisha:afishaView})[t]()}
-const head=(h,sub)=>`<div class="muted">${sub||''}</div><div style="display:flex;justify-content:space-between;align-items:center"><h1>${h}</h1><button class="btn ghost" style="min-height:36px" onclick="sb.auth.signOut().then(()=>{S.me=null;boot()})">Выйти</button></div>`;
+function go(t){S.tab=t;nav.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));window.scrollTo(0,0);
+  Promise.resolve(({rot:rotView,sch:schView,news:newsView,afisha:afishaView,set:settingsView})[t]()).then(refreshUnread)}
+async function refreshUnread(){
+  if(!S.me)return;
+  const [n,r]=await Promise.all([sb.from('news').select('id'),sb.from('news_reads').select('news_id').eq('user_id',S.me.id)]);
+  if(n.error||r.error)return;
+  const seen=new Set((r.data||[]).map(x=>x.news_id));S.unread=(n.data||[]).filter(x=>!seen.has(x.id)).length;
+  const el=$('#bellN');if(el){el.hidden=!S.unread;el.textContent=S.unread>9?'9+':S.unread}
+}
+const firstName=()=>(S.me?.full_name||'').trim().split(/\s+/)[0]||'друг';
+const bell=()=>`<button class="bell" aria-label="Новости" onclick="go('news')">🔔<i id="bellN" ${S.unread>0?'':'hidden'}>${S.unread>9?'9+':S.unread}</i></button>`;
+const head=(h,sub)=>`<div class="top"><div class="hi">Привет, ${esc(firstName())}! 👋</div>${bell()}</div>${sub?`<div class="muted">${sub}</div>`:''}<h1>${h}</h1>`;
 
 // ---------- Ротации ----------
 const hh=x=>{const m=x.split(':');return +m[0]+(+m[1])/60};
@@ -64,8 +79,8 @@ async function rotView(){
   if(!S.day||!days.includes(S.day))S.day=days.includes(todayIso)?todayIso:days[days.length-1];
   const {data}=await sb.from('rotations').select('*').eq('day',S.day).maybeSingle();
   const rot=data?.data;
-  let h=head('Ротации',`Привет, ${esc(S.me.full_name||'')}!`);
-  h+=`<div class="tabs">${days.map(d=>`<button data-d="${d}" class="${d===S.day?'on':''}" style="background:#E3EAD2">${d===todayIso?'Сегодня':dayLabel(d)}${d===todayIso?'<br><small>'+dayLabel(d)+'</small>':''}</button>`).join('')}</div>`;
+  let h=head('Ротации','Кто где стоит и когда перерыв');
+  h+=`<div class="tabs">${days.map(d=>`<button data-d="${d}" class="${d===S.day?'on':''}" style="background:var(--tab)">${d===todayIso?'Сегодня':dayLabel(d)}${d===todayIso?'<br><small>'+dayLabel(d)+'</small>':''}</button>`).join('')}</div>`;
   if(!rot){h+=`<div class="card pad"><b>Ротации на ${dayLabel(S.day)} пока нет</b><div class="muted">Как только её загрузят, она появится здесь.</div></div>`;app.innerHTML=h;return bindRot()}
   if(rot.banner)h+=`<div class="banner">🎃 ${esc(rot.banner)}</div>`;
   if(rot.image)h+=`<a href="${esc(rot.image)}" target="_blank" rel="noopener" class="card" style="display:block;overflow:hidden;padding:0"><img src="${esc(rot.image)}" alt="Ротация картинкой" loading="lazy" style="display:block;width:100%;height:auto"><div class="muted" style="padding:6px 12px;font-size:12px">🖼 Ротация картинкой — нажми, чтобы открыть крупно</div></a>`;
@@ -91,6 +106,8 @@ async function schView(){
   if(isManager()&&!S.people.length){const {data}=await sb.from('profiles').select('id,full_name').order('full_name');S.people=data||[]}
   const m=S.month,y=m.getFullYear(),mo=m.getMonth(),first=iso(new Date(y,mo,1)),last=iso(new Date(y,mo+1,0));
   const {data}=await sb.from('marks').select('*').eq('user_id',S.viewUser).gte('day',first).lte('day',last);
+  const otr=await sb.from('overtime').select('*').eq('user_id',S.viewUser).gte('day',first).lte('day',last).order('day').order('start_time');
+  const otRows=otr.data||[],otSum=otRows.reduce((a,r)=>a+Number(r.hours),0),fh=x=>String(Math.round(x*100)/100).replace('.',',');
   S.marks={};(data||[]).forEach(r=>S.marks[r.day]=r);
   const n=new Date(y,mo+1,0).getDate(),lead=(new Date(y,mo,1).getDay()+6)%7;
   let h=head('График',m.toLocaleDateString('ru',{month:'long',year:'numeric'}));
@@ -99,8 +116,13 @@ async function schView(){
   let worked=0;const cnt={};
   for(let d=1;d<=n;d++){const k=iso(new Date(y,mo,d)),mk=S.marks[k];
     if(!mk)worked++;else cnt[mk.kind]=(cnt[mk.kind]||0)+1;
-    h+=`<button class="day ${S.sel===k?'sel':''}" data-k="${k}" style="background:${mk?KINDS[mk.kind][1]:'#FFFDF9'}">${d}<small>${mk?KINDS[mk.kind][0]:''}</small></button>`}
-  h+=`</div><div class="stat"><div style="background:#C9D4B0"><b>${worked}</b>рабочих дней</div><div style="background:#E6CC8F"><b>${worked*10}</b>рабочих часов</div></div><div class="muted">Смена 11 ч, из них 1 ч обед → 10 рабочих часов. Дни без отметки считаются рабочими.</div>`;
+    h+=`<button class="day ${S.sel===k?'sel':''}" data-k="${k}" style="background:${mk?KINDS[mk.kind][1]:'var(--card)'}">${d}<small>${mk?KINDS[mk.kind][0]:''}</small></button>`}
+  h+=`</div><div class="stat"><div style="background:var(--sage)"><b>${worked}</b>рабочих дней</div><div style="background:var(--gold)"><b>${worked*10}</b>часов по графику</div></div>
+  <div class="stat"><div style="background:var(--pink)"><b>${fh(otSum)}</b>переработки</div><div style="background:var(--blue)"><b>${fh(worked*10+otSum)}</b>всего часов</div></div>
+  <div class="muted">Смена 11 ч, из них 1 ч обед → 10 рабочих часов. Дни без отметки считаются рабочими. Переработки вносит руководитель и они идут в общий итог.</div>`;
+  const defd=S.sel||(iso(new Date()).slice(0,7)===first.slice(0,7)?iso(new Date()):first);
+  h+=`<div class="card pad col"><b>⏱ Переработки</b>${otRows.length?otRows.map(r=>`<div class="otr"><span><b>${dayLabel(r.day)}</b> · с ${esc(String(r.start_time||'—').slice(0,5))} · ${fh(+r.hours)} ч${r.note?' · '+esc(r.note):''}</span>${isManager()?`<button class="x" data-od="${r.id}" aria-label="Удалить">✕</button>`:''}</div>`).join(''):'<div class="muted">В этом месяце переработок нет</div>'}
+  ${isManager()?`<div class="col" style="border-top:1px solid var(--line);padding-top:10px"><div class="muted">Добавить переработку для выбранного сотрудника</div><input type="date" id="otd" value="${defd}"><div class="two"><label>С какого времени<input type="time" id="ots" value="20:00"></label><label>Сколько часов<input type="number" id="oth" step="0.5" min="0.5" placeholder="2"></label></div><input id="otn" placeholder="Комментарий (необязательно)"><button class="btn" id="otadd">Добавить</button></div>`:''}</div>`;
   if(S.sel){const mk=S.marks[S.sel];
     h+=`<div class="card pad" style="display:flex;flex-direction:column;gap:10px"><b>${S.sel}</b><div class="tabs">${Object.entries(KINDS).map(([k,v])=>`<button data-m="${k}" style="background:${v[1]}" class="${mk?.kind===k?'on':''}">${v[2]}</button>`).join('')}<button data-m="" style="background:#fff;border:1px solid #ccc">Рабочий</button></div><textarea id="note" placeholder="Комментарий">${esc(mk?.note||'')}</textarea><button class="btn" id="save">Сохранить</button></div>`}
   app.innerHTML=h;
@@ -108,6 +130,12 @@ async function schView(){
   $('#pm').onclick=()=>{S.month=new Date(y,mo-1,1);S.sel=null;schView()};$('#nm').onclick=()=>{S.month=new Date(y,mo+1,1);S.sel=null;schView()};
   app.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{S.sel=b.dataset.k;S.pick=S.marks[S.sel]?.kind||'';schView()});
   app.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{S.pick=b.dataset.m;app.querySelectorAll('[data-m]').forEach(x=>x.classList.toggle('on',x===b))});
+  $('#otadd')?.addEventListener('click',async()=>{
+    const day=$('#otd').value,hours=parseFloat(String($('#oth').value).replace(',','.'));
+    if(!day||!(hours>0))return alert('Укажи дату и сколько часов (больше нуля)');
+    const r=await sb.from('overtime').insert({user_id:S.viewUser,day,start_time:$('#ots').value||null,hours,note:$('#otn').value.trim()||null,created_by:S.me.id});
+    if(r.error)return alert('Не удалось добавить: '+r.error.message);schView()});
+  app.querySelectorAll('[data-od]').forEach(b=>b.onclick=async()=>{if(!confirm('Удалить эту переработку?'))return;const r=await sb.from('overtime').delete().eq('id',b.dataset.od);if(r.error)alert(r.error.message);schView()});
   $('#save')?.addEventListener('click',async()=>{
     const kind=S.pick??S.marks[S.sel]?.kind??'',note=$('#note').value;
     const r=kind?await sb.from('marks').upsert({user_id:S.viewUser,day:S.sel,kind,note}):await sb.from('marks').delete().eq('user_id',S.viewUser).eq('day',S.sel);
@@ -131,10 +159,15 @@ const importBtn=()=>isManager()?'<button class="btn ghost" onclick="importSeed()
 // ---------- Новости ----------
 async function newsView(){
   const {data}=await sb.from('news').select('*').order('pinned',{ascending:false}).order('created_at',{ascending:false});
+  const {data:rd}=await sb.from('news_reads').select('news_id').eq('user_id',S.me.id);
+  const seen=new Set((rd||[]).map(x=>x.news_id));
   let h=head('Что нового','Свежее для нашей команды')+((data||[]).length?'':importBtn());
-  h+=(data||[]).map(n=>{const long=n.body.length>400,open=S.newsOpen?.[n.id];return `<div class="card pad" style="${n.pinned?'background:#3B2A35;color:#FFFDF9':''}"><b>${n.pinned?'📌 ':''}${esc(n.title)}</b><div style="white-space:pre-wrap;margin-top:8px;font-size:14px;line-height:1.45">${esc(long&&!open?n.body.split('\n')[0]:n.body)}</div>${long?`<button class="btn ghost" style="margin-top:10px;min-height:40px;${n.pinned?'color:#FFFDF9;border-color:#FFFDF9':''}" data-nid="${n.id}">${open?'Свернуть':'Развернуть'}</button>`:''}</div>`}).join('')||'<div class="card pad">Пока новостей нет</div>';
+  h+=(data||[]).map(n=>{const long=n.body.length>400,open=S.newsOpen?.[n.id];return `<div class="card pad" style="${n.pinned?'background:var(--ink);color:#FFFDF9':''}"><b>${n.pinned?'📌 ':''}${esc(n.title)}</b>${seen.has(n.id)?'':'<span class="newb">новое</span>'}<div style="white-space:pre-wrap;margin-top:8px;font-size:14px;line-height:1.45">${esc(long&&!open?n.body.split('\n')[0]:n.body)}</div>${long?`<button class="btn ghost" style="margin-top:10px;min-height:40px;${n.pinned?'color:#FFFDF9;border-color:#FFFDF9':''}" data-nid="${n.id}">${open?'Свернуть':'Развернуть'}</button>`:''}</div>`}).join('')||'<div class="card pad">Пока новостей нет</div>';
   app.innerHTML=h;
   app.querySelectorAll('[data-nid]').forEach(b=>b.onclick=()=>{S.newsOpen=S.newsOpen||{};S.newsOpen[b.dataset.nid]=!S.newsOpen[b.dataset.nid];newsView()});
+  const fresh=(data||[]).filter(n=>!seen.has(n.id)).map(n=>({user_id:S.me.id,news_id:n.id}));
+  if(fresh.length)await sb.from('news_reads').upsert(fresh);
+  S.unread=0;const bn=$('#bellN');if(bn)bn.hidden=true;
 }
 
 // ---------- Афиша ----------
@@ -144,12 +177,29 @@ async function afishaView(){
   let list=S.ev.filter(e=>e.day===S.aday);
   if(S.evFilter==='paid')list=list.filter(e=>e.price);if(S.evFilter==='token')list=list.filter(e=>e.token);
   let h=head('Афиша','Что происходит в парке')+(S.ev.length?'':importBtn());
-  h+=`<div class="tabs">${days.map(d=>`<button data-ad="${d}" class="${d===S.aday?'on':''}" style="background:#E3EAD2">${d.slice(8)}.${d.slice(5,7)}</button>`).join('')}</div>`;
+  h+=`<div class="tabs">${days.map(d=>`<button data-ad="${d}" class="${d===S.aday?'on':''}" style="background:var(--tab)">${d.slice(8)}.${d.slice(5,7)}</button>`).join('')}</div>`;
   h+=`<div class="seg">${[['all','Все'],['paid','Платные ₽'],['token','С ТыквоФишкой']].map(([k,n])=>`<button data-f="${k}" class="${S.evFilter===k?'on':''}">${n}</button>`).join('')}</div>`;
   h+=list.map(e=>`<div class="card pad" style="display:flex;gap:12px"><b style="width:60px">${esc(e.time)}</b><div><b>${esc(e.title)}</b><div class="muted">${esc(e.loc)}</div><div style="font-size:14px;margin-top:6px">${esc(e.descr)}</div><div style="margin-top:6px;display:flex;gap:6px">${e.price?`<span class="pill" style="background:#F5E2A8">${esc(e.price)}</span>`:''}${e.token?'<span class="pill" style="background:#F3C29B">ТыквоФишка</span>':''}</div></div></div>`).join('')||'<div class="card pad">Нет событий</div>';
   app.innerHTML=h;
   app.querySelectorAll('[data-ad]').forEach(b=>b.onclick=()=>{S.aday=b.dataset.ad;afishaView()});
   app.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{S.evFilter=b.dataset.f;afishaView()});
+}
+// ---------- Настройки ----------
+async function settingsView(){
+  const cur=getTheme();
+  let h=head('Настройки','Профиль и оформление');
+  h+=`<div class="card pad"><b style="font-size:18px">${esc(S.me.full_name||'')}</b><div class="muted">${isManager()?'Руководитель':'Сотрудник'}${S.me.tab_no?` · табельный № ${esc(S.me.tab_no)}`:' · табельный номер пока не назначен'}</div></div>`;
+  h+=`<div class="card pad"><b>Оформление</b><div class="muted">Четыре сезона, у каждого тёплый и холодный вариант</div>${Object.entries(THEMES).map(([k,[ic,n]])=>`<div class="trow"><span>${ic} ${n}</span>${[['warm','Тёплый'],['cold','Холодный']].map(([v,t])=>`<button class="tbtn ${cur===k+'-'+v?'on':''}" data-th="${k}-${v}"><i class="sw" data-theme="${k}-${v}"></i>${t}</button>`).join('')}</div>`).join('')}</div>`;
+  let ppl=[];
+  if(isManager()){const r=await sb.from('profiles').select('id,full_name,role,tab_no').order('full_name');ppl=r.data||[];
+    h+=`<div class="card pad col"><b>Сотрудники</b><div class="muted">Имя (как покажется в приветствии: первое слово) и табельный номер</div>${ppl.map(p=>`<div class="prow"><input class="pn" data-pn="${p.id}" value="${esc(p.full_name||'')}" placeholder="Имя Фамилия"><input class="pt" data-pt="${p.id}" value="${esc(p.tab_no||'')}" placeholder="№"><button class="btn" style="padding:0 14px" data-sp="${p.id}" aria-label="Сохранить">💾</button></div><div class="muted" style="margin-top:-6px">${p.role==='manager'?'руководитель':'сотрудник'}</div>`).join('')||'<div class="muted">Пока никого нет</div>'}</div>`}
+  h+=`<button class="btn ghost" id="out">Выйти из аккаунта</button>`;
+  app.innerHTML=h;
+  app.querySelectorAll('[data-th]').forEach(b=>b.onclick=()=>{applyTheme(b.dataset.th);settingsView()});
+  app.querySelectorAll('[data-sp]').forEach(b=>b.onclick=async()=>{const id=b.dataset.sp,full_name=app.querySelector(`[data-pn="${id}"]`).value.trim(),tab_no=app.querySelector(`[data-pt="${id}"]`).value.trim()||null;
+    const r=await sb.from('profiles').update({full_name,tab_no}).eq('id',id);if(r.error)return alert('Не удалось сохранить: '+r.error.message);
+    if(id===S.me.id){S.me.full_name=full_name;S.me.tab_no=tab_no}b.textContent='✅';setTimeout(()=>settingsView(),600)});
+  $('#out').onclick=()=>sb.auth.signOut().then(()=>{S.me=null;S.unread=0;boot()});
 }
 sb.auth.onAuthStateChange(()=>{});
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
