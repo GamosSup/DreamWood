@@ -23,3 +23,10 @@ label{font-weight:700;font-size:14px;display:flex;flex-direction:column;gap:6px}
 nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:#fff;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
 nav button{flex:1;min-height:64px;border:0;background:transparent;font-size:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--muted)}nav span{font-size:12px;font-weight:700}nav button.on{color:var(--ink);background:#E3EAD2;border-radius:18px;margin:6px 4px}
 nav[hidden]{display:none}
+
+.zcard{border-left:0}.zh{padding:12px 16px;font-weight:800;font-size:17px;font-family:Alegreya,Georgia,serif}
+.zb{padding:12px 16px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:10px}.zt{font-weight:800;font-size:13px;color:var(--muted)}
+.track{position:relative;height:26px;border-radius:8px;background:#F1E8DA;overflow:hidden}.track .work{position:absolute;inset:0;background:var(--c);opacity:.65}
+.track .brk{position:absolute;top:0;bottom:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;border-left:2px solid #FFFDF9;border-right:2px solid #FFFDF9}
+.axis{position:relative;height:14px}.axis span{position:absolute;transform:translateX(-50%);font-size:11px;font-weight:700;color:var(--muted)}
+.tabs button small{font-weight:600}

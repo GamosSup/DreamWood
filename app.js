@@ -33,28 +33,49 @@ function go(t){S.tab=t;nav.querySelectorAll('button').forEach(b=>b.classList.tog
 const head=(h,sub)=>`<div class="muted">${sub||''}</div><div style="display:flex;justify-content:space-between;align-items:center"><h1>${h}</h1><button class="btn ghost" style="min-height:36px" onclick="sb.auth.signOut().then(()=>{S.me=null;boot()})">Выйти</button></div>`;
 
 // ---------- Ротации ----------
+const hh=x=>{const m=x.split(':');return +m[0]+(+m[1])/60};
+const dayLabel=d=>new Date(d+'T12:00:00').toLocaleDateString('ru',{weekday:'short',day:'numeric',month:'short'});
+function parseRange(t){const m=String(t).match(/(\d{1,2}:\d{2})\s*[–-]\s*(\d{1,2}:\d{2})/);return m?[hh(m[1]),hh(m[2])]:[10,20]}
+function personTrack(p,r,c,a,b){
+  const span=b-a;let h=`<div style="display:flex;flex-direction:column;gap:4px"><div style="font-weight:700;font-size:14px">${esc(p.icon)} ${esc(p.name)}${p.senior?'<span class="sr">Старший</span>':''}</div>
+  <div class="track" style="--c:${c}"><div class="work"></div>`;
+  const marks=[];
+  (p.brks||[]).forEach(t=>{const m=t.match(/^(Ос|О)\s+(\d+:\d+)[–-](\d+:\d+)/);if(!m)return;const s0=hh(m[2]),e0=hh(m[3]);if(e0<=a||s0>=b)return;
+    h+=`<div class="brk" style="left:${(Math.max(s0,a)-a)/span*100}%;width:${(Math.min(e0,b)-Math.max(s0,a))/span*100}%;background:${brkBg(t)}">${m[1]}</div>`;marks.push(`${m[1]} ${m[2]}–${m[3]}`)});
+  h+=`</div>${marks.length?`<div class="muted">Перерыв: ${marks.map(esc).join(', ')}</div>`:''}</div>`;return h}
+function axis(a,b){let t='';for(let v=Math.ceil(a);v<=b;v++)t+=`<span style="left:${(v-a)/(b-a)*100}%">${v}</span>`;return `<div class="axis">${t}</div>`}
+function zoneCard(zone,blocks,c){
+  let h=`<div class="card zcard" style="--c:${c}"><div class="zh" style="background:${c}">${esc(zone)}</div>`;
+  blocks.forEach(bl=>{
+    const [a,b]=bl.range;
+    h+=`<div class="zb"><div class="zt">🕑 ${bl.title}</div>`;
+    if(bl.steps?.length){
+      h+=`<div class="muted">${esc(bl.people.map(p=>p.name).join(', '))} — меняет обеды</div><div class="bar">${bl.steps.map(x=>{const r=parseRange(x[0]);return `<div style="width:${(r[1]-r[0])/(b-a)*100}%;background:${STEPC[x[1]]||'#eee'}" title="${esc(x[0]+' '+x[1])}">${r[1]-r[0]>=1?esc(x[1].split(' ')[0]):''}</div>`}).join('')}</div>${axis(a,b)}
+      <div class="steps">${bl.steps.map(x=>`<b>${esc(x[0])}</b><span><span class="pill" style="background:${STEPC[x[1]]||'#eee'}">${esc(x[1])}</span></span>`).join('')}</div>`;
+    }else{
+      h+=bl.people.map(p=>personTrack(p,null,c,a,b)).join('');h+=axis(a,b);
+    }
+    h+=`</div>`});
+  return h+`</div>`}
 async function rotView(){
-  const today=new Date(),d1=new Date(today.getTime()+864e5),d2=new Date(today.getTime()+2*864e5);
-  const days=[['Завтра',d1],['Послезавтра',d2]];
-  S.day=S.day||iso(d1);
+  const todayIso=iso(new Date()),from=iso(new Date(Date.now()-7*864e5));
+  const {data:list}=await sb.from('rotations').select('day').gte('day',from).order('day');
+  const days=[...new Set([...(list||[]).map(x=>x.day),todayIso])].sort();
+  if(!S.day||!days.includes(S.day))S.day=days.includes(todayIso)?todayIso:days[days.length-1];
   const {data}=await sb.from('rotations').select('*').eq('day',S.day).maybeSingle();
   const rot=data?.data;
   let h=head('Ротации',`Привет, ${esc(S.me.full_name||'')}!`);
-  h+=`<div class="seg">${days.map(([n,d])=>`<button class="${iso(d)===S.day?'on':''}" data-d="${iso(d)}">${n}<br><small>${d.toLocaleDateString('ru',{weekday:'short',day:'numeric',month:'short'})}</small></button>`).join('')}</div>`;
-  if(!rot){h+=`<div class="card pad"><b>Ротации на этот день пока нет</b><div class="muted">Как только её загрузят, она появится здесь.</div></div>`;app.innerHTML=h;return bindRot()}
+  h+=`<div class="tabs">${days.map(d=>`<button data-d="${d}" class="${d===S.day?'on':''}" style="background:#E3EAD2">${d===todayIso?'Сегодня':dayLabel(d)}${d===todayIso?'<br><small>'+dayLabel(d)+'</small>':''}</button>`).join('')}</div>`;
+  if(!rot){h+=`<div class="card pad"><b>Ротации на ${dayLabel(S.day)} пока нет</b><div class="muted">Как только её загрузят, она появится здесь.</div></div>`;app.innerHTML=h;return bindRot()}
   if(rot.banner)h+=`<div class="banner">🎃 ${esc(rot.banner)}</div>`;
   h+=`<div class="tabs">${TEAMS.map(([k,n,c])=>`<button data-t="${k}" class="${S.team===k?'on':''}" style="background:${c}">${n}</button>`).join('')}</div>`;
   const secs=rot.teams?.[S.team]||[];
-  for(const s of secs){
-    h+=`<div class="card sec"><div class="h">${esc(s.title)}</div>${s.note?`<div class="n" style="background:${s.noteBg||'#E8B4B8'}">${esc(s.note)}</div>`:''}`;
-    for(const r of s.rows){
-      const c=S.team==='W'?'#7E98AE':(ZC[r.zone]||'#D3BFD0');
-      h+=`<div class="row" style="--c:${c}"><b>${esc(r.zone)}</b>${r.note?`<span class="muted">${esc(r.note)}</span>`:''}<div class="chips">${r.people.map(p=>`<div class="chip" style="--c:${c}"><span>${esc(p.icon)} ${esc(p.name)}${p.senior?'<span class="sr">Старший</span>':''}</span>${(p.brks||[]).map(b=>`<span class="pill" style="background:${brkBg(b)}">${esc(b)}</span>`).join('')}</div>`).join('')}</div>`;
-      if(r.steps?.length)h+=`<div class="steps">${r.steps.map(x=>`<b>${esc(x[0])}</b><span><span class="pill" style="background:${STEPC[x[1]]||'#eee'}">${esc(x[1])}</span></span>`).join('')}</div>`;
-      h+=`</div>`;
-    }
-    h+=`</div>`;
-  }
+  const notes=secs.filter(s=>s.note).map(s=>`<div class="n" style="background:${s.noteBg||'#E8B4B8'};padding:8px 12px;border-radius:12px;font-weight:700;font-size:13px">${esc(s.note)}</div>`).join('');
+  h+=notes;
+  const order=[],byZone={};
+  secs.forEach(s=>{const range=parseRange(s.title);s.rows.forEach(r=>{if(!byZone[r.zone]){byZone[r.zone]=[];order.push(r.zone)}
+    byZone[r.zone].push({range,title:s.title==='Весь день'?'Весь день · 10:00–20:00':s.title.replace(/^.*·\s*/,''),people:r.people,steps:r.steps})})});
+  order.forEach(z=>{const c=S.team==='W'?'#7E98AE':(ZC[z]||'#D3BFD0');h+=zoneCard(z,byZone[z],c)});
   if(rot.legend)h+=`<div class="card pad muted">${rot.legend.map(esc).join('<br>')}</div>`;
   app.innerHTML=h;bindRot();
 }
