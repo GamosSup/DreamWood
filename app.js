@@ -4,7 +4,7 @@ const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&g
 const sb=supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
 const S={tab:'rot',me:null,team:'R',day:null,month:new Date(),viewUser:null,sel:null,people:[],marks:{},ev:null,evFilter:'all'};
 const ZC={'Веревочный лагерь':'#C9D4B0','Золото':'#E6CC8F','Гольф':'#B7CFC4','Альфа':'#D3BFD0','Боулинг':'#BCC8D6','Кино':'#E4B5A3','VR-арена':'#BFD3D3','Няня 1':'#D9C3AE','Няня 2':'#D9C3AE','Детский клуб':'#E8C1B5'};
-const STEPC={'Боулинг':'#BCC8D6','Ос':'#F3C29B','Гольф':'#B7CFC4','Золото':'#E6CC8F','Метро':'#CFC6BC','Веревочный лагерь / инд. задачи':'#C9D4B0'};
+const STEPC={'Боулинг':'#BCC8D6','Ос':'#F3C29B','Гольф':'#B7CFC4','Золото':'#E6CC8F','Метро':'#CFC6BC','Веревочный лагерь / инд. задачи':'#C9D4B0','Веревочный лагерь':'#C9D4B0'};
 const brkBg=t=>t.startsWith('Ос')?'#F3C29B':t.startsWith('О')?'#F5E2A8':'#E4EDF4';
 const TEAMS=[['R','Рейнджеры','#C9D4B0'],['K','Хранители','#B7CFC4'],['M','Метрополис','#E4B5A3'],['W','Если дождь','#7E98AE']];
 const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -68,6 +68,7 @@ async function rotView(){
   h+=`<div class="tabs">${days.map(d=>`<button data-d="${d}" class="${d===S.day?'on':''}" style="background:#E3EAD2">${d===todayIso?'Сегодня':dayLabel(d)}${d===todayIso?'<br><small>'+dayLabel(d)+'</small>':''}</button>`).join('')}</div>`;
   if(!rot){h+=`<div class="card pad"><b>Ротации на ${dayLabel(S.day)} пока нет</b><div class="muted">Как только её загрузят, она появится здесь.</div></div>`;app.innerHTML=h;return bindRot()}
   if(rot.banner)h+=`<div class="banner">🎃 ${esc(rot.banner)}</div>`;
+  if(rot.image)h+=`<a href="${esc(rot.image)}" target="_blank" rel="noopener" class="card" style="display:block;overflow:hidden;padding:0"><img src="${esc(rot.image)}" alt="Ротация картинкой" loading="lazy" style="display:block;width:100%;height:auto"><div class="muted" style="padding:6px 12px;font-size:12px">🖼 Ротация картинкой — нажми, чтобы открыть крупно</div></a>`;
   h+=`<div class="tabs">${TEAMS.map(([k,n,c])=>`<button data-t="${k}" class="${S.team===k?'on':''}" style="background:${c}">${n}</button>`).join('')}</div>`;
   const secs=rot.teams?.[S.team]||[];
   const notes=secs.filter(s=>s.note).map(s=>`<div class="n" style="background:${s.noteBg||'#E8B4B8'};padding:8px 12px;border-radius:12px;font-weight:700;font-size:13px">${esc(s.note)}</div>`).join('');
