@@ -30,3 +30,5 @@ create table if not exists public.overtime(id bigint generated always as identit
 alter table public.overtime enable row level security;
 create policy "overtime read own or manager" on public.overtime for select to authenticated using(user_id=auth.uid() or is_manager());
 create policy "overtime manager write" on public.overtime for all to authenticated using(is_manager()) with check(is_manager());
+
+-- Добавлено 2026-10-24 (вечер): регистрация с одобрением, roster, уведомления, табельные номера → supabase/migration_2026-10-24_signup_roster.sql
