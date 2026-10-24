@@ -18,34 +18,75 @@ const isManager=()=>S.me?.role==='manager';
 async function boot(){
   if(cfg.SUPABASE_ANON_KEY.startsWith('ВСТАВЬ')){app.innerHTML='<div class="card pad">Нужно вставить anon key в config.js</div>';return}
   const {data:{session}}=await sb.auth.getSession();
-  if(!session)return loginView();
+  if(!session)return authView('in');
   const {data}=await sb.from('profiles').select('*').eq('id',session.user.id).single();
-  S.me=data||{id:session.user.id,full_name:session.user.email,role:'employee'};
-  S.viewUser=S.me.id;nav.hidden=false;go(S.tab);
+  S.me=data||{id:session.user.id,full_name:session.user.email,role:'employee',status:'pending'};
+  S.viewUser=S.me.id;
+  if(S.me.status!=='approved')return pendingView();
+  nav.hidden=false;nav.querySelector('[data-tab=staff]').hidden=!isManager();go(S.tab==='staff'&&!isManager()?'rot':S.tab);
 }
-function loginView(err){
-  nav.hidden=true;
-  app.innerHTML=`<div style="margin-top:40px"><div class="muted" style="text-transform:uppercase;font-weight:700">Дримвуд · Mriya Resort &amp; Spa</div><h1>Чудеса начинаются здесь</h1><p class="muted">Вход для команды парка: ротации, график, новости и афиша.</p></div>
+function authView(mode,err,ok){
+  nav.hidden=true;const reg=mode==='up';
+  app.innerHTML=`<div style="margin-top:40px"><div class="muted" style="text-transform:uppercase;font-weight:700">Дримвуд · Mriya Resort &amp; Spa</div><h1>Чудеса начинаются здесь</h1><p class="muted">Приложение команды парка: ротации, график, афиша и новости.</p></div>
+  <div class="seg"><button id="tin" class="${reg?'':'on'}">Вход</button><button id="tup" class="${reg?'on':''}">Регистрация</button></div>
+  ${reg?`<div class="two"><label>Имя<input id="fn" autocomplete="given-name" placeholder="Игорь"></label><label>Фамилия<input id="ln" autocomplete="family-name" placeholder="Шубчик"></label></div>`:''}
   <label>Почта<input id="em" type="email" autocomplete="username" placeholder="name@company.ru"></label>
-  <label>Пароль<input id="pw" type="password" autocomplete="current-password"></label>
-  <div class="err">${esc(err||'')}</div><button class="btn" id="go">Войти в приключение</button>
-  <button class="btn ghost" id="fg">Забыли пароль?</button><div class="muted">Доступ по приглашению от руководителя.</div>`;
-  $('#go').onclick=async()=>{const {error}=await sb.auth.signInWithPassword({email:$('#em').value.trim(),password:$('#pw').value});error?loginView('Не получилось войти: проверь почту и пароль'):boot()};
-  $('#fg').onclick=async()=>{const e=$('#em').value.trim();if(!e)return loginView('Введи почту, пришлём ссылку');await sb.auth.resetPasswordForEmail(e);loginView('Если почта в системе, письмо отправлено')};
+  <label>Пароль${reg?' (придумай сам, не короче 6 знаков)':''}<input id="pw" type="password" autocomplete="${reg?'new-password':'current-password'}"></label>
+  <div class="err">${esc(err||'')}</div>${ok?`<div class="card pad" style="background:var(--sage)">${esc(ok)}</div>`:''}
+  <button class="btn" id="go">${reg?'Отправить заявку':'Войти в приключение'}</button>
+  ${reg?'<div class="muted">Пароль знаешь только ты. Руководитель получит имя, фамилию и почту и подтвердит доступ.</div>':'<button class="btn ghost" id="fg">Забыли пароль?</button><div class="muted">Нет аккаунта? Открой «Регистрацию»: руководитель подтвердит заявку.</div>'}`;
+  $('#tin').onclick=()=>authView('in');$('#tup').onclick=()=>authView('up');
+  $('#go').onclick=async()=>{
+    const email=$('#em').value.trim(),password=$('#pw').value;
+    if(!reg){const {error}=await sb.auth.signInWithPassword({email,password});return error?authView('in','Не получилось войти: проверь почту и пароль'):boot()}
+    const fn=$('#fn').value.trim(),ln=$('#ln').value.trim();
+    if(!fn||!ln)return authView('up','Укажи имя и фамилию');
+    if(!/^\S+@\S+\.\S+$/.test(email))return authView('up','Проверь почту');
+    if(password.length<6)return authView('up','Пароль должен быть не короче 6 знаков');
+    $('#go').disabled=true;
+    const {data,error}=await sb.auth.signUp({email,password,options:{data:{full_name:fn+' '+ln}}});
+    if(error)return authView('up',/registered|already/i.test(error.message)?'Эта почта уже зарегистрирована: открой «Вход»':'Не удалось зарегистрироваться: '+error.message);
+    if(data.session)return boot();
+    authView('in','', 'Заявка отправлена. Если пришло письмо со ссылкой, подтверди почту, потом войди. Руководитель подтвердит доступ.');
+  };
+  $('#fg')&&($('#fg').onclick=async()=>{const e=$('#em').value.trim();if(!e)return authView('in','Введи почту, пришлём ссылку');await sb.auth.resetPasswordForEmail(e);authView('in','','Если почта в системе, письмо отправлено')});
+}
+const loginView=err=>authView('in',err);
+function pendingView(){
+  nav.hidden=true;const rej=S.me.status==='rejected';
+  app.innerHTML=`<div style="margin-top:40px"><div style="font-size:54px">${rej?'🚫':'⏳'}</div><h1>${rej?'Заявка отклонена':'Ждём подтверждения'}</h1>
+  <p class="muted">${rej?'Руководитель не подтвердил доступ. Если это ошибка, напиши ему напрямую.':`Привет, ${esc(firstName())}! Заявка отправлена руководителю. Как только он её подтвердит, откроются ротации, график и афиша.`}</p></div>
+  <div class="card pad"><b>${esc(S.me.full_name||'')}</b><div class="muted">${esc(S.me.email||'')}</div></div>
+  <button class="btn" id="chk">Проверить ещё раз</button><button class="btn ghost" id="out">Выйти</button>`;
+  $('#chk').onclick=boot;$('#out').onclick=()=>sb.auth.signOut().then(()=>{S.me=null;boot()});
 }
 nav.onclick=e=>{const b=e.target.closest('button');if(b)go(b.dataset.tab)};
 function go(t){S.tab=t;nav.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));window.scrollTo(0,0);
-  Promise.resolve(({rot:rotView,sch:schView,news:newsView,afisha:afishaView,set:settingsView})[t]()).then(refreshUnread)}
+  Promise.resolve(({rot:rotView,sch:schView,afisha:afishaView,staff:staffView,set:settingsView})[t]()).then(refreshUnread)}
 async function refreshUnread(){
-  if(!S.me)return;
-  const [n,r]=await Promise.all([sb.from('news').select('id'),sb.from('news_reads').select('news_id').eq('user_id',S.me.id)]);
-  if(n.error||r.error)return;
-  const seen=new Set((r.data||[]).map(x=>x.news_id));S.unread=(n.data||[]).filter(x=>!seen.has(x.id)).length;
-  const el=$('#bellN');if(el){el.hidden=!S.unread;el.textContent=S.unread>9?'9+':S.unread}
+  if(!S.me||S.me.status!=='approved')return;
+  const [n,r,p]=await Promise.all([sb.from('notifications').select('id'),sb.from('notif_reads').select('notif_id').eq('user_id',S.me.id),isManager()?sb.from('profiles').select('id',{count:'exact',head:true}).eq('status','pending'):Promise.resolve({count:0})]);
+  if(!n.error&&!r.error){const seen=new Set((r.data||[]).map(x=>x.notif_id));S.unread=(n.data||[]).filter(x=>!seen.has(x.id)).length;
+    const el=$('#bellN');if(el){el.hidden=!S.unread;el.textContent=S.unread>9?'9+':S.unread}}
+  S.pending=p.count||0;const sn=$('#staffN');if(sn){sn.hidden=!S.pending;sn.textContent=S.pending}
 }
 const firstName=()=>(S.me?.full_name||'').trim().split(/\s+/)[0]||'друг';
-const bell=()=>`<button class="bell" aria-label="Новости" onclick="go('news')">🔔<i id="bellN" ${S.unread>0?'':'hidden'}>${S.unread>9?'9+':S.unread}</i></button>`;
+const bell=()=>`<button class="bell" aria-label="Уведомления" onclick="openBell()">🔔<i id="bellN" ${S.unread>0?'':'hidden'}>${S.unread>9?'9+':S.unread}</i></button>`;
 const head=(h,sub)=>`<div class="top"><div class="hi">Привет, ${esc(firstName())}! 👋</div>${bell()}</div>${sub?`<div class="muted">${sub}</div>`:''}<h1>${h}</h1>`;
+const NI={news:'📰',rotation:'🔄',afisha:'🎟️',signup:'🧑‍💼'};
+const ago=d=>{const m=Math.round((Date.now()-new Date(d))/6e4);return m<1?'только что':m<60?m+' мин назад':m<1440?Math.floor(m/60)+' ч назад':new Date(d).toLocaleDateString('ru',{day:'numeric',month:'short'})};
+async function openBell(){
+  const [n,r]=await Promise.all([sb.from('notifications').select('*').order('created_at',{ascending:false}).limit(50),sb.from('notif_reads').select('notif_id').eq('user_id',S.me.id)]);
+  const seen=new Set((r.data||[]).map(x=>x.notif_id)),list=n.data||[];
+  const ov=document.createElement('div');ov.className='ov';ov.innerHTML=`<div class="sheet"><div class="sh"><button class="x" id="bk" aria-label="Назад">←</button><b>Уведомления</b><span></span></div><div class="sb">${list.map(x=>{const lg=(x.body||'').length>160;return `<div class="nt ${seen.has(x.id)?'':'new'}" data-id="${x.id}"><div class="ni">${NI[x.kind]||'🔔'}</div><div class="nb"><b>${esc(x.title)}</b>${seen.has(x.id)?'':'<span class="newb">новое</span>'}<div class="nbody ${lg?'cl':''}">${esc(x.body||'')}</div><div class="muted" style="margin-top:4px">${ago(x.created_at)}${lg?' · <a href="#" class="more">читать полностью</a>':''}${x.link&&x.link!=='news'?` · <a href="#" class="lnk" data-l="${esc(x.link)}">открыть</a>`:''}</div></div></div>`}).join('')||'<div class="muted" style="padding:20px">Пока ничего нового</div>'}</div></div>`;
+  document.body.appendChild(ov);document.body.style.overflow='hidden';
+  const close=()=>{ov.remove();document.body.style.overflow=''};
+  ov.onclick=e=>{if(e.target===ov)close()};ov.querySelector('#bk').onclick=close;
+  ov.querySelectorAll('.more').forEach(a=>a.onclick=e=>{e.preventDefault();a.closest('.nb').querySelector('.nbody').classList.remove('cl');a.remove()});
+  ov.querySelectorAll('.lnk').forEach(a=>a.onclick=e=>{e.preventDefault();const l=a.dataset.l;close();if(l.startsWith('rot:')){S.day=l.slice(4);go('rot')}else go(l)});
+  const fresh=list.filter(x=>!seen.has(x.id)).map(x=>({user_id:S.me.id,notif_id:x.id}));
+  if(fresh.length){await sb.from('notif_reads').upsert(fresh);S.unread=0;const bn=$('#bellN');if(bn)bn.hidden=true}
+}
 
 // ---------- Ротации ----------
 const hh=x=>{const m=x.split(':');return +m[0]+(+m[1])/60};
@@ -103,7 +144,7 @@ function bindRot(){
 // ---------- График ----------
 const KINDS={off:['ВЫХ','#E8DCCB','Выходной'],otgul:['ОТ','#E4B5A3','Отгул'],do:['ДО','#F5E2A8','ДО'],sick:['Б','#BCC8D6','Больничный'],vac:['ОП','#C9D4B0','Отпуск']};
 async function schView(){
-  if(isManager()&&!S.people.length){const {data}=await sb.from('profiles').select('id,full_name').order('full_name');S.people=data||[]}
+  if(isManager()&&!S.people.length){const {data}=await sb.from('profiles').select('id,full_name').eq('status','approved').order('full_name');S.people=data||[]}
   const m=S.month,y=m.getFullYear(),mo=m.getMonth(),first=iso(new Date(y,mo,1)),last=iso(new Date(y,mo+1,0));
   const {data}=await sb.from('marks').select('*').eq('user_id',S.viewUser).gte('day',first).lte('day',last);
   const otr=await sb.from('overtime').select('*').eq('user_id',S.viewUser).gte('day',first).lte('day',last).order('day').order('start_time');
@@ -156,20 +197,6 @@ async function importSeed(){
   S.ev=null;alert('Готово: загружено '+d.events.length+' событий и '+d.news.length+' новости');go(S.tab);
 }
 const importBtn=()=>isManager()?'<button class="btn ghost" onclick="importSeed()">⬆️ Загрузить афишу и новости из файла</button>':'';
-// ---------- Новости ----------
-async function newsView(){
-  const {data}=await sb.from('news').select('*').order('pinned',{ascending:false}).order('created_at',{ascending:false});
-  const {data:rd}=await sb.from('news_reads').select('news_id').eq('user_id',S.me.id);
-  const seen=new Set((rd||[]).map(x=>x.news_id));
-  let h=head('Что нового','Свежее для нашей команды')+((data||[]).length?'':importBtn());
-  h+=(data||[]).map(n=>{const long=n.body.length>400,open=S.newsOpen?.[n.id];return `<div class="card pad" style="${n.pinned?'background:var(--ink);color:#FFFDF9':''}"><b>${n.pinned?'📌 ':''}${esc(n.title)}</b>${seen.has(n.id)?'':'<span class="newb">новое</span>'}<div style="white-space:pre-wrap;margin-top:8px;font-size:14px;line-height:1.45">${esc(long&&!open?n.body.split('\n')[0]:n.body)}</div>${long?`<button class="btn ghost" style="margin-top:10px;min-height:40px;${n.pinned?'color:#FFFDF9;border-color:#FFFDF9':''}" data-nid="${n.id}">${open?'Свернуть':'Развернуть'}</button>`:''}</div>`}).join('')||'<div class="card pad">Пока новостей нет</div>';
-  app.innerHTML=h;
-  app.querySelectorAll('[data-nid]').forEach(b=>b.onclick=()=>{S.newsOpen=S.newsOpen||{};S.newsOpen[b.dataset.nid]=!S.newsOpen[b.dataset.nid];newsView()});
-  const fresh=(data||[]).filter(n=>!seen.has(n.id)).map(n=>({user_id:S.me.id,news_id:n.id}));
-  if(fresh.length)await sb.from('news_reads').upsert(fresh);
-  S.unread=0;const bn=$('#bellN');if(bn)bn.hidden=true;
-}
-
 // ---------- Афиша ----------
 async function afishaView(){
   if(!S.ev){const {data}=await sb.from('events').select('*').order('day').order('time');S.ev=data||[]}
@@ -184,21 +211,45 @@ async function afishaView(){
   app.querySelectorAll('[data-ad]').forEach(b=>b.onclick=()=>{S.aday=b.dataset.ad;afishaView()});
   app.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{S.evFilter=b.dataset.f;afishaView()});
 }
+// ---------- Сотрудники (руководитель) ----------
+const norm=t=>String(t||'').toLowerCase().replace(/ё/g,'е').replace(/[^a-zа-я\s]/g,' ').split(/\s+/).filter(x=>x.length>1);
+function simScore(a,b){const A=norm(a),B=norm(b);let sc=0;A.forEach(x=>B.forEach(y=>{if(x===y)sc+=3;else if(x.length>=3&&y.length>=3&&(x.startsWith(y.slice(0,3))||y.startsWith(x.slice(0,3))))sc+=1}));return sc}
+const TN={R:'Рейнджеры',K:'Хранители',M:'Метрополис'};
+async function staffView(){
+  if(!isManager())return go('rot');
+  const [pr,ro]=await Promise.all([sb.from('profiles').select('id,full_name,email,role,status,tab_no,team,created_at').order('created_at'),sb.from('roster').select('*').order('team').order('full_name')]);
+  const all=pr.data||[],roster=ro.data||[];
+  const ap=all.filter(p=>p.status==='approved'),req=all.filter(p=>p.status!=='approved').sort((a,b)=>(a.status==='pending'?0:1)-(b.status==='pending'?0:1));
+  const rl=new Map(roster.filter(r=>r.profile_id).map(r=>[r.profile_id,r.full_name]));
+  const free=roster.filter(r=>!r.profile_id);
+  const dt=d=>d?new Date(d).toLocaleDateString('ru',{day:'numeric',month:'short',year:'numeric'}):'';
+  let h=head('Сотрудники','Заявки на регистрацию и список команды');
+  h+=`<div class="stat"><div style="background:var(--sage)"><b>${ap.length}</b>в команде</div><div style="background:var(--gold)"><b>${req.filter(p=>p.status==='pending').length}</b>новых заявок</div></div>`;
+  h+=`<div class="card pad col"><b>📨 Заявки</b>${req.length?req.map(p=>{
+      const opts=free.map(r=>({r,sc:simScore(p.full_name,r.full_name)})).sort((a,b)=>b.sc-a.sc);
+      return `<div class="col" style="border-top:1px solid var(--line);padding-top:10px"><div><b>${esc(p.full_name)}</b>${p.status==='rejected'?'<span class="pill" style="background:#E8B4B8;margin-left:6px">отклонена</span>':''}<div class="muted">${esc(p.email||'')} · ${dt(p.created_at)}</div></div>
+      <label>Это сотрудник из списка:<select data-rs="${p.id}"><option value="">— не привязывать —</option>${opts.map(({r,sc})=>`<option value="${r.id}" ${sc>=3&&r===opts[0].r?'selected':''}>${sc>0?'★ ':''}${esc(r.full_name)} · ${TN[r.team]}</option>`).join('')}</select></label>
+      <div class="two"><button class="btn" data-ok="${p.id}">Одобрить</button>${p.status==='rejected'?'':`<button class="btn ghost" data-no="${p.id}">Отклонить</button>`}</div></div>`}).join(''):'<div class="muted">Новых заявок нет</div>'}<div class="muted">★ — похоже по имени и фамилии. Табельный номер присваивается автоматически при одобрении.</div></div>`;
+  h+=`<div class="card pad col"><b>👥 Команда · ${ap.length}</b><div class="muted">Имя (первое слово идёт в приветствие) и табельный номер</div>${ap.map(p=>`<div class="prow"><input class="pn" data-pn="${p.id}" value="${esc(p.full_name||'')}" placeholder="Имя Фамилия"><input class="pt" data-pt="${p.id}" value="${esc(p.tab_no||'')}" placeholder="№"><button class="btn" style="padding:0 14px" data-sp="${p.id}" aria-label="Сохранить">💾</button></div><div class="muted" style="margin-top:-6px">${p.role==='manager'?'руководитель':'сотрудник'}${rl.get(p.id)?' · в списке: '+esc(rl.get(p.id)):''}${p.team?' · '+(TN[p.team]||''):''} · с ${dt(p.created_at)}</div>`).join('')}</div>`;
+  h+=`<div class="card pad col"><b>📋 Ещё не зарегистрировались · ${free.length}</b><div class="muted">${free.length?free.map(r=>esc(r.full_name)).join(', '):'Все из списка уже в приложении'}</div></div>`;
+  app.innerHTML=h;
+  app.querySelectorAll('[data-ok]').forEach(b=>b.onclick=async()=>{const id=b.dataset.ok,rs=app.querySelector(`[data-rs="${id}"]`).value;b.disabled=true;
+    const r=await sb.rpc('approve_member',{p_id:id,p_roster:rs?+rs:null});if(r.error){alert('Не удалось одобрить: '+r.error.message);return staffView()}
+    alert('Одобрено. Табельный номер: '+r.data);S.people=[];staffView().then(refreshUnread)});
+  app.querySelectorAll('[data-no]').forEach(b=>b.onclick=async()=>{if(!confirm('Отклонить заявку?'))return;const r=await sb.rpc('reject_member',{p_id:b.dataset.no});if(r.error)alert(r.error.message);staffView().then(refreshUnread)});
+  app.querySelectorAll('[data-sp]').forEach(b=>b.onclick=async()=>{const id=b.dataset.sp,full_name=app.querySelector(`[data-pn="${id}"]`).value.trim(),tab_no=app.querySelector(`[data-pt="${id}"]`).value.trim()||null;
+    const r=await sb.from('profiles').update({full_name,tab_no}).eq('id',id);if(r.error)return alert('Не удалось сохранить: '+r.error.message);
+    if(id===S.me.id){S.me.full_name=full_name;S.me.tab_no=tab_no}S.people=[];b.textContent='✅';setTimeout(()=>staffView(),600)});
+}
 // ---------- Настройки ----------
 async function settingsView(){
   const cur=getTheme();
   let h=head('Настройки','Профиль и оформление');
   h+=`<div class="card pad"><b style="font-size:18px">${esc(S.me.full_name||'')}</b><div class="muted">${isManager()?'Руководитель':'Сотрудник'}${S.me.tab_no?` · табельный № ${esc(S.me.tab_no)}`:' · табельный номер пока не назначен'}</div></div>`;
   h+=`<div class="card pad"><b>Оформление</b><div class="muted">Четыре сезона, у каждого тёплый и холодный вариант</div>${Object.entries(THEMES).map(([k,[ic,n]])=>`<div class="trow"><span>${ic} ${n}</span>${[['warm','Тёплый'],['cold','Холодный']].map(([v,t])=>`<button class="tbtn ${cur===k+'-'+v?'on':''}" data-th="${k}-${v}"><i class="sw" data-theme="${k}-${v}"></i>${t}</button>`).join('')}</div>`).join('')}</div>`;
-  let ppl=[];
-  if(isManager()){const r=await sb.from('profiles').select('id,full_name,role,tab_no').order('full_name');ppl=r.data||[];
-    h+=`<div class="card pad col"><b>Сотрудники</b><div class="muted">Имя (как покажется в приветствии: первое слово) и табельный номер</div>${ppl.map(p=>`<div class="prow"><input class="pn" data-pn="${p.id}" value="${esc(p.full_name||'')}" placeholder="Имя Фамилия"><input class="pt" data-pt="${p.id}" value="${esc(p.tab_no||'')}" placeholder="№"><button class="btn" style="padding:0 14px" data-sp="${p.id}" aria-label="Сохранить">💾</button></div><div class="muted" style="margin-top:-6px">${p.role==='manager'?'руководитель':'сотрудник'}</div>`).join('')||'<div class="muted">Пока никого нет</div>'}</div>`}
   h+=`<button class="btn ghost" id="out">Выйти из аккаунта</button>`;
   app.innerHTML=h;
   app.querySelectorAll('[data-th]').forEach(b=>b.onclick=()=>{applyTheme(b.dataset.th);settingsView()});
-  app.querySelectorAll('[data-sp]').forEach(b=>b.onclick=async()=>{const id=b.dataset.sp,full_name=app.querySelector(`[data-pn="${id}"]`).value.trim(),tab_no=app.querySelector(`[data-pt="${id}"]`).value.trim()||null;
-    const r=await sb.from('profiles').update({full_name,tab_no}).eq('id',id);if(r.error)return alert('Не удалось сохранить: '+r.error.message);
-    if(id===S.me.id){S.me.full_name=full_name;S.me.tab_no=tab_no}b.textContent='✅';setTimeout(()=>settingsView(),600)});
   $('#out').onclick=()=>sb.auth.signOut().then(()=>{S.me=null;S.unread=0;boot()});
 }
 sb.auth.onAuthStateChange(()=>{});
