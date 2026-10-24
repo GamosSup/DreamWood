@@ -50,3 +50,14 @@ nav[hidden]{display:none}
 .prow{display:flex;gap:6px}.prow .pn{flex:1;min-width:0}.prow .pt{width:68px;flex:none;padding:0 8px}.prow .btn{min-height:48px}
 .otr{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line);font-size:14px}
 .x{width:36px;height:36px;border-radius:50%;border:1.5px solid var(--line);background:var(--card);color:var(--ink);flex:none}
+nav button{position:relative}nav button[hidden]{display:none}
+nav button i{position:absolute;top:4px;right:calc(50% - 26px);min-width:18px;height:18px;border-radius:9px;background:#C0392B;color:#fff;font:800 11px Manrope,sans-serif;font-style:normal;display:flex;align-items:center;justify-content:center;padding:0 5px}
+nav button i[hidden]{display:none}
+.ov{position:fixed;inset:0;background:rgba(40,28,36,.55);z-index:50;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--bg);width:100%;max-width:520px;max-height:88vh;border-radius:24px 24px 0 0;display:flex;flex-direction:column;overflow:hidden;animation:up .22s ease-out}
+@keyframes up{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+.sh{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line);font-size:17px}.sh .x{width:40px;height:40px}.sh span{width:40px}
+.sb{overflow:auto;padding:10px 12px 28px;display:flex;flex-direction:column;gap:8px}
+.nt{display:flex;gap:12px;padding:12px;border-radius:16px;background:var(--card);border:1px solid var(--line)}.nt.new{border-color:var(--ink);background:var(--tab)}
+.ni{font-size:24px;flex:none}.nb{min-width:0}.nbody{white-space:pre-wrap;font-size:14px;line-height:1.4;margin-top:4px}.nbody.cl{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.nb a{color:var(--ink);font-weight:700}
