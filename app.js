@@ -113,12 +113,27 @@ async function schView(){
     if(r.error)alert('Не удалось сохранить: '+r.error.message);S.sel=null;schView()});
 }
 
+
+async function importSeed(){
+  if(!confirm('Загрузить афишу и новости из файла seed/events.json? Существующие записи за эти даты будут заменены.'))return;
+  const d=await (await fetch('seed/events.json?'+Date.now())).json();
+  const days=[...new Set(d.events.map(e=>e.day))];
+  await sb.from('events').delete().in('day',days);
+  let r=await sb.from('events').insert(d.events);
+  if(r.error)return alert('Афиша: '+r.error.message);
+  await sb.from('news').delete().in('title',d.news.map(n=>n.title));
+  r=await sb.from('news').insert(d.news);
+  if(r.error)return alert('Новости: '+r.error.message);
+  S.ev=null;alert('Готово: загружено '+d.events.length+' событий и '+d.news.length+' новости');go(S.tab);
+}
+const importBtn=()=>isManager()?'<button class="btn ghost" onclick="importSeed()">⬆️ Загрузить афишу и новости из файла</button>':'';
 // ---------- Новости ----------
 async function newsView(){
   const {data}=await sb.from('news').select('*').order('pinned',{ascending:false}).order('created_at',{ascending:false});
-  let h=head('Что нового','Свежее для нашей команды');
-  h+=(data||[]).map(n=>`<div class="card pad" style="${n.pinned?'background:#3B2A35;color:#FFFDF9':''}"><b>${n.pinned?'📌 ':''}${esc(n.title)}</b><div style="white-space:pre-wrap;margin-top:8px;font-size:14px;line-height:1.45">${esc(n.body)}</div></div>`).join('')||'<div class="card pad">Пока новостей нет</div>';
+  let h=head('Что нового','Свежее для нашей команды')+((data||[]).length?'':importBtn());
+  h+=(data||[]).map(n=>{const long=n.body.length>400,open=S.newsOpen?.[n.id];return `<div class="card pad" style="${n.pinned?'background:#3B2A35;color:#FFFDF9':''}"><b>${n.pinned?'📌 ':''}${esc(n.title)}</b><div style="white-space:pre-wrap;margin-top:8px;font-size:14px;line-height:1.45">${esc(long&&!open?n.body.split('\n')[0]:n.body)}</div>${long?`<button class="btn ghost" style="margin-top:10px;min-height:40px;${n.pinned?'color:#FFFDF9;border-color:#FFFDF9':''}" data-nid="${n.id}">${open?'Свернуть':'Развернуть'}</button>`:''}</div>`}).join('')||'<div class="card pad">Пока новостей нет</div>';
   app.innerHTML=h;
+  app.querySelectorAll('[data-nid]').forEach(b=>b.onclick=()=>{S.newsOpen=S.newsOpen||{};S.newsOpen[b.dataset.nid]=!S.newsOpen[b.dataset.nid];newsView()});
 }
 
 // ---------- Афиша ----------
@@ -127,7 +142,7 @@ async function afishaView(){
   const days=[...new Set(S.ev.map(e=>e.day))];if(!S.aday||!days.includes(S.aday))S.aday=days.includes(iso(new Date()))?iso(new Date()):days[0];
   let list=S.ev.filter(e=>e.day===S.aday);
   if(S.evFilter==='paid')list=list.filter(e=>e.price);if(S.evFilter==='token')list=list.filter(e=>e.token);
-  let h=head('Афиша','Что происходит в парке');
+  let h=head('Афиша','Что происходит в парке')+(S.ev.length?'':importBtn());
   h+=`<div class="tabs">${days.map(d=>`<button data-ad="${d}" class="${d===S.aday?'on':''}" style="background:#E3EAD2">${d.slice(8)}.${d.slice(5,7)}</button>`).join('')}</div>`;
   h+=`<div class="seg">${[['all','Все'],['paid','Платные ₽'],['token','С ТыквоФишкой']].map(([k,n])=>`<button data-f="${k}" class="${S.evFilter===k?'on':''}">${n}</button>`).join('')}</div>`;
   h+=list.map(e=>`<div class="card pad" style="display:flex;gap:12px"><b style="width:60px">${esc(e.time)}</b><div><b>${esc(e.title)}</b><div class="muted">${esc(e.loc)}</div><div style="font-size:14px;margin-top:6px">${esc(e.descr)}</div><div style="margin-top:6px;display:flex;gap:6px">${e.price?`<span class="pill" style="background:#F5E2A8">${esc(e.price)}</span>`:''}${e.token?'<span class="pill" style="background:#F3C29B">ТыквоФишка</span>':''}</div></div></div>`).join('')||'<div class="card pad">Нет событий</div>';
