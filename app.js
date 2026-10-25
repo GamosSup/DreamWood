@@ -7,7 +7,7 @@ const getTheme=()=>{try{return localStorage.getItem('dw-theme')||'autumn-warm'}c
 function applyTheme(t){document.documentElement.dataset.theme=t;try{localStorage.setItem('dw-theme',t)}catch(e){}
   const m=document.querySelector('meta[name=theme-color]');if(m)m.content=getComputedStyle(document.documentElement).getPropertyValue('--ink').trim()||'#3B2A35'}
 applyTheme(getTheme());
-const S={unread:0,tab:'rot',me:null,team:'R',day:null,month:new Date(),viewUser:null,sel:null,people:[],marks:{},ev:null,evFilter:'all'};
+const S={unread:0,tab:'today',sub:{ap:'req',park:'news',team:'contacts'},me:null,team:'R',day:null,month:new Date(),viewUser:null,sel:null,people:[],marks:{},ev:null,evFilter:'all'};
 const ZC={'Данделион':'#E4B5A3','Карусель':'#D3BFD0','Джипы':'#B7CFC4','Шахта':'#BCC8D6','Кон-Тики':'#E6CC8F','Плющ':'#C9D4B0','Дерево приключений':'#C9D4B0','Бабл хаус':'#F3C29B','Студия волшебных образов':'#D3BFD0','Квесты/Роботы':'#BFD3D3','Лес Чудес':'#B7CFC4','Альфа 1':'#D3BFD0','Альфа 2':'#D3BFD0','Старший специалист':'#E8C1B5','Супервайзер':'#E8C1B5','Веревочный лагерь':'#C9D4B0','Золото':'#E6CC8F','Гольф':'#B7CFC4','Альфа':'#D3BFD0','Боулинг':'#BCC8D6','Кино':'#E4B5A3','VR-арена':'#BFD3D3','Няня 1':'#D9C3AE','Няня 2':'#D9C3AE','Детский клуб':'#E8C1B5'};
 const STEPC={'Шахта':'#BCC8D6','Джипы':'#B7CFC4','Карусель':'#D3BFD0','Плющ':'#C9D4B0','Данделион':'#E4B5A3','Кон-Тики':'#E6CC8F','Ротация':'#E3E3E3','Пс':'#F3C29B','Боулинг':'#BCC8D6','Ос':'#F3C29B','Гольф':'#B7CFC4','Золото':'#E6CC8F','Метро':'#CFC6BC','Веревочный лагерь / инд. задачи':'#C9D4B0','Веревочный лагерь':'#C9D4B0'};
 const brkBg=t=>t.startsWith('Ос')||t.startsWith('Пс')?'#F3C29B':t.startsWith('О')?'#F5E2A8':'#CFE0EE';
@@ -31,6 +31,7 @@ async function cq(key,fn){
 const clearCache=()=>{try{Object.keys(localStorage).filter(k=>k.startsWith('dw:')).forEach(k=>localStorage.removeItem(k))}catch(e){}};
 
 async function boot(){
+  if(document.readyState==='loading')await new Promise(r=>document.addEventListener('DOMContentLoaded',r,{once:true}));
   if(cfg.SUPABASE_ANON_KEY.startsWith('ВСТАВЬ')){app.innerHTML='<div class="card pad">Нужно вставить anon key в config.js</div>';return}
   const {data:{session}}=await sb.auth.getSession();
   if(!session)return authView('in');
@@ -39,7 +40,7 @@ async function boot(){
   S.me=data||{id:session.user.id,full_name:session.user.email,role:'employee',status:'pending'};
   S.viewUser=S.me.id;
   if(S.me.status!=='approved')return pendingView();
-  nav.hidden=false;nav.querySelectorAll('[data-mgr]').forEach(b=>b.hidden=!isManager());nav.querySelectorAll('[data-lead]').forEach(b=>b.hidden=!canMng());go(S.tab==='staff'&&!isManager()?'rot':S.tab);
+  nav.hidden=false;nav.querySelectorAll('[data-mgr]').forEach(b=>b.hidden=!isManager());nav.querySelectorAll('[data-lead]').forEach(b=>b.hidden=!canMng());go(S.tab);
   const g=new URLSearchParams(location.search).get('go');if(g){history.replaceState(null,'',location.pathname);openLink(g)}
   window.pushRefresh&&pushRefresh();
 }
@@ -47,27 +48,28 @@ function authView(mode,err,ok){
   nav.hidden=true;const reg=mode==='up';
   app.innerHTML=`<div style="margin-top:24px"><div class="authhd"><img class="alogo" src="stickers/logo.webp" alt="Дримвуд — парк чудес и приключений"><img class="amas" src="stickers/mascot-hi.webp" alt=""></div><h1>Чудеса начинаются здесь</h1><p class="muted">Приложение команды парка: ротации, график, афиша и новости.</p></div>
   <div class="seg"><button id="tin" class="${reg?'':'on'}">Вход</button><button id="tup" class="${reg?'on':''}">Регистрация</button></div>
-  ${reg?`<div class="two"><label>Имя<input id="fn" autocomplete="given-name" placeholder="Игорь"></label><label>Фамилия<input id="ln" autocomplete="family-name" placeholder="Шубчик"></label></div>`:''}
-  <label>Почта<input id="em" type="email" autocomplete="username" placeholder="name@company.ru"></label>
+  ${reg?`<div class="two"><label>Имя<input id="fn" autocomplete="given-name" placeholder="Игорь"></label><label>Фамилия<input id="ln" autocomplete="family-name" placeholder="Шубчик"></label></div>
+  <label>Телефон<input id="ph" type="tel" autocomplete="tel" placeholder="+7 ..."></label>`:''}
+  <label>Почта${reg?' (лучше рабочая)':''}<input id="em" type="email" autocomplete="username" placeholder="name@company.ru"></label>
   <label>Пароль${reg?' (придумай сам, не короче 6 знаков)':''}<input id="pw" type="password" autocomplete="${reg?'new-password':'current-password'}"></label>
   <div class="err">${esc(err||'')}</div>${ok?`<div class="card pad" style="background:var(--sage)">${esc(ok)}</div>`:''}
   <button class="btn" id="go">${reg?'Отправить заявку':'Войти в приключение'}</button>
-  ${reg?'<div class="muted">Пароль знаешь только ты. Руководитель получит имя, фамилию и почту и подтвердит доступ.</div>':'<button class="btn ghost" id="fg">Забыли пароль?</button><div class="muted">Нет аккаунта? Открой «Регистрацию»: руководитель подтвердит заявку.</div>'}`;
+  ${reg?'<div class="muted">Почта нужна только как логин: мы ничего на неё не отправляем. Руководитель получит имя, телефон и почту и подтвердит доступ. Пароль знаешь только ты.</div>':'<div class="muted">Нет аккаунта? Открой «Регистрацию»: руководитель подтвердит заявку. Забыл пароль — напиши руководителю, он задаст новый.</div>'}`;
   $('#tin').onclick=()=>authView('in');$('#tup').onclick=()=>authView('up');
   $('#go').onclick=async()=>{
     const email=$('#em').value.trim(),password=$('#pw').value;
     if(!reg){const {error}=await sb.auth.signInWithPassword({email,password});return error?authView('in','Не получилось войти: проверь почту и пароль'):boot()}
     const fn=$('#fn').value.trim(),ln=$('#ln').value.trim();
     if(!fn||!ln)return authView('up','Укажи имя и фамилию');
+    const phone=$('#ph').value.trim();if(phone.replace(/\D/g,'').length<10)return authView('up','Укажи номер телефона');
     if(!/^\S+@\S+\.\S+$/.test(email))return authView('up','Проверь почту');
     if(password.length<6)return authView('up','Пароль должен быть не короче 6 знаков');
     $('#go').disabled=true;
-    const {data,error}=await sb.auth.signUp({email,password,options:{data:{full_name:fn+' '+ln}}});
+    const {data,error}=await sb.auth.signUp({email,password,options:{data:{full_name:fn+' '+ln,phone}}});
     if(error)return authView('up',/registered|already/i.test(error.message)?'Эта почта уже зарегистрирована: открой «Вход»':'Не удалось зарегистрироваться: '+error.message);
     if(data.session)return boot();
-    authView('in','', 'Заявка отправлена. Если пришло письмо со ссылкой, подтверди почту, потом войди. Руководитель подтвердит доступ.');
+    authView('in','', 'Заявка отправлена. Руководитель подтвердит доступ: тогда войдёшь с этой почтой и паролем.');
   };
-  $('#fg')&&($('#fg').onclick=async()=>{const e=$('#em').value.trim();if(!e)return authView('in','Введи почту, пришлём ссылку');await sb.auth.resetPasswordForEmail(e);authView('in','','Если почта в системе, письмо отправлено')});
 }
 const loginView=err=>authView('in',err);
 function pendingView(){
@@ -80,8 +82,15 @@ function pendingView(){
 }
 nav.onclick=e=>{const b=e.target.closest('button');if(b)go(b.dataset.tab)};
 const VIEWS={sch:schView,afisha:afishaView,dg:dgView,staff:staffView,set:settingsView};
-const MORE_TABS=['news','afisha','req','kb','fix','inc','contacts','grid','staff','set'];
-function go(t){if(!VIEWS[t])t='rot';S.tab=t;S.offline=0;document.body.dataset.tab=t;
+VIEWS.ap=()=>VIEWS[S.sub.ap]();VIEWS.park=()=>VIEWS[S.sub.park]();
+VIEWS.team=()=>{if(!isManager())S.sub.team='contacts';return VIEWS[S.sub.team]()};
+function subBar(g,cur){const L={ap:[['req','📨','Заявки'],['fix','🛠','Поломки'],['inc','🚨','Происшествия']],park:[['news','📰','Новости'],['afisha','🎟️','Афиша']],team:[['contacts','📞','Контакты'],...(isManager()?[['staff','👥','Сотрудники']]:[])]}[g];if(!L||L.length<2)return '';const b=S.badges||{};
+  return `<div class="seg subbar">${L.map(([k,ic,n])=>`<button data-sub="${k}" class="${k===cur?'on':''}">${ic} ${n}${b[k]?` <i class="sbn">${b[k]}</i>`:''}</button>`).join('')}</div>`}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-sub]');if(b&&S.me)go(b.dataset.sub)});
+const MORE_TABS=['shift','park','kb','team','grid','set'];
+const SUBG={req:'ap',fix:'ap',inc:'ap',news:'park',afisha:'park',contacts:'team',staff:'team'};
+const onTab=k=>SUBG[k]?(S.tab===SUBG[k]&&S.sub[SUBG[k]]===k):S.tab===k;
+function go(t){if(SUBG[t]){S.sub[SUBG[t]]=t;t=SUBG[t]}if(!VIEWS[t])t='today';S.tab=t;S.offline=0;document.body.dataset.tab=S.sub[t]||t;
   nav.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t||(b.dataset.tab==='more'&&MORE_TABS.includes(t))));window.scrollTo(0,0);app.scrollTop=0;
   Promise.resolve(VIEWS[t]()).then(refreshUnread)}
 async function refreshUnread(){
@@ -98,8 +107,9 @@ async function refreshUnread(){
   try{const q=await sb.from('requests').select('id,status,peer_id').in('status',['peer','pending']);
     const rq=(q.data||[]).filter(x=>(x.status==='pending'&&canMng())||(x.status==='peer'&&x.peer_id===S.me.id)).length;
     let fx=0;if(isManager()){const q2=await sb.from('repairs').select('id',{count:'exact',head:true}).eq('status','new');fx=q2.count||0}
-    S.badges={req:rq,staff:S.pending,fix:fx};const rn=$('#reqN');if(rn){rn.hidden=!rq;rn.textContent=rq}const fn=$('#fixN');if(fn){fn.hidden=!fx;fn.textContent=fx}
-    const mt=rq+S.pending+fx,mn=$('#moreN');if(mn){mn.hidden=!mt;mn.textContent=mt}}catch(e){}
+    S.badges={req:rq,staff:S.pending,fix:fx};
+    const an=$('#apN');if(an){an.hidden=!(rq+fx);an.textContent=rq+fx}const tn=$('#teamN');if(tn){tn.hidden=!S.pending;tn.textContent=S.pending}
+    const mn=$('#moreN');if(mn){mn.hidden=!S.pending;mn.textContent=S.pending}}catch(e){}
 }
 const firstName=()=>(S.me?.full_name||'').trim().split(/\s+/)[0]||'друг';
 const bell=()=>`<button class="bell" aria-label="Уведомления" onclick="openBell()">🔔<i id="bellN" ${S.unread>0?'':'hidden'}>${S.unread>9?'9+':S.unread}</i></button>`;
@@ -216,7 +226,7 @@ async function afishaView(){
   const days=[...new Set(S.ev.map(e=>e.day))];if(!S.aday||!days.includes(S.aday))S.aday=days.includes(iso(new Date()))?iso(new Date()):days[0];
   let list=S.ev.filter(e=>e.day===S.aday);
   if(S.evFilter==='paid')list=list.filter(e=>e.price);if(S.evFilter==='token')list=list.filter(e=>e.token);
-  let h=head('Афиша','Что происходит в парке')+(S.ev.length?'':importBtn());
+  let h=head('Афиша','Что происходит в парке')+subBar('park','afisha')+(S.ev.length?'':importBtn());
   h+=`<div class="tabs">${days.map(d=>`<button data-ad="${d}" class="${d===S.aday?'on':''}" style="background:var(--tab)">${d.slice(8)}.${d.slice(5,7)}</button>`).join('')}</div>`;
   h+=`<div class="seg">${[['all','Все'],['paid','Платные ₽'],['token','С ТыквоФишкой']].map(([k,n])=>`<button data-f="${k}" class="${S.evFilter===k?'on':''}">${n}</button>`).join('')}</div>`;
   h+=list.map(e=>`<div class="card pad" style="display:flex;gap:12px"><b style="width:60px">${esc(e.time)}</b><div><b>${esc(e.title)}</b><div class="muted">${esc(e.loc)}</div><div style="font-size:14px;margin-top:6px">${esc(e.descr)}</div><div style="margin-top:6px;display:flex;gap:6px">${e.price?`<span class="pill" style="background:#F5E2A8">${esc(e.price)}</span>`:''}${e.token?'<span class="pill" style="background:#F3C29B">ТыквоФишка</span>':''}</div></div></div>`).join('')||'<div class="card pad">Нет событий</div>';
@@ -230,20 +240,24 @@ function simScore(a,b){const A=norm(a),B=norm(b);let sc=0;A.forEach(x=>B.forEach
 const TN={R:'Рейнджеры',K:'Хранители',M:'Метрополис'};
 async function staffView(){
   if(!isManager())return go('rot');
-  const [pr,ro]=await Promise.all([sb.from('profiles').select('id,full_name,email,role,status,tab_no,team,created_at').order('created_at'),sb.from('roster').select('*').order('team').order('full_name')]);
+  const [pr,ro]=await Promise.all([sb.from('profiles').select('id,full_name,email,role,status,tab_no,team,created_at,phone,position').order('created_at'),sb.from('roster').select('*').order('team').order('full_name')]);
   const all=pr.data||[],roster=ro.data||[];
   const ap=all.filter(p=>p.status==='approved'),req=all.filter(p=>p.status!=='approved').sort((a,b)=>(a.status==='pending'?0:1)-(b.status==='pending'?0:1));
   const rl=new Map(roster.filter(r=>r.profile_id).map(r=>[r.profile_id,r.full_name]));
   const free=roster.filter(r=>!r.profile_id);
   const dt=d=>d?new Date(d).toLocaleDateString('ru',{day:'numeric',month:'short',year:'numeric'}):'';
-  let h=head('Сотрудники','Заявки на регистрацию и список команды');
+  let h=head('Сотрудники','Заявки на регистрацию и список команды')+subBar('team','staff');
   h+=`<div class="stat"><div style="background:var(--sage)"><b>${ap.length}</b>в команде</div><div style="background:var(--gold)"><b>${req.filter(p=>p.status==='pending').length}</b>новых заявок</div></div>`;
   h+=`<div class="card pad col"><b>📨 Заявки</b>${req.length?req.map(p=>{
       const opts=free.map(r=>({r,sc:simScore(p.full_name,r.full_name)})).sort((a,b)=>b.sc-a.sc);
-      return `<div class="col" style="border-top:1px solid var(--line);padding-top:10px"><div><b>${esc(p.full_name)}</b>${p.status==='rejected'?'<span class="pill" style="background:#E8B4B8;margin-left:6px">отклонена</span>':''}<div class="muted">${esc(p.email||'')} · ${dt(p.created_at)}</div></div>
-      <label>Это сотрудник из списка:<select data-rs="${p.id}"><option value="">— не привязывать —</option>${opts.map(({r,sc})=>`<option value="${r.id}" ${sc>=3&&r===opts[0].r?'selected':''}>${sc>0?'★ ':''}${esc(r.full_name)} · ${TN[r.team]}</option>`).join('')}</select></label>
+      return `<div class="col" style="border-top:1px solid var(--line);padding-top:10px"><div><b>${esc(p.full_name)}</b>${p.status==='rejected'?'<span class="pill" style="background:#E8B4B8;margin-left:6px">отклонена</span>':''}<div class="muted">${esc(p.email||'')}${p.phone?' · '+esc(p.phone):''} · ${dt(p.created_at)}</div></div>
+      <label>Это сотрудник из списка:<select data-rs="${p.id}"><option value="">— не привязывать —</option>${opts.map(({r,sc})=>`<option value="${r.id}" ${sc>=3&&r===opts[0].r?'selected':''}>${sc>0?'★ ':''}${esc(r.full_name)}${r.team?' · '+TN[r.team]:''}${r.pre_role?' · '+esc(r.pre_position||'руководитель'):''}</option>`).join('')}</select></label>
       <div class="two"><button class="btn" data-ok="${p.id}">Одобрить</button>${p.status==='rejected'?'':`<button class="btn ghost" data-no="${p.id}">Отклонить</button>`}</div></div>`}).join(''):'<div class="muted">Новых заявок нет</div>'}<div class="muted">★ — похоже по имени и фамилии. Табельный номер присваивается автоматически при одобрении.</div></div>`;
-  h+=`<div class="card pad col"><b>👥 Команда · ${ap.length}</b><div class="muted">Имя (первое слово идёт в приветствие) и табельный номер</div>${ap.map(p=>`<div class="prow"><input class="pn" data-pn="${p.id}" value="${esc(p.full_name||'')}" placeholder="Имя Фамилия"><input class="pt" data-pt="${p.id}" value="${esc(p.tab_no||'')}" placeholder="№"><button class="btn" style="padding:0 14px" data-sp="${p.id}" aria-label="Сохранить">💾</button></div><div class="muted" style="margin-top:-6px">${p.id===S.me.id?ROLE_RU[p.role].toLowerCase():`<select class="rl" data-rl="${p.id}">${Object.entries(ROLE_RU).map(([k,v])=>`<option value="${k}" ${p.role===k?'selected':''}>${v}</option>`).join('')}</select>`}${rl.get(p.id)?' · в списке: '+esc(rl.get(p.id)):''}${p.team?' · '+(TN[p.team]||''):''} · с ${dt(p.created_at)}</div>`).join('')}</div>`;
+  const adm=isAdmin(),lockRole=p=>!adm&&(p.role==='manager'||p.role==='admin'),roleOpts=p=>Object.entries(ROLE_RU).filter(([k])=>adm?k!=='admin'||p.role==='admin':k==='employee'||k==='lead');
+  h+=`<div class="card pad col"><b>👥 Команда · ${ap.length}</b><div class="muted">Имя (первое слово идёт в приветствие), табельный номер и должность${adm?'. Роли руководителей и удаление — только у админа':''}</div>${ap.map(p=>`<div class="col" style="border-top:1px solid var(--line);padding-top:10px;gap:6px"><div class="prow"><input class="pn" data-pn="${p.id}" value="${esc(p.full_name||'')}" placeholder="Имя Фамилия"><input class="pt" data-pt="${p.id}" value="${esc(p.tab_no||'')}" placeholder="№"><button class="btn" style="padding:0 14px" data-sp="${p.id}" aria-label="Сохранить">💾</button></div>
+    <input data-ps="${p.id}" value="${esc(p.position||'')}" placeholder="Должность (например, супервайзер)">
+    <div class="muted">${p.id===S.me.id||lockRole(p)||p.role==='admin'?`<b>${ROLE_RU[p.role]}</b>`:`<select class="rl" data-rl="${p.id}">${roleOpts(p).map(([k,v])=>`<option value="${k}" ${p.role===k?'selected':''}>${v}</option>`).join('')}</select>`}${rl.get(p.id)?' · в списке: '+esc(rl.get(p.id)):''}${p.team?' · '+(TN[p.team]||''):''}${p.phone?' · '+esc(p.phone):''} · с ${dt(p.created_at)}</div>
+    ${adm&&p.id!==S.me.id?`<div class="two"><button class="btn ghost" data-pw="${p.id}">🔑 Новый пароль</button><button class="btn ghost" data-rm="${p.id}" style="color:#9b2c2c;border-color:#9b2c2c">🚫 Убрать</button></div>`:''}</div>`).join('')}</div>`;
   h+=`<div class="card pad col"><b>📋 Ещё не зарегистрировались · ${free.length}</b><div class="muted">${free.length?free.map(r=>esc(r.full_name)).join(', '):'Все из списка уже в приложении'}</div></div>`;
   app.innerHTML=h;
   app.querySelectorAll('[data-ok]').forEach(b=>b.onclick=async()=>{const id=b.dataset.ok,rs=app.querySelector(`[data-rs="${id}"]`).value;b.disabled=true;
@@ -254,9 +268,13 @@ async function staffView(){
     if(sel.value==='lead'&&!nm?.team)alert('У сотрудника не указана команда (он не привязан к списку), поэтому бригадир увидит только себя.');
     const r=await sb.from('profiles').update({role:sel.value}).eq('id',sel.dataset.rl);if(r.error){alert('Не удалось сменить роль: '+r.error.message);return staffView()}
     sel.style.outline='2px solid var(--sage)';setTimeout(()=>sel.style.outline='',900)});
-  app.querySelectorAll('[data-sp]').forEach(b=>b.onclick=async()=>{const id=b.dataset.sp,full_name=app.querySelector(`[data-pn="${id}"]`).value.trim(),tab_no=app.querySelector(`[data-pt="${id}"]`).value.trim()||null;
-    const r=await sb.from('profiles').update({full_name,tab_no}).eq('id',id);if(r.error)return alert('Не удалось сохранить: '+r.error.message);
-    if(id===S.me.id){S.me.full_name=full_name;S.me.tab_no=tab_no}S.people=[];b.textContent='✅';setTimeout(()=>staffView(),600)});
+  app.querySelectorAll('[data-sp]').forEach(b=>b.onclick=async()=>{const id=b.dataset.sp,full_name=app.querySelector(`[data-pn="${id}"]`).value.trim(),tab_no=app.querySelector(`[data-pt="${id}"]`).value.trim()||null,position=app.querySelector(`[data-ps="${id}"]`).value.trim()||null;
+    const r=await sb.from('profiles').update({full_name,tab_no,position}).eq('id',id);if(r.error)return alert('Не удалось сохранить: '+r.error.message);
+    if(id===S.me.id){S.me.full_name=full_name;S.me.tab_no=tab_no;S.me.position=position}S.people=[];b.textContent='✅';setTimeout(()=>staffView(),600)});
+  app.querySelectorAll('[data-pw]').forEach(b=>b.onclick=async()=>{const nm=ap.find(x=>x.id===b.dataset.pw)?.full_name||'';const pw=prompt('Новый пароль для '+nm+' (не короче 6 знаков). Передай его человеку лично, он сможет сменить его в Настройках:');if(!pw)return;
+    if(pw.length<6)return alert('Пароль должен быть не короче 6 знаков');const r=await sb.rpc('reset_member_password',{p_id:b.dataset.pw,p:pw});alert(r.error?'Не получилось: '+r.error.message:'Пароль задан')});
+  app.querySelectorAll('[data-rm]').forEach(b=>b.onclick=async()=>{const nm=ap.find(x=>x.id===b.dataset.rm)?.full_name||'';if(!confirm('Убрать '+nm+' из приложения? Доступ закроется, график и записи в журналах сохранятся.'))return;
+    const r=await sb.rpc('remove_member',{p_id:b.dataset.rm});if(r.error)return alert('Не получилось: '+r.error.message);S.people=[];staffView().then(refreshUnread)});
 }
 // ---------- Настройки ----------
 
@@ -409,14 +427,24 @@ async function dgOpen(id,colId){
 }
 
 async function settingsView(){
-  const cur=getTheme();
+  const cur=getTheme(),adm=isAdmin(),pf=S.me.push_prefs||{},pon=k=>pf[k]!==false;
+  let ct=null;if(adm){const r=await sb.from('app_settings').select('value').eq('key','checkin_time').maybeSingle();ct=r.data?.value||{h:9,m:30}}
   let h=head('Настройки','Профиль и оформление');
-  h+=`<div class="card pad"><b style="font-size:18px">${esc(S.me.full_name||'')}</b><div class="muted">${ROLE_RU[S.me.role]||'Сотрудник'}${S.me.tab_no?` · табельный № ${esc(S.me.tab_no)}`:' · табельный номер пока не назначен'}</div></div>`;
+  h+=`<div class="card pad"><b style="font-size:18px">${esc(S.me.full_name||'')}</b><div class="muted">${ROLE_RU[S.me.role]||'Сотрудник'}${S.me.position&&S.me.position!==ROLE_RU[S.me.role]?' · '+esc(S.me.position):''}${S.me.tab_no?` · табельный № ${esc(S.me.tab_no)}`:' · табельный номер пока не назначен'}</div></div>`;
   h+=`<div class="card pad"><b>Оформление</b><div class="muted">Четыре сезона, у каждого тёплый и холодный вариант</div>${Object.entries(THEMES).map(([k,[ic,n]])=>`<div class="trow"><span>${ic} ${n}</span>${[['warm','Тёплый'],['cold','Холодный']].map(([v,t])=>`<button class="tbtn ${cur===k+'-'+v?'on':''}" data-th="${k}-${v}"><i class="sw" data-theme="${k}-${v}"></i>${t}</button>`).join('')}</div>`).join('')}</div>`;
+  h+=`<div class="card pad col"><b>📱 Мой телефон</b><div class="muted">Номер сам появится у коллег в «Команда → Контакты». Вводить его больше нигде не нужно.</div><div class="prow"><input id="st_ph" type="tel" class="pn" placeholder="+7 ..." value="${esc(S.me.phone||'')}"><button class="btn" id="st_phs">Сохранить</button></div></div>`;
+  h+=`<div class="card pad col"><b>🔑 Сменить пароль</b><div class="muted">Письмо на почту не отправляется: пароль меняется сразу.</div><input id="st_p1" type="password" autocomplete="new-password" placeholder="Новый пароль (от 6 знаков)"><input id="st_p2" type="password" autocomplete="new-password" placeholder="Повтори пароль"><div class="err" id="st_pe"></div><button class="btn" id="st_pw">Сменить пароль</button></div>`;
+  h+=`<div class="card pad col"><b>🔔 Что присылать на телефон</b><div class="muted">Колокольчик внутри приложения работает всегда. Утреннюю отметку «Ты сегодня на смене?» и срочные поломки отключить нельзя.</div>${[['req','📨 Заявки, поломки и ответы по ним'],['news','📰 Новости и афиша'],['rot','🔄 Ротации'],['task','📋 Задачи и комментарии в смене']].map(([k,n])=>`<label class="chk"><input type="checkbox" data-pp="${k}" ${pon(k)?'checked':''}><span>${n}</span></label>`).join('')}</div>`;
+  if(adm)h+=`<div class="card pad col"><b>⚙️ Настройки приложения (только админ)</b><div class="muted">Во сколько утром приходит «Ты сегодня на смене?» (по Москве).</div><div class="prow"><input id="st_ct" type="time" class="pn" value="${String(ct.h).padStart(2,'0')}:${String(ct.m).padStart(2,'0')}"><button class="btn" id="st_cts">Сохранить</button></div><div class="err" id="st_cte"></div></div>`;
   h+='<div id="pushbox"></div>';
   h+=`<button class="btn ghost" id="out">Выйти из аккаунта</button>`;
   app.innerHTML=h;
   window.pushMount&&pushMount();
+  $('#st_phs').onclick=async e=>{e.target.disabled=true;const v=$('#st_ph').value.trim(),r=await sb.rpc('set_my_phone',{p:v});e.target.disabled=false;if(r.error)return alert(r.error.message);S.me.phone=v||null;S.dg.people=[];e.target.textContent='✅';setTimeout(()=>e.target.textContent='Сохранить',1200)};
+  $('#st_pw').onclick=async e=>{const p1=$('#st_p1').value,p2=$('#st_p2').value,er=$('#st_pe');er.style.color='';if(p1.length<6)return er.textContent='Пароль не короче 6 знаков';if(p1!==p2)return er.textContent='Пароли не совпадают';
+    e.target.disabled=true;const r=await sb.auth.updateUser({password:p1});e.target.disabled=false;if(r.error)return er.textContent='Не получилось: '+r.error.message;$('#st_p1').value=$('#st_p2').value='';er.style.color='var(--ink)';er.textContent='Пароль изменён ✅'};
+  app.querySelectorAll('[data-pp]').forEach(c=>c.onchange=async()=>{const p={};app.querySelectorAll('[data-pp]').forEach(x=>p[x.dataset.pp]=x.checked);const r=await sb.rpc('set_my_push_prefs',{p});if(r.error){alert(r.error.message);c.checked=!c.checked;return}S.me.push_prefs=p});
+  $('#st_cts')&&($('#st_cts').onclick=async e=>{const [h,m]=($('#st_ct').value||'09:30').split(':').map(Number);e.target.disabled=true;const r=await sb.rpc('set_checkin_time',{h,m});e.target.disabled=false;const er=$('#st_cte');er.style.color=r.error?'':'var(--ink)';er.textContent=r.error?r.error.message:'Сохранено: теперь отметка приходит в '+String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+' ✅'});
   app.querySelectorAll('[data-th]').forEach(b=>b.onclick=()=>{applyTheme(b.dataset.th);settingsView()});
   $('#out').onclick=()=>sb.auth.signOut().then(()=>{clearCache();S.me=null;S.unread=0;boot()});
 }

@@ -22,7 +22,7 @@ async function reqView(){
   }
   const what=x=>x.kind==='swap'?`<b>${esc(dispName(x.user_id))}</b> ⇄ <b>${esc(dispName(x.peer_id))}</b><div class="muted">${dayLabel(x.day)}: выйдет ${esc(dispName(x.peer_id))} вместо ${esc(dispName(x.user_id))}<br>${dayLabel(x.peer_day)}: выйдет ${esc(dispName(x.user_id))} вместо ${esc(dispName(x.peer_id))}</div>`:`<b>${esc(dispName(x.user_id))}</b> · ${REQ_K[x.kind][0]} ${REQ_K[x.kind][1]}<div class="muted">${dRange(x)}</div>`;
   const stp=x=>`<span class="pill" style="background:${REQ_ST[x.status][1]}">${REQ_ST[x.status][0]}</span>`;
-  let h=head('Заявки','Отгулы, ДО, отпуск и обмен сменами');
+  let h=head('Заявки','Отгулы, ДО, отпуск и обмен сменами')+subBar('ap','req');
   h+='<button class="btn" id="rq_new">➕ Новая заявка</button>';
   if(toMe.length)h+=`<div class="card pad col"><b>⏳ Ждут твоего ответа</b>${toMe.map(x=>`<div class="col" style="border-top:1px solid var(--line);padding-top:10px">${what(x)}${x.note?`<div>${esc(x.note)}</div>`:''}<div class="two"><button class="btn" data-pa="${x.id}" data-ok="1">Согласен</button><button class="btn ghost" data-pa="${x.id}" data-ok="0">Отказаться</button></div></div>`).join('')}</div>`;
   if(mgr)h+=`<div class="card pad col"><b>📋 На рассмотрении · ${pend.length}</b>${pend.map(x=>`<div class="col" style="border-top:1px solid var(--line);padding-top:10px">${what(x)}${x.note?`<div>${esc(x.note)}</div>`:''}
@@ -65,7 +65,7 @@ function reqForm(){
       if(r.error){e.target.disabled=false;return er.textContent='Не получилось: '+r.error.message}
       close(false);reqView().then(refreshUnread);
     };
-  },()=>{if(S.tab==='req')reqView()});
+  },()=>{if(onTab('req'))reqView()});
 }
 
 // ================= НОВОСТИ =================
@@ -73,7 +73,7 @@ async function newsView(){
   await ensurePeople();
   const [n,a]=await Promise.all([sb.from('news').select('*').order('pinned',{ascending:false}).order('created_at',{ascending:false}).limit(60),sb.from('news_acks').select('*')]);
   const mgr=isManager(),list=n.data||[],acks=a.data||[],me=S.me.id,total=S.dg.people.length;
-  let h=head('Новости','Что нового в парке');
+  let h=head('Новости','Что нового в парке')+subBar('park','news');
   if(mgr)h+='<button class="btn" id="nw_new">➕ Опубликовать новость</button>';
   h+=list.map(x=>{
     const ack=acks.filter(k=>k.news_id===x.id),mine=ack.find(k=>k.user_id===me),lg=(x.body||'').length>240;
@@ -104,7 +104,7 @@ function newsForm(x){
       const r=x?await sb.from('news').update(row).eq('id',x.id):await sb.from('news').insert(row);
       if(r.error)return box.querySelector('#w_er').textContent=r.error.message;close()};
     box.querySelector('#w_dl')?.addEventListener('click',async()=>{if(!confirm('Удалить новость?'))return;await sb.from('news').delete().eq('id',x.id);close()});
-  },()=>{if(S.tab==='news')newsView()});
+  },()=>{if(onTab('news'))newsView()});
 }
 
 // ================= БАЗА ЗНАНИЙ =================
@@ -167,9 +167,8 @@ function kbEdit(p){
 S.ct={q:''};
 async function contactsView(){
   await ensurePeople(true);
-  const ppl=S.dg.people,me=ppl.find(p=>p.id===S.me.id);
-  let h=head('Контакты','Телефоны команды');
-  h+=`<div class="card pad col"><b>Мой телефон</b><div class="muted">Его увидят коллеги в этом списке.</div><div class="prow"><input id="ct_my" type="tel" class="pn" placeholder="+7 ..." value="${esc(me?.phone||'')}"><button class="btn" id="ct_sv">Сохранить</button></div></div>`;
+  const ppl=S.dg.people;
+  let h=head('Контакты','Телефоны команды')+subBar('team','contacts');
   h+=`<input id="ct_q" type="search" placeholder="🔍 Поиск по имени" value="${esc(S.ct.q)}"><div id="ct_list"></div>`;
   app.innerHTML=h;
   const draw=()=>{
@@ -179,14 +178,14 @@ async function contactsView(){
   };
   draw();
   $('#ct_q').oninput=e=>{S.ct.q=e.target.value;draw()};
-  $('#ct_sv').onclick=async e=>{e.target.disabled=true;const r=await sb.rpc('set_my_phone',{p:$('#ct_my').value});if(r.error)alert(r.error.message);else{e.target.textContent='✅';await ensurePeople(true);setTimeout(()=>contactsView(),500)}};
 }
 
 // ================= МЕНЮ «ЕЩЁ» (телефон) =================
 function moreView(){
   const mgr=isManager(),b=S.badges||{};
-  const items=[['news','📰','Новости','Что нового в парке'],['afisha','🎟️','Афиша','События и расписание'],['req','📨','Заявки','Отгул, ДО, отпуск, обмен сменами'],['kb','📚','База знаний','Регламенты и инструкции'],['fix','🛠','Поломки','Сообщить о поломке: описание, фото, видео'],['inc','🚨','Происшествия',mgr?'Журнал происшествий':'Сообщить о происшествии'],['contacts','📞','Контакты','Телефоны команды'],
-    ...(canMng()&&VIEWS.grid?[['grid','📆','Общий график и сводка','Все сотрудники по дням, часы и переработки, Excel']]:[]),...(mgr?[['staff','👥','Команда','Заявки на регистрацию и список']]:[]),['set','⚙️','Настройки','Оформление и выход']];
+  const items=[['shift','✅','Смена','Открытие и закрытие: чек-листы зон'],['park','📰','Парк','Новости и афиша событий'],['kb','📚','База знаний','Регламенты и инструкции'],['team','👥','Команда','Телефоны'+(mgr?', заявки на регистрацию, роли':'')],
+    ...(canMng()&&VIEWS.grid?[['grid','📆','График и сводка','Все сотрудники по дням, часы и переработки, Excel']]:[]),['set','⚙️','Настройки','Телефон, пароль, уведомления, оформление']];
+  b.team=b.staff;
   app.innerHTML=head('Ещё','Все разделы приложения')+items.map(([k,ic,n,d])=>`<div class="card pad" data-go="${k}" style="display:flex;gap:14px;align-items:center;cursor:pointer"><span style="font-size:28px">${ic}</span><span style="flex:1"><b style="font-size:16px">${n}</b><div class="muted">${d}</div></span>${b[k]?`<span class="pill" style="background:#C0392B;color:#fff;align-self:center">${b[k]}</span>`:''}</div>`).join('');
   app.querySelectorAll('[data-go]').forEach(c=>c.onclick=()=>go(c.dataset.go));
 }

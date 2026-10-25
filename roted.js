@@ -29,7 +29,7 @@ async function rotView(){
   if(rot.banner)h+=`<div class="banner">🎃 ${esc(rot.banner)}</div>`;
   // моя смена
   const mine=myShift(rot);
-  if(mine.length)h+=`<div class="card pad col" style="border:2px solid var(--ink)"><b>👤 Твоя смена</b>${mine.map(x=>`<div><b>${esc(x.zone)}</b> <span class="muted">· ${esc(x.sec.replace(/^.*·\s*/,''))}${x.team==='W'?' · если дождь':''}</span>${x.p.brks?.length?`<div class="muted">Перерыв: ${x.p.brks.map(esc).join(' · ')}</div>`:''}${x.steps?.length?`<div class="muted">Замены: ${x.steps.map(s=>esc(s[0])+' '+esc(s[1])).join(' · ')}</div>`:''}</div>`).join('')}</div>`;
+  h+=myShiftCard(mine);
   const rimg=rot.images?.[S.team]||(rot.image&&(rot.imageTeams||['R','M']).includes(S.team)?rot.image:null);
   if(rimg)h+=`<button class="card rimg" id="rimg" aria-label="Увеличить картинку ротации"><img src="${esc(rimg)}" alt="Ротация картинкой" loading="lazy"><span>🔍 Нажми, чтобы увеличить</span></button>`;
   h+=`<div class="tabs">${TEAMS.map(([k,n,c])=>`<button data-t="${k}" class="${S.team===k?'on':''}" style="background:${c}">${n}</button>`).join('')}</div>`;
@@ -246,3 +246,5 @@ function rotZoom(src){
   document.addEventListener('keydown',kd);
   document.body.appendChild(ov);document.body.style.overflow='hidden';
 }
+
+function myShiftCard(mine){return mine.length?`<div class="card pad col" style="border:2px solid var(--ink)"><b>👤 Твоя смена</b>${mine.map(x=>`<div><b>${esc(x.zone)}</b> <span class="muted">· ${esc(x.sec.replace(/^.*·\s*/,''))}${x.team==='W'?' · если дождь':''}</span>${x.p.brks?.length?`<div class="muted">Перерыв: ${x.p.brks.map(esc).join(' · ')}</div>`:''}${x.steps?.length?`<div class="muted">Замены: ${x.steps.map(s=>esc(s[0])+' '+esc(s[1])).join(' · ')}</div>`:''}</div>`).join('')}</div>`:''}

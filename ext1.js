@@ -109,7 +109,7 @@ async function incView(){
   await ensurePeople();
   const r=await sb.from('incidents').select('*').order('created_at',{ascending:false}).limit(300);
   const mgr=isManager(),all=r.data||[],list=all.filter(x=>S.inc.f==='all'||x.status===S.inc.f);
-  let h=head('Происшествия',mgr?'Журнал происшествий парка':'Твои сообщения о происшествиях');
+  let h=head('Происшествия',mgr?'Журнал происшествий парка':'Твои сообщения о происшествиях')+subBar('ap','inc');
   h+=`<button class="btn" id="inc_new">➕ Сообщить о происшествии</button>`;
   if(mgr){
     const cnt=s=>all.filter(x=>x.status===s).length;
@@ -145,7 +145,7 @@ function incForm(){
       for(const f of files)await fileUpload('inc','inc_files','inc_id',r.data.id,f);
       close(false);alert('Записано, руководители уведомлены ✅');incView();
     };
-  },()=>{if(S.tab==='inc')incView()});
+  },()=>{if(onTab('inc'))incView()});
 }
 function incOpen(x){
   const mgr=isManager();let st=x.status;
@@ -163,7 +163,7 @@ function incOpen(x){
       :`<div><b style="font-size:14px">Статус:</b> <span class="pill" style="background:${INC_ST[x.status][1]}">${INC_ST[x.status][0]}</span>${x.resolution?`<div style="margin-top:6px;white-space:pre-wrap">${esc(x.resolution)}</div>`:''}</div>`}`;
     box.querySelector('#i_sv')?.addEventListener('click',async()=>{const r=await sb.from('incidents').update({status:box.querySelector('#i_st').value,resolution:box.querySelector('#i_rs').value.trim()||null}).eq('id',x.id);if(r.error)return box.querySelector('#i_er').textContent=r.error.message;S.inc.f=S.inc.f;document.querySelector('.ov #bk').click()});
     box.querySelector('#i_dl')?.addEventListener('click',async()=>{if(!confirm('Удалить запись о происшествии насовсем?'))return;if(files.length)await sb.storage.from('inc').remove(files.map(y=>y.path));await sb.from('incidents').delete().eq('id',x.id);document.querySelector('.ov #bk').click()});
-  },()=>{if(S.tab==='inc')incView()});
+  },()=>{if(onTab('inc'))incView()});
 }
 
 VIEWS.shift=shiftView;VIEWS.inc=incView;

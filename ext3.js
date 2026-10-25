@@ -7,7 +7,7 @@ async function fixView(){
   const [r,fl]=await Promise.all([sb.from('repairs').select('*').order('created_at',{ascending:false}).limit(300),sb.from('repair_files').select('repair_id,mime')]);
   const mgr=isManager(),all=r.data||[],list=all.filter(x=>S.fix.f==='all'||x.status===S.fix.f);
   const nf={};(fl.data||[]).forEach(x=>{const o=nf[x.repair_id]||(nf[x.repair_id]={p:0,v:0});/^video\//.test(x.mime||'')?o.v++:o.p++});
-  let h=head('Поломки',mgr?'Что сломалось в парке — от сотрудников':'Сообщи, если что-то сломалось');
+  let h=head('Поломки',mgr?'Что сломалось в парке — от сотрудников':'Сообщи, если что-то сломалось')+subBar('ap','fix');
   h+=`<button class="btn" id="fx_new">🛠 Сообщить о поломке</button>`;
   if(mgr){const c=s=>all.filter(x=>x.status===s).length;
     h+=`<div class="tabs">${[['all','Все',all.length],['new','Новые',c('new')],['work','В работе',c('work')],['done','Устранены',c('done')]].map(([k,n,v])=>`<button data-f="${k}" class="${S.fix.f===k?'on':''}" style="background:var(--tab)">${n} · ${v}</button>`).join('')}</div>`}
@@ -46,7 +46,7 @@ function fixForm(){
       close(false);
       alert(bad.length?'Заявка отправлена, но не всё загрузилось:\n'+bad.join('\n'):'Отправлено, руководители уведомлены ✅');fixView();
     };
-  },()=>{if(S.tab==='fix')fixView()});
+  },()=>{if(onTab('fix'))fixView()});
 }
 function fixOpen(x){
   const mgr=isManager();
@@ -66,6 +66,6 @@ function fixOpen(x){
       :(x.resolution?`<div><b style="font-size:14px">Ответ руководителя</b><div style="margin-top:4px;white-space:pre-wrap">${esc(x.resolution)}</div></div>`:'')}`;
     box.querySelector('#x_sv')?.addEventListener('click',async()=>{const r=await sb.from('repairs').update({status:box.querySelector('#x_st').value,resolution:box.querySelector('#x_rs').value.trim()||null}).eq('id',x.id);if(r.error)return box.querySelector('#x_er').textContent=r.error.message;document.querySelector('.ov #bk').click()});
     box.querySelector('#x_dl')?.addEventListener('click',async()=>{if(!confirm('Удалить заявку вместе с фото и видео?'))return;if(files.length)await sb.storage.from('repairs').remove(files.map(y=>y.path));await sb.from('repairs').delete().eq('id',x.id);document.querySelector('.ov #bk').click()});
-  },()=>{if(S.tab==='fix')fixView()});
+  },()=>{if(onTab('fix'))fixView()});
 }
 VIEWS.fix=fixView;

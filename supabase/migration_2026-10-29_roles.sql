@@ -135,3 +135,18 @@ where r.full_name='Алексюк Игорь' and extract(dow from d) in(0,6) on
 insert into public.roster_marks(roster_id,day,kind)
 select r.id,make_date(2026,10,i),'off' from public.roster r, generate_series(1,22) i
 where r.full_name='Прошутинская К.' and substr('o...oooo...oooo...oooo..',i,1)='o' on conflict do nothing;
+
+-- регистрация: телефон из заявки попадает в профиль
+create or replace function public.handle_new_user() returns trigger language plpgsql security definer set search_path=public as $$
+begin
+  insert into profiles(id,full_name,email,status,phone) values(new.id,coalesce(nullif(new.raw_user_meta_data->>'full_name',''),new.email),new.email,'pending',nullif(trim(coalesce(new.raw_user_meta_data->>'phone','')),''));
+  return new;
+end $$;
+
+-- админ задаёт сотруднику новый пароль (письма на почту не отправляются)
+create or replace function public.reset_member_password(p_id uuid, p text) returns void language plpgsql security definer set search_path=public,extensions,auth as $$
+begin
+  if not is_admin() then raise exception 'Только админ'; end if;
+  if length(coalesce(p,''))<6 then raise exception 'Пароль не короче 6 знаков'; end if;
+  update auth.users set encrypted_password=extensions.crypt(p, extensions.gen_salt('bf')), updated_at=now() where id=p_id;
+end $$;
