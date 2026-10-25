@@ -503,5 +503,10 @@ boot();
     ['heart','right:5vw;bottom:21vh','clamp(40px,7vw,64px)',-10],
     ['thumb','left:17vw;bottom:33vh','clamp(46px,8vw,72px)',-6]];
   const box=document.getElementById('bgs');if(!box)return;
-  box.innerHTML=D.map(([f,pos,w,r])=>`<img src="stickers/${f}.webp" alt="" loading="lazy" decoding="async" style="${pos};width:${w};transform:rotate(${r}deg)">`).join('');
+  // россыпь нарисованных стикеров: сетка 4×8 со случайным (но одинаковым при каждом запуске) смещением
+  const N=['star','flower','leaf','mushroom','acorn','balloon','rainbow','sun','moon','paw','butterfly','cupcake','drum','umbrella','snow','pumpkin','cherry'];
+  let sd=7;const rnd=()=>{sd=(sd*1664525+1013904223)>>>0;return sd/4294967296};
+  const X=[];for(let r=0;r<8;r++)for(let c=0;c<4;c++){const f=N[(r*4+c*3+r)%N.length];if(r<2&&c<3||r===0)continue;
+    X.push([f+'.svg',`left:${((c+.1+rnd()*.7)*25).toFixed(1)}vw;top:${((r+.05+rnd()*.7)*12.5).toFixed(1)}vh`,`clamp(44px,${(6+rnd()*3).toFixed(1)}vw,${Math.round(70+rnd()*24)}px)`,Math.round(rnd()*44-22)])}
+  box.innerHTML=X.concat(D.map(d=>[d[0]+'.webp',d[1],d[2],d[3]])).map(([f,pos,w,r])=>`<img src="stickers/${f}" alt="" loading="lazy" decoding="async" style="${pos};width:${w};transform:rotate(${r}deg)">`).join('');
 })();

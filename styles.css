@@ -11,10 +11,10 @@ h1,h2{font-family:Alegreya,Georgia,serif;margin:0}h1{font-size:32px}
 #app{max-width:520px;margin:0 auto;padding:24px 16px;display:flex;flex-direction:column;gap:14px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:20px;overflow:hidden}.pad{padding:14px 16px}
 button{font:inherit;cursor:pointer}.btn{min-height:48px;border:0;border-radius:16px;background:var(--ink);color:#FFFDF9;font-weight:800;padding:0 18px}
-.btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--ink)}
+.btn.ghost{background:var(--card);color:var(--ink);border:1.5px solid var(--ink)}
 input,textarea,select{font:inherit;width:100%;min-height:48px;padding:0 14px;border-radius:16px;border:1.5px solid var(--inb);background:var(--card);color:var(--ink)}textarea{padding:12px;min-height:80px}
 label{font-weight:700;font-size:14px;display:flex;flex-direction:column;gap:6px}
-.seg{display:flex;gap:4px;padding:4px;background:var(--line);border-radius:18px}.seg button{flex:1;min-height:48px;border:0;border-radius:14px;background:transparent;color:var(--ink);font-weight:800}.seg button.on{background:var(--ink);color:#FFFDF9}
+.seg{display:flex;gap:4px;padding:4px;background:var(--line);border-radius:18px}.seg button{flex:1;min-height:48px;border:0;border-radius:14px;background:var(--card);color:var(--ink);font-weight:800}.seg button.on{background:var(--ink);color:#FFFDF9}
 .tabs{display:flex;gap:8px;flex-wrap:wrap}.tabs button{min-height:44px;padding:0 16px;border:0;border-radius:22px;font-weight:700;color:var(--ink)}.tabs button.on{background:var(--ink)!important;color:#FFFDF9}
 .banner{background:var(--ink);color:var(--gold);padding:16px;border-radius:20px;font-weight:800;font-size:17px;display:flex;gap:12px;align-items:center}
 .sec>.h{background:var(--ink);color:#FFFDF9;padding:12px 16px;font-weight:800}.sec>.n{padding:8px 16px;font-weight:700;font-size:13px}
@@ -189,11 +189,14 @@ select.rl{width:auto;min-height:0;padding:2px 6px;font-size:13px;display:inline-
 
 /* фон со стикерами и логотип */
 #bgs{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
-#bgs img{position:absolute;height:auto;opacity:.55;filter:drop-shadow(0 3px 5px rgba(60,40,50,.14))}
+#bgs img{position:absolute;height:auto;opacity:.88;filter:drop-shadow(0 3px 5px rgba(60,40,50,.14))}
 #app{position:relative;z-index:1}nav{position:relative!important;z-index:5}
 .brand{display:flex;align-items:center;gap:10px;min-width:0}.brand .lg{height:56px;width:auto;flex:none;filter:drop-shadow(0 2px 3px rgba(60,40,50,.18))}
 .authhd{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}.authhd .alogo{width:min(52vw,210px);height:auto;filter:drop-shadow(0 3px 5px rgba(60,40,50,.18))}.authhd .amas{width:min(34vw,150px);height:auto;margin-bottom:-6px;filter:drop-shadow(0 3px 5px rgba(60,40,50,.18))}
-@media (min-width:900px){#bgs img{opacity:.7}}
+@media (min-width:900px){#bgs img{opacity:.95}}
 
 .subbar{margin:0}.subbar button{font-size:13px;padding:0 3px;white-space:nowrap;display:flex;align-items:center;justify-content:center;gap:3px}.sbn{font-style:normal;background:#C0392B;color:#fff;border-radius:9px;padding:1px 6px;font-size:11px;margin-left:2px}
 .chk{display:flex;flex-direction:row;align-items:center;gap:12px;font-weight:600}.chk input{width:24px;min-height:24px;flex:none}
+
+h1,#app>.muted,.top+.muted{text-shadow:0 0 5px var(--bg),0 0 9px var(--bg),0 0 12px var(--bg)}
+.btn.ghost:hover{background:var(--tab)}
