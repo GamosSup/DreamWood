@@ -88,7 +88,7 @@ function rotNew(){
 // ---------- проверки ротации ----------
 function rotCheck(D,roster){
   const out=[],seenMsg=new Set(),add=(lvl,msg)=>{if(seenMsg.has(msg))return;seenMsg.add(msg);out.push({lvl,msg})};
-  const brkRe=/^(Ос|О|Т|Бриф)\s*(\d{1,2}):(\d{2})\s*[–-]\s*(\d{1,2}):(\d{2})/;
+  const brkRe=/^(Ос|Пс|О|П|Т|Бриф)\s*(\d{1,2}):(\d{2})\s*[–-]\s*(\d{1,2}):(\d{2})/;
   const parseB=s=>{const m=String(s).match(brkRe);return m?{code:m[1],s:+m[2]+m[3]/60,e:+m[4]+m[5]/60,raw:s}:null};
   const ov=(a,b)=>a.s<b.e-.01&&b.s<a.e-.01;
   const end=dayEndOf(D),rk=roster?new Set(roster.map(nameKey)):null;
@@ -114,7 +114,7 @@ function rotCheck(D,roster){
             if(x.r[0]<sr[0]-.01||x.r[1]>sr[1]+.01)add('warn',`${where}: замена Альфы ${fmtH(x.r[0])}–${fmtH(x.r[1])} выходит за границы раздела`);
             if(i>0&&x.r[0]<st[i-1].r[1]-.01)add('err',`${where}: у Альфы пересекаются замены (${fmtH(st[i-1].r[0])}–${fmtH(st[i-1].r[1])} и ${fmtH(x.r[0])}–${fmtH(x.r[1])})`);
             if(i>0&&x.r[0]>st[i-1].r[1]+.01)add('warn',`${where}: у Альфы пустое время ${fmtH(st[i-1].r[1])}–${fmtH(x.r[0])}`);
-            if(!/^(ос|бриф|т)$/i.test(x.label.trim()))alpha.push({s:x.r[0],e:x.r[1],label:x.label,where});
+            if(!/^(ос|пс|бриф|т|ротация)$/i.test(x.label.trim()))alpha.push({s:x.r[0],e:x.r[1],label:x.label,where});
           });
         }
         const iv=[];
@@ -129,11 +129,11 @@ function rotCheck(D,roster){
             if(b.s<sr[0]-.01||b.e>sr[1]+.01)add('warn',`${where} · ${nm}: перерыв ${fmtH(b.s)}–${fmtH(b.e)} вне времени раздела`);
             if(b.e-b.s>1.01||b.e-b.s<.24)add('warn',`${where} · ${nm}: странная длительность перерыва ${fmtH(b.s)}–${fmtH(b.e)}`);
             bs.slice(i+1).forEach(c=>{if(c.code!=='Бриф'&&c.code!=='Т'&&ov(b,c))add('err',`${where} · ${nm}: перерывы пересекаются (${fmtH(b.s)}–${fmtH(b.e)} и ${fmtH(c.s)}–${fmtH(c.e)})`)});
-            if(b.code==='О')obr.push({zone,s:b.s,e:b.e,name:nm,where});
+            if(b.code==='О'||b.code==='П')obr.push({zone,s:b.s,e:b.e,name:nm,where});
             if(strict&&/веревоч/i.test(zone)&&b.code==='О')add('warn',`${where} · ${nm}: у Веревочного лагеря обед самостоятельный — должен быть «Ос», а не «О»`);
             iv.push({...b,who:nm});
           });
-          const lunches=bs.filter(b=>b.code==='О'||b.code==='Ос');
+          const lunches=bs.filter(b=>['О','Ос','П','Пс'].includes(b.code));
           if(strict&&!isA&&(sr[1]-sr[0])>=3.5&&p.name&&!lunches.length&&!(p.brks||[]).length)add('warn',`${where} · ${nm} (${zone}): не указан перерыв`);
         });
         // зона без людей: все на самостоятельном обеде одновременно

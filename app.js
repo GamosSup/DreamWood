@@ -8,9 +8,9 @@ function applyTheme(t){document.documentElement.dataset.theme=t;try{localStorage
   const m=document.querySelector('meta[name=theme-color]');if(m)m.content=getComputedStyle(document.documentElement).getPropertyValue('--ink').trim()||'#3B2A35'}
 applyTheme(getTheme());
 const S={unread:0,tab:'rot',me:null,team:'R',day:null,month:new Date(),viewUser:null,sel:null,people:[],marks:{},ev:null,evFilter:'all'};
-const ZC={'Веревочный лагерь':'#C9D4B0','Золото':'#E6CC8F','Гольф':'#B7CFC4','Альфа':'#D3BFD0','Боулинг':'#BCC8D6','Кино':'#E4B5A3','VR-арена':'#BFD3D3','Няня 1':'#D9C3AE','Няня 2':'#D9C3AE','Детский клуб':'#E8C1B5'};
-const STEPC={'Боулинг':'#BCC8D6','Ос':'#F3C29B','Гольф':'#B7CFC4','Золото':'#E6CC8F','Метро':'#CFC6BC','Веревочный лагерь / инд. задачи':'#C9D4B0','Веревочный лагерь':'#C9D4B0'};
-const brkBg=t=>t.startsWith('Ос')?'#F3C29B':t.startsWith('О')?'#F5E2A8':'#E4EDF4';
+const ZC={'Данделион':'#E4B5A3','Карусель':'#D3BFD0','Джипы':'#B7CFC4','Шахта':'#BCC8D6','Кон-Тики':'#E6CC8F','Плющ':'#C9D4B0','Дерево приключений':'#C9D4B0','Бабл хаус':'#F3C29B','Студия волшебных образов':'#D3BFD0','Квесты/Роботы':'#BFD3D3','Лес Чудес':'#B7CFC4','Альфа 1':'#D3BFD0','Альфа 2':'#D3BFD0','Старший специалист':'#E8C1B5','Супервайзер':'#E8C1B5','Веревочный лагерь':'#C9D4B0','Золото':'#E6CC8F','Гольф':'#B7CFC4','Альфа':'#D3BFD0','Боулинг':'#BCC8D6','Кино':'#E4B5A3','VR-арена':'#BFD3D3','Няня 1':'#D9C3AE','Няня 2':'#D9C3AE','Детский клуб':'#E8C1B5'};
+const STEPC={'Шахта':'#BCC8D6','Джипы':'#B7CFC4','Карусель':'#D3BFD0','Плющ':'#C9D4B0','Данделион':'#E4B5A3','Кон-Тики':'#E6CC8F','Ротация':'#E3E3E3','Пс':'#F3C29B','Боулинг':'#BCC8D6','Ос':'#F3C29B','Гольф':'#B7CFC4','Золото':'#E6CC8F','Метро':'#CFC6BC','Веревочный лагерь / инд. задачи':'#C9D4B0','Веревочный лагерь':'#C9D4B0'};
+const brkBg=t=>t.startsWith('Ос')||t.startsWith('Пс')?'#F3C29B':t.startsWith('О')?'#F5E2A8':'#CFE0EE';
 const TEAMS=[['R','Рейнджеры','#C9D4B0'],['K','Хранители','#B7CFC4'],['M','Метрополис','#E4B5A3'],['W','Если дождь','#7E98AE']];
 const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const isManager=()=>S.me?.role==='manager';
@@ -120,10 +120,10 @@ const hh=x=>{const m=x.split(':');return +m[0]+(+m[1])/60};
 const dayLabel=d=>new Date(d+'T12:00:00').toLocaleDateString('ru',{weekday:'short',day:'numeric',month:'short'});
 function parseRange(t){const m=String(t).match(/(\d{1,2}:\d{2})\s*[–-]\s*(\d{1,2}:\d{2})/);return m?[hh(m[1]),hh(m[2])]:[10,S.dayEnd||18]}
 function personTrack(p,r,c,a,b){
-  const span=b-a;let h=`<div style="display:flex;flex-direction:column;gap:4px"><div style="font-weight:700;font-size:14px">${esc(p.icon)} ${esc(p.name)}${p.senior?'<span class="sr">Старший</span>':''}</div>
+  const span=b-a;let h=`<div style="display:flex;flex-direction:column;gap:4px"><div style="font-weight:700;font-size:14px">${esc(p.icon)} ${esc(p.name)}${p.senior?'<span class="sr">Старший</span>':''}${p.tag?`<span class="sr" style="background:#E8DCCB;color:#3B2A35">${esc(p.tag)}</span>`:''}</div>
   <div class="track" style="--c:${c}"><div class="work"></div>`;
   const marks=[];
-  (p.brks||[]).forEach(t=>{const m=t.match(/^(Ос|О)\s+(\d+:\d+)[–-](\d+:\d+)/);if(!m)return;const s0=hh(m[2]),e0=hh(m[3]);if(e0<=a||s0>=b)return;
+  (p.brks||[]).forEach(t=>{const m=t.match(/^(Ос|Пс|О|П)\s+(\d+:\d+)[–-](\d+:\d+)/);if(!m)return;const s0=hh(m[2]),e0=hh(m[3]);if(e0<=a||s0>=b)return;
     h+=`<div class="brk" style="left:${(Math.max(s0,a)-a)/span*100}%;width:${(Math.min(e0,b)-Math.max(s0,a))/span*100}%;background:${brkBg(t)}">${m[1]}</div>`;marks.push(`${m[1]} ${m[2]}–${m[3]}`)});
   h+=`</div>${marks.length?`<div class="muted">Перерыв: ${marks.map(esc).join(', ')}</div>`:''}</div>`;return h}
 function axis(a,b){let t='';for(let v=Math.ceil(a);v<=b;v++)t+=`<span style="left:${(v-a)/(b-a)*100}%">${v}</span>`;return `<div class="axis">${t}</div>`}
@@ -133,7 +133,7 @@ function zoneCard(zone,blocks,c){
     const [a,b]=bl.range;
     h+=`<div class="zb"><div class="zt">🕑 ${bl.title}</div>`;
     if(bl.steps?.length){
-      h+=`<div class="muted">${esc(bl.people.map(p=>p.name).join(', '))} — меняет обеды</div><div class="bar">${bl.steps.map(x=>{const r=parseRange(x[0]);return `<div style="width:${(r[1]-r[0])/(b-a)*100}%;background:${STEPC[x[1]]||'#eee'}" title="${esc(x[0]+' '+x[1])}">${r[1]-r[0]>=1?esc(x[1].split(' ')[0]):''}</div>`}).join('')}</div>${axis(a,b)}
+      h+=`<div class="muted">${esc(bl.people.map(p=>p.name).join(', '))} — меняет обеды</div><div class="bar">${(()=>{let cur=a;return bl.steps.map(x=>{const r=parseRange(x[0]);const gap=r[0]>cur+0.01?`<div style="width:${(r[0]-cur)/(b-a)*100}%;background:transparent"></div>`:'';cur=r[1];return gap+`<div style="width:${(r[1]-r[0])/(b-a)*100}%;background:${STEPC[x[1]]||'#eee'}" title="${esc(x[0]+' '+x[1])}">${r[1]-r[0]>=1?esc(x[1].split(' ')[0]):''}</div>`}).join('')})()}</div>${axis(a,b)}
       <div class="steps">${bl.steps.map(x=>`<b>${esc(x[0])}</b><span><span class="pill" style="background:${STEPC[x[1]]||'#eee'}">${esc(x[1])}</span></span>`).join('')}</div>`;
     }else{
       h+=bl.people.map(p=>personTrack(p,null,c,a,b)).join('');h+=axis(a,b);
