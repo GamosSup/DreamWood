@@ -17,7 +17,7 @@ async function todayView(){
     adm={inc,sn,total,work:Math.max(0,total-absent),ok:(cks.data||[]).length};
   }
   const rot=rt.data?.data,mine=rot&&window.myShift?myShift(rot):[],K=mk.data&&KINDS[mk.data.kind];
-  const b=S.badges||{};
+  const b=S.act||{};
   let h=head('Сегодня',dayLabel(t));
   // статус дня
   if(K)h+=`<div class="card pad col" style="background:${K[1]}"><b style="font-size:18px">Сегодня у тебя: ${mk.data.kind==='do'?'день отдыха (ДО)':K[2].toLowerCase()}</b>${mk.data.note?`<div class="muted">${esc(mk.data.note)}</div>`:''}</div>`;

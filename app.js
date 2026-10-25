@@ -85,7 +85,7 @@ const VIEWS={sch:schView,afisha:afishaView,dg:dgView,staff:staffView,set:setting
 VIEWS.ap=()=>VIEWS[S.sub.ap]();VIEWS.park=()=>VIEWS[S.sub.park]();
 VIEWS.team=()=>{if(!isManager())S.sub.team='contacts';return VIEWS[S.sub.team]()};
 function subBar(g,cur){const L={ap:[['req','📨','Заявки'],['fix','🛠','Поломки'],['inc','🚨','Происшествия']],park:[['news','📰','Новости'],['afisha','🎟️','Афиша']],team:[['contacts','📞','Контакты'],...(isManager()?[['staff','👥','Сотрудники']]:[])]}[g];if(!L||L.length<2)return '';const b=S.badges||{};
-  return `<div class="seg subbar">${L.map(([k,ic,n])=>`<button data-sub="${k}" class="${k===cur?'on':''}">${ic} ${n}${b[k]?` <i class="sbn">${b[k]}</i>`:''}</button>`).join('')}</div>`}
+  return `<div class="seg subbar">${L.map(([k,ic,n])=>`<button data-sub="${k}" class="${k===cur?'on':''}">${ic} ${n}${b[k]&&k!==cur?` <i class="sbn">${b[k]}</i>`:''}</button>`).join('')}</div>`}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-sub]');if(b&&S.me)go(b.dataset.sub)});
 const MORE_TABS=['shift','park','kb','team','grid','set'];
 const SUBG={req:'ap',fix:'ap',inc:'ap',news:'park',afisha:'park',contacts:'team',staff:'team'};
@@ -93,23 +93,57 @@ const onTab=k=>SUBG[k]?(S.tab===SUBG[k]&&S.sub[SUBG[k]]===k):S.tab===k;
 function go(t){if(SUBG[t]){S.sub[SUBG[t]]=t;t=SUBG[t]}if(!VIEWS[t])t='today';S.tab=t;S.offline=0;document.body.dataset.tab=S.sub[t]||t;
   nav.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t||(b.dataset.tab==='more'&&MORE_TABS.includes(t))));window.scrollTo(0,0);app.scrollTop=0;
   Promise.resolve(VIEWS[t]()).then(refreshUnread)}
+const NKNOWN=new Set(['req','fix','inc','news','afisha','staff','rot','dg','shift','set']);
+const NLK=l=>{l=String(l||'');return l.startsWith('rot:')?'rot':l.startsWith('checkin')?'':l};
+const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}},lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+function paintBell(){const el=$('#bellN');if(!el)return;const tot=(S.unread||0)+(S.due||[]).length+(S.ckPending?1:0);el.hidden=!tot;el.textContent=tot>9?'9+':tot}
+// красные кружки у пунктов меню: считаем непросмотренные уведомления по разделам (+ «База знаний» и «График» — по изменениям)
+function paintBadges(){
+  const c=k=>(S.nl||[]).filter(x=>x.k===k).length,B={};
+  ['req','fix','inc','news','afisha','staff','rot','dg','shift','set'].forEach(k=>B[k]=c(k));
+  B.contacts=0;B.kb=S.kbNew||0;B.sch=S.schNew||0;
+  B.ap=B.req+B.fix+B.inc;B.park=B.news+B.afisha;B.team=B.staff;B.today=0;B.grid=0;
+  B.more=B.shift+B.park+B.kb+B.team+B.set;
+  S.badges=B;
+  nav.querySelectorAll('button[data-tab]').forEach(btn=>{let i=btn.querySelector('i');const n=B[btn.dataset.tab]||0;
+    if(!i){i=document.createElement('i');i.hidden=true;btn.appendChild(i)}
+    i.hidden=!n;i.textContent=n>99?'99+':n});
+  document.querySelectorAll('.subbar [data-sub]').forEach(btn=>{const k=btn.dataset.sub,n=btn.classList.contains('on')?0:(B[k]||0);let i=btn.querySelector('.sbn');
+    if(!n){if(i)i.remove();return}if(!i){i=document.createElement('i');i.className='sbn';btn.appendChild(document.createTextNode(' '));btn.appendChild(i)}i.textContent=n});
+}
+// открыл раздел — его уведомления считаются просмотренными
+async function markSeen(){
+  const t=S.tab,keys=[(t==='ap'||t==='park'||t==='team')?S.sub[t]:t];
+  if(t==='kb'){lsSet('dw_seen_kb',new Date().toISOString());S.kbNew=0}
+  if(t==='sch'&&S.schCur){lsSet('dw_seen_sch',JSON.stringify(S.schCur));S.schNew=0}
+  const ids=(S.nl||[]).filter(x=>keys.includes(x.k)).map(x=>x.id);
+  if(ids.length&&!S.offline){S.nl=S.nl.filter(x=>!ids.includes(x.id));S.unread=Math.max(0,(S.unread||0)-ids.length);
+    sb.from('notif_reads').upsert(ids.map(id=>({user_id:S.me.id,notif_id:id}))).then(()=>{},()=>{})}
+  paintBadges();paintBell();
+}
 async function refreshUnread(){
   if(!S.me||S.me.status!=='approved')return;
   const [n,r,p]=await Promise.all([sb.from('notifications').select('id,kind,link'),sb.from('notif_reads').select('notif_id').eq('user_id',S.me.id),isManager()?sb.from('profiles').select('id',{count:'exact',head:true}).eq('status','pending'):Promise.resolve({count:0})]);
-  if(!n.error&&!r.error){const seen=new Set((r.data||[]).map(x=>x.notif_id));S.unread=(n.data||[]).filter(x=>!seen.has(x.id)).length;
-    const el=$('#bellN');if(el){el.hidden=!S.unread;el.textContent=S.unread>9?'9+':S.unread}}
+  if(!n.error&&!r.error){const seen=new Set((r.data||[]).map(x=>x.notif_id));const un=(n.data||[]).filter(x=>!seen.has(x.id));S.unread=un.length;S.nl=un.map(x=>({id:x.id,k:NLK(x.link)})).filter(x=>x.k)}
   try{const today=iso(new Date());S.ckPending=false;
     if(!n.error&&(n.data||[]).some(x=>x.kind==='checkin'&&x.link==='checkin:'+today)){const c=await sb.from('checkins').select('at').eq('user_id',S.me.id).eq('day',today).maybeSingle();S.ckPending=!c.data}}catch(e){}
   try{const q=await sb.from('dg_tasks').select('id,title,deadline,assignees').eq('done',false).not('deadline','is',null);
-    const lim=iso(new Date(Date.now()+864e5));S.due=(q.data||[]).filter(t=>(t.assignees||[]).includes(S.me.id)&&t.deadline<=lim).sort((a,b)=>a.deadline<b.deadline?-1:1);
-    const el=$('#bellN'),tot=(S.unread||0)+S.due.length+(S.ckPending?1:0);if(el){el.hidden=!tot;el.textContent=tot>9?'9+':tot}}catch(e){S.due=[]}
-  S.pending=p.count||0;const sn=$('#staffN');if(sn){sn.hidden=!S.pending;sn.textContent=S.pending}
+    const lim=iso(new Date(Date.now()+864e5));S.due=(q.data||[]).filter(t=>(t.assignees||[]).includes(S.me.id)&&t.deadline<=lim).sort((a,b)=>a.deadline<b.deadline?-1:1)}catch(e){S.due=[]}
+  S.pending=p.count||0;
   try{const q=await sb.from('requests').select('id,status,peer_id').in('status',['peer','pending']);
     const rq=(q.data||[]).filter(x=>(x.status==='pending'&&canMng())||(x.status==='peer'&&x.peer_id===S.me.id)).length;
     let fx=0;if(isManager()){const q2=await sb.from('repairs').select('id',{count:'exact',head:true}).eq('status','new');fx=q2.count||0}
-    S.badges={req:rq,staff:S.pending,fix:fx};
-    const an=$('#apN');if(an){an.hidden=!(rq+fx);an.textContent=rq+fx}const tn=$('#teamN');if(tn){tn.hidden=!S.pending;tn.textContent=S.pending}
-    const mn=$('#moreN');if(mn){mn.hidden=!S.pending;mn.textContent=S.pending}}catch(e){}
+    S.act={req:rq,fix:fx,staff:S.pending}}catch(e){S.act=S.act||{}}
+  // «База знаний»: страницы, изменённые не мной после последнего просмотра
+  try{let ks=lsGet('dw_seen_kb');if(!ks){ks=new Date().toISOString();lsSet('dw_seen_kb',ks);S.kbNew=0}
+    else{const q=await sb.from('kb_pages').select('id,updated_by').gt('updated_at',ks);S.kbNew=(q.data||[]).filter(x=>x.updated_by!==S.me.id).length}}catch(e){S.kbNew=0}
+  // «График»: мои отметки с сегодняшнего дня изменились после последнего просмотра
+  try{const td=iso(new Date());const q=await sb.from('marks').select('day,kind').eq('user_id',S.me.id).gte('day',td).order('day');
+    if(!q.error){const cur={};(q.data||[]).forEach(x=>cur[x.day]=x.kind);S.schCur=cur;let old=null;try{old=JSON.parse(lsGet('dw_seen_sch')||'null')}catch(e){}
+      if(!old){lsSet('dw_seen_sch',JSON.stringify(cur));S.schNew=0}
+      else{const days=new Set([...Object.keys(cur),...Object.keys(old).filter(d=>d>=td)]);let d=0;days.forEach(k=>{if(cur[k]!==old[k])d++});S.schNew=d}}}catch(e){S.schNew=0}
+  paintBadges();paintBell();
+  if(S.tab)await markSeen();
 }
 const firstName=()=>(S.me?.full_name||'').trim().split(/\s+/)[0]||'друг';
 const bell=()=>`<button class="bell" aria-label="Уведомления" onclick="openBell()">🔔<i id="bellN" ${S.unread>0?'':'hidden'}>${S.unread>9?'9+':S.unread}</i></button>`;
@@ -131,10 +165,10 @@ async function openBell(){
     if(el.dataset.busy)return;el.dataset.busy=1;
     const r=await sb.rpc('checkin_confirm');if(r.error){alert('Не получилось подтвердить: '+r.error.message);delete el.dataset.busy;return}
     el.className='nt ckn done';el.removeAttribute('data-ck');el.querySelector('.ni').textContent='✅';el.querySelector('b').textContent='Выход на смену подтверждён';el.querySelector('.nbody').textContent='Подтверждено в '+tm(r.data||Date.now());
-    S.ckPending=false;const bn=$('#bellN');if(bn){const tot=(S.unread||0)+(S.due||[]).length;bn.hidden=!tot;bn.textContent=tot>9?'9+':tot}
+    S.ckPending=false;paintBell()
   });
-  const fresh=list.filter(x=>!seen.has(x.id)).map(x=>({user_id:S.me.id,notif_id:x.id}));
-  if(fresh.length){await sb.from('notif_reads').upsert(fresh);S.unread=0;const bn=$('#bellN');if(bn){const tot=(S.due||[]).length+(S.ckPending?1:0);bn.hidden=!tot;bn.textContent=tot>9?'9+':tot}}
+  const fresh=list.filter(x=>!seen.has(x.id)&&!NKNOWN.has(NLK(x.link))).map(x=>({user_id:S.me.id,notif_id:x.id}));
+  if(fresh.length){await sb.from('notif_reads').upsert(fresh);S.unread=(S.nl||[]).length;paintBell()}
 }
 
 // ---------- Ротации ----------
