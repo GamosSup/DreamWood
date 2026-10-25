@@ -53,16 +53,18 @@ async function gridView(){
   if(!canMng())return go('rot');
   S.offline=0;
   const G=S.grid,y=G.month.getFullYear(),mo=G.month.getMonth(),first=iso(new Date(y,mo,1)),last=iso(new Date(y,mo+1,0)),n=new Date(y,mo+1,0).getDate(),mgr=isManager();
-  const [pr,mk,ro,rm]=await Promise.all([
+  const [pr,mk,ro,rm,ck]=await Promise.all([
     cq('g:p',()=>sb.from('profiles').select('id,full_name,tab_no,team,role').eq('status','approved').order('full_name')),
     cq('g:m'+first,()=>sb.from('marks').select('user_id,day,kind,note').gte('day',first).lte('day',last)),
     mgr?cq('g:r',()=>sb.from('roster').select('id,full_name,team,profile_id')):Promise.resolve({data:[]}),
-    mgr?cq('g:rm'+first,()=>sb.from('roster_marks').select('roster_id,day,kind,note').gte('day',first).lte('day',last)):Promise.resolve({data:[]})]);
+    mgr?cq('g:rm'+first,()=>sb.from('roster_marks').select('roster_id,day,kind,note').gte('day',first).lte('day',last)):Promise.resolve({data:[]}),
+    cq('g:c'+first,()=>sb.from('checkins').select('user_id,day').gte('day',first).lte('day',last))]);
   let rows=[];
-  (pr.data||[]).forEach(p=>{if(!mgr&&p.team!==S.me.team)return;rows.push({key:'u:'+p.id,id:p.id,reg:true,name:p.full_name,team:p.team||'',tab:p.tab_no,marks:{}})});
-  (ro.data||[]).filter(r=>!r.profile_id).forEach(r=>rows.push({key:'r:'+r.id,id:r.id,reg:false,name:r.full_name,team:r.team||'',marks:{}}));
+  (pr.data||[]).forEach(p=>{if(!mgr&&p.team!==S.me.team)return;rows.push({key:'u:'+p.id,id:p.id,reg:true,name:p.full_name,team:p.team||'',tab:p.tab_no,marks:{},ck:new Set()})});
+  (ro.data||[]).filter(r=>!r.profile_id).forEach(r=>rows.push({key:'r:'+r.id,id:r.id,reg:false,name:r.full_name,team:r.team||'',marks:{},ck:new Set()}));
   const byKey=new Map(rows.map(r=>[r.key,r]));
   (mk.data||[]).forEach(m=>{const r=byKey.get('u:'+m.user_id);if(r)r.marks[m.day]=m});
+  (ck.data||[]).forEach(c=>{const r=byKey.get('u:'+c.user_id);if(r)r.ck.add(c.day)});
   (rm.data||[]).forEach(m=>{const r=byKey.get('r:'+m.roster_id);if(r)r.marks[m.day]=m});
   const teams=[...new Set(rows.map(r=>r.team).filter(Boolean))];
   if(G.team&&!teams.includes(G.team))G.team='';
@@ -75,11 +77,11 @@ async function gridView(){
   let h=head('Общий график',G.month.toLocaleDateString('ru',{month:'long',year:'numeric'})+(mgr?'':' · '+(TN[S.me.team]||'моя команда')));
   h+=`<div style="display:flex;gap:8px"><button class="btn ghost" id="gpm">←</button><button class="btn ghost" id="gtd" style="flex:1">Сегодня</button><button class="btn ghost" id="gnm">→</button></div>`;
   if(mgr&&teams.length>1)h+=`<div class="tabs"><button data-gt="" class="${G.team?'':'on'}" style="background:#E3EAD2">Все</button>${['R','K','M'].filter(t=>teams.includes(t)).map(t=>`<button data-gt="${t}" class="${G.team===t?'on':''}" style="background:${tc(t)}">${TN[t]}</button>`).join('')}</div>`;
-  h+=`<div class="gleg">${Object.entries(KINDS).map(([k,v])=>`<span style="background:${v[1]}"><b>${v[0]}</b> ${v[2]}</span>`).join('')}<span style="background:var(--card);border:1px solid var(--line)">пусто — работает</span></div>`;
+  h+=`<div class="gleg">${Object.entries(KINDS).map(([k,v])=>`<span style="background:${v[1]}"><b>${v[0]}</b> ${v[2]}</span>`).join('')}<span style="background:var(--card);border:1px solid var(--line)">пусто — работает</span><span style="background:var(--card);border:1px solid var(--line)"><i class="ckdot" style="margin:0 4px 0 0"></i>подтвердил выход</span></div>`;
   const absent=d=>rows.filter(r=>{const m=r.marks[d.iso];return m&&m.kind!=='off'}).length,work=d=>rows.filter(r=>!r.marks[d.iso]).length;
   h+=`<div class="card pad col"><div class="muted">Нажми на клетку — поставить или убрать отметку.${mgr?' Серым значком отмечены те, кто ещё не зарегистрировался: их график тоже сохранён.':''}</div><div class="rtw gw"><table class="gt"><thead><tr><th class="gn">Сотрудник</th>${days.map(d=>`<th class="${d.wd%6===0?'we':''} ${d.iso===today?'td':''}">${d.i}<small>${GRID_WD[d.wd]}</small></th>`).join('')}<th>Раб.</th></tr></thead><tbody>
-  ${rows.map(r=>{const w=days.filter(d=>!r.marks[d.iso]).length;return `<tr><td class="gn"><i style="background:${tc(r.team)}"></i>${esc(shortName(r.name))}${r.reg?'':'<small class="nr" title="ещё не зарегистрирован">○</small>'}</td>${days.map(d=>{const m=r.marks[d.iso],K=m&&KINDS[m.kind];return `<td class="gc ${d.wd%6===0?'we':''} ${d.iso===today?'td':''}" data-r="${r.key}" data-d="${d.iso}" ${K?`style="background:${K[1]}" title="${esc(K[2]+(m.note?': '+m.note:''))}"`:''}>${K?K[0]:''}</td>`}).join('')}<td class="gs">${w}</td></tr>`}).join('')||`<tr><td colspan="${n+2}" class="muted">Нет сотрудников</td></tr>`}
-  </tbody><tfoot><tr><td class="gn">Работают</td>${days.map(d=>`<td class="gs">${work(d)}</td>`).join('')}<td></td></tr><tr><td class="gn">Отсутствуют</td>${days.map(d=>`<td class="gs">${absent(d)||'·'}</td>`).join('')}<td></td></tr></tfoot></table></div></div>`;
+  ${rows.map(r=>{const w=days.filter(d=>!r.marks[d.iso]).length;return `<tr><td class="gn"><i style="background:${tc(r.team)}"></i>${esc(shortName(r.name))}${r.reg?(r.ck.has(today)?'<span class="ckdot" title="Сегодня подтвердил(а) выход"></span>':''):'<small class="nr" title="ещё не зарегистрирован">○</small>'}</td>${days.map(d=>{const m=r.marks[d.iso],K=m&&KINDS[m.kind];return `<td class="gc ${d.wd%6===0?'we':''} ${d.iso===today?'td':''} ${r.ck.has(d.iso)?'ckd':''}" data-r="${r.key}" data-d="${d.iso}" ${K?`style="background:${K[1]}" title="${esc(K[2]+(m.note?': '+m.note:''))}"`:''}>${K?K[0]:''}</td>`}).join('')}<td class="gs">${w}</td></tr>`}).join('')||`<tr><td colspan="${n+2}" class="muted">Нет сотрудников</td></tr>`}
+  </tbody><tfoot><tr><td class="gn">Работают</td>${days.map(d=>`<td class="gs">${work(d)}</td>`).join('')}<td></td></tr><tr><td class="gn">Подтвердили</td>${days.map(d=>`<td class="gs">${d.iso>today?'':(rows.filter(r=>r.ck.has(d.iso)).length||'·')}</td>`).join('')}<td></td></tr><tr><td class="gn">Отсутствуют</td>${days.map(d=>`<td class="gs">${absent(d)||'·'}</td>`).join('')}<td></td></tr></tfoot></table></div></div>`;
   app.innerHTML=h;
   const wrap=app.querySelector('.gw');
   if(G.sx!=null)wrap.scrollLeft=G.sx;else{const t=wrap.querySelector('th.td');if(t)wrap.scrollLeft=Math.max(0,t.offsetLeft-120)}

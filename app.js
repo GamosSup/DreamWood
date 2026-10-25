@@ -85,12 +85,14 @@ function go(t){if(!VIEWS[t])t='rot';S.tab=t;S.offline=0;document.body.dataset.ta
   Promise.resolve(VIEWS[t]()).then(refreshUnread)}
 async function refreshUnread(){
   if(!S.me||S.me.status!=='approved')return;
-  const [n,r,p]=await Promise.all([sb.from('notifications').select('id'),sb.from('notif_reads').select('notif_id').eq('user_id',S.me.id),isManager()?sb.from('profiles').select('id',{count:'exact',head:true}).eq('status','pending'):Promise.resolve({count:0})]);
+  const [n,r,p]=await Promise.all([sb.from('notifications').select('id,kind,link'),sb.from('notif_reads').select('notif_id').eq('user_id',S.me.id),isManager()?sb.from('profiles').select('id',{count:'exact',head:true}).eq('status','pending'):Promise.resolve({count:0})]);
   if(!n.error&&!r.error){const seen=new Set((r.data||[]).map(x=>x.notif_id));S.unread=(n.data||[]).filter(x=>!seen.has(x.id)).length;
     const el=$('#bellN');if(el){el.hidden=!S.unread;el.textContent=S.unread>9?'9+':S.unread}}
+  try{const today=iso(new Date());S.ckPending=false;
+    if(!n.error&&(n.data||[]).some(x=>x.kind==='checkin'&&x.link==='checkin:'+today)){const c=await sb.from('checkins').select('at').eq('user_id',S.me.id).eq('day',today).maybeSingle();S.ckPending=!c.data}}catch(e){}
   try{const q=await sb.from('dg_tasks').select('id,title,deadline,assignees').eq('done',false).not('deadline','is',null);
     const lim=iso(new Date(Date.now()+864e5));S.due=(q.data||[]).filter(t=>(t.assignees||[]).includes(S.me.id)&&t.deadline<=lim).sort((a,b)=>a.deadline<b.deadline?-1:1);
-    const el=$('#bellN'),tot=(S.unread||0)+S.due.length;if(el){el.hidden=!tot;el.textContent=tot>9?'9+':tot}}catch(e){S.due=[]}
+    const el=$('#bellN'),tot=(S.unread||0)+S.due.length+(S.ckPending?1:0);if(el){el.hidden=!tot;el.textContent=tot>9?'9+':tot}}catch(e){S.due=[]}
   S.pending=p.count||0;const sn=$('#staffN');if(sn){sn.hidden=!S.pending;sn.textContent=S.pending}
   try{const q=await sb.from('requests').select('id,status,peer_id').in('status',['peer','pending']);
     const rq=(q.data||[]).filter(x=>(x.status==='pending'&&canMng())||(x.status==='peer'&&x.peer_id===S.me.id)).length;
@@ -100,19 +102,27 @@ async function refreshUnread(){
 const firstName=()=>(S.me?.full_name||'').trim().split(/\s+/)[0]||'друг';
 const bell=()=>`<button class="bell" aria-label="Уведомления" onclick="openBell()">🔔<i id="bellN" ${S.unread>0?'':'hidden'}>${S.unread>9?'9+':S.unread}</i></button>`;
 const head=(h,sub)=>`<div class="top"><div class="hi">Привет, ${esc(firstName())}! 👋</div>${bell()}</div>${S.offline?`<div class="banner" style="background:#E6CC8F;color:#3B2A35;font-size:14px">📴 Нет сети — показаны сохранённые данные (от ${new Date(S.offline).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'})}). Менять что-либо пока нельзя.</div>`:''}${sub?`<div class="muted">${sub}</div>`:''}<h1>${h}</h1>`;
-const NI={news:'📰',rotation:'🔄',afisha:'🎟️',signup:'🧑‍💼',task:'📋',request:'📨',incident:'🚨',shift:'💬'};
+const NI={news:'📰',rotation:'🔄',afisha:'🎟️',signup:'🧑‍💼',task:'📋',request:'📨',incident:'🚨',shift:'💬',checkin:'☀️'};
 const ago=d=>{const m=Math.round((Date.now()-new Date(d))/6e4);return m<1?'только что':m<60?m+' мин назад':m<1440?Math.floor(m/60)+' ч назад':new Date(d).toLocaleDateString('ru',{day:'numeric',month:'short'})};
 async function openBell(){
-  const [n,r]=await Promise.all([sb.from('notifications').select('*').order('created_at',{ascending:false}).limit(50),sb.from('notif_reads').select('notif_id').eq('user_id',S.me.id)]);
+  const [n,r,ckq]=await Promise.all([sb.from('notifications').select('*').order('created_at',{ascending:false}).limit(50),sb.from('notif_reads').select('notif_id').eq('user_id',S.me.id),sb.from('checkins').select('day,at').eq('user_id',S.me.id).order('day',{ascending:false}).limit(40)]);
+  const cks=new Map((ckq.data||[]).map(c=>[c.day,c.at])),todayIso=iso(new Date()),tm=t=>new Date(t).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'});
   const seen=new Set((r.data||[]).map(x=>x.notif_id)),list=n.data||[];
-  const ov=document.createElement('div');ov.className='ov';ov.innerHTML=`<div class="sheet"><div class="sh"><button class="x" id="bk" aria-label="Назад">←</button><b>Уведомления</b><span></span></div><div class="sb">${(S.due||[]).map(t=>{const od=t.deadline<iso(new Date()),td=t.deadline===iso(new Date());return `<div class="nt new" style="border-left:6px solid ${od?'#E08A7A':'#E6CC8F'}"><div class="ni">⏰</div><div class="nb"><b>${od?'Просрочена':td?'Срок сегодня':'Срок завтра'}: ${esc(t.title)}</b><div class="muted" style="margin-top:4px">📅 ${dgFmt(t.deadline)} · <a href="#" class="lnk" data-l="dg">открыть доску</a></div></div></div>`}).join('')}${list.map(x=>{const lg=(x.body||'').length>160;return `<div class="nt ${seen.has(x.id)?'':'new'}" data-id="${x.id}"><div class="ni">${NI[x.kind]||'🔔'}</div><div class="nb"><b>${esc(x.title)}</b>${seen.has(x.id)?'':'<span class="newb">новое</span>'}<div class="nbody ${lg?'cl':''}">${esc(x.body||'')}</div><div class="muted" style="margin-top:4px">${ago(x.created_at)}${lg?' · <a href="#" class="more">читать полностью</a>':''}${x.link?` · <a href="#" class="lnk" data-l="${esc(x.link)}">открыть</a>`:''}</div></div></div>`}).join('')||'<div class="muted" style="padding:20px">Пока ничего нового</div>'}</div></div>`;
+  const ov=document.createElement('div');ov.className='ov';ov.innerHTML=`<div class="sheet"><div class="sh"><button class="x" id="bk" aria-label="Назад">←</button><b>Уведомления</b><span></span></div><div class="sb">${(S.due||[]).map(t=>{const od=t.deadline<iso(new Date()),td=t.deadline===iso(new Date());return `<div class="nt new" style="border-left:6px solid ${od?'#E08A7A':'#E6CC8F'}"><div class="ni">⏰</div><div class="nb"><b>${od?'Просрочена':td?'Срок сегодня':'Срок завтра'}: ${esc(t.title)}</b><div class="muted" style="margin-top:4px">📅 ${dgFmt(t.deadline)} · <a href="#" class="lnk" data-l="dg">открыть доску</a></div></div></div>`}).join('')}${list.map(x=>{if(x.kind==='checkin'){const day=String(x.link||'').slice(8),ck=cks.get(day),pend=!ck&&day===todayIso;return `<div class="nt ckn ${ck?'done':pend?'pend':'miss'}" data-id="${x.id}" ${pend?'data-ck="1"':''}><div class="ni">${ck?'✅':'☀️'}</div><div class="nb"><b>${ck?'Выход на смену подтверждён':pend?'Ты сегодня на смене?':'Выход не подтверждён'}</b>${seen.has(x.id)||pend?'':'<span class="newb">новое</span>'}<div class="nbody">${ck?'Подтверждено в '+tm(ck):pend?'Нажми на это сообщение, чтобы подтвердить.':dayLabel(day)}</div><div class="muted" style="margin-top:4px">${ago(x.created_at)}</div></div></div>`}
+    const lg=(x.body||'').length>160;return `<div class="nt ${seen.has(x.id)?'':'new'}" data-id="${x.id}"><div class="ni">${NI[x.kind]||'🔔'}</div><div class="nb"><b>${esc(x.title)}</b>${seen.has(x.id)?'':'<span class="newb">новое</span>'}<div class="nbody ${lg?'cl':''}">${esc(x.body||'')}</div><div class="muted" style="margin-top:4px">${ago(x.created_at)}${lg?' · <a href="#" class="more">читать полностью</a>':''}${x.link?` · <a href="#" class="lnk" data-l="${esc(x.link)}">открыть</a>`:''}</div></div></div>`}).join('')||'<div class="muted" style="padding:20px">Пока ничего нового</div>'}</div></div>`;
   document.body.appendChild(ov);document.body.style.overflow='hidden';
   const close=()=>{ov.remove();document.body.style.overflow=''};
   ov.onclick=e=>{if(e.target===ov)close()};ov.querySelector('#bk').onclick=close;
   ov.querySelectorAll('.more').forEach(a=>a.onclick=e=>{e.preventDefault();a.closest('.nb').querySelector('.nbody').classList.remove('cl');a.remove()});
   ov.querySelectorAll('.lnk').forEach(a=>a.onclick=e=>{e.preventDefault();const l=a.dataset.l;close();if(l.startsWith('rot:')){S.day=l.slice(4);go('rot')}else go(l)});
+  ov.querySelectorAll('.ckn[data-ck]').forEach(el=>el.onclick=async()=>{
+    if(el.dataset.busy)return;el.dataset.busy=1;
+    const r=await sb.rpc('checkin_confirm');if(r.error){alert('Не получилось подтвердить: '+r.error.message);delete el.dataset.busy;return}
+    el.className='nt ckn done';el.removeAttribute('data-ck');el.querySelector('.ni').textContent='✅';el.querySelector('b').textContent='Выход на смену подтверждён';el.querySelector('.nbody').textContent='Подтверждено в '+tm(r.data||Date.now());
+    S.ckPending=false;const bn=$('#bellN');if(bn){const tot=(S.unread||0)+(S.due||[]).length;bn.hidden=!tot;bn.textContent=tot>9?'9+':tot}
+  });
   const fresh=list.filter(x=>!seen.has(x.id)).map(x=>({user_id:S.me.id,notif_id:x.id}));
-  if(fresh.length){await sb.from('notif_reads').upsert(fresh);S.unread=0;const bn=$('#bellN');if(bn){const tot=(S.due||[]).length;bn.hidden=!tot;bn.textContent=tot>9?'9+':tot}}
+  if(fresh.length){await sb.from('notif_reads').upsert(fresh);S.unread=0;const bn=$('#bellN');if(bn){const tot=(S.due||[]).length+(S.ckPending?1:0);bn.hidden=!tot;bn.textContent=tot>9?'9+':tot}}
 }
 
 // ---------- Ротации ----------
@@ -410,6 +420,6 @@ async function settingsView(){
 }
 sb.auth.onAuthStateChange(()=>{});
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
-function openLink(l){if(!l)return;if(String(l).startsWith('rot:')){S.day=l.slice(4);go('rot')}else go(l)}
+function openLink(l){if(!l)return;if(String(l).startsWith('checkin:'))return openBell();if(String(l).startsWith('rot:')){S.day=l.slice(4);go('rot')}else go(l)}
 if('serviceWorker'in navigator)navigator.serviceWorker.addEventListener('message',e=>{if(e.data&&e.data.go&&S.me)openLink(e.data.go)});
 boot();
