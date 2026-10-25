@@ -23,6 +23,12 @@ const areaOf=z=>AREAS.find(a=>a.re.test(z||''))||AREAS[AREAS.length-1];
 function byArea(items,zoneOf){const g=AREAS.map(a=>({a,items:[]}));items.forEach(x=>{const a=areaOf(zoneOf(x));g.find(y=>y.a===a).items.push(x)});return g.filter(y=>y.items.length)}
 S.areaOpen=S.areaOpen||{};
 const areaHead=(a,right)=>`<summary class="ah" style="background:${a.c}"><span class="ahn"><img src="stickers/${a.img}.svg" alt="" width="30" height="30"> ${a.n}</span><span class="pill" style="background:#FFFDF9;align-self:center">${right}</span></summary>`;
+
+// Периоды графика: часы смены по датам (пт-вс 9:30–20:30, потом каждый день 9:30–18:30 и т.п.). Личная длина дня главнее периода.
+async function loadPeriods(){const r=await cq('sched_periods',()=>sb.from('sched_periods').select('*').order('date_from'));S.periods=r&&!r.error?(r.data||[]):[]}
+const perOf=k=>(S.periods||[]).find(x=>k>=x.date_from&&k<=x.date_to);
+const dayH=(k,len,set)=>{if(set)return len;const p=perOf(k);return p?Number(p.hours):len};
+const perLabel=k=>{const p=perOf(k);return p?`${String(p.start_time).slice(0,5)}–${String(p.end_time).slice(0,5)}${p.break_min?', перерыв '+(p.break_min%60?p.break_min+' мин':p.break_min/60+' ч'):''} · ${String(p.hours).replace('.',',')} ч`:''};
 function bindAreas(root){(root||document).querySelectorAll('details.area').forEach(d=>d.addEventListener('toggle',()=>{S.areaOpen[d.dataset.ar]=d.open}))}
 const STEPC={'Шахта':'#BCC8D6','Джипы':'#B7CFC4','Карусель':'#D3BFD0','Плющ':'#C9D4B0','Данделион':'#E4B5A3','Кон-Тики':'#E6CC8F','Ротация':'#E3E3E3','Пс':'#F3C29B','Боулинг':'#BCC8D6','Ос':'#F3C29B','Гольф':'#B7CFC4','Золото':'#E6CC8F','Метро':'#CFC6BC','Веревочный лагерь / инд. задачи':'#C9D4B0','Веревочный лагерь':'#C9D4B0'};
 const brkBg=t=>t.startsWith('Ос')||t.startsWith('Пс')?'#F3C29B':t.startsWith('О')?'#F5E2A8':'#CFE0EE';
@@ -234,7 +240,7 @@ function dayModal(k){
   const me=S.me.id,mk=S.marks[k],pd=S.pendDay[k];
   dgxSheet(dayLabel(k),(box,paint,close)=>{
     const L={otgul:['🏖','Отгул'],do:['📌','ДО'],sick:['🤒','Больничный'],vac:['🌴','Отпуск']};
-    box.innerHTML=`${mk?`<div class="card pad" style="background:${KINDS[mk.kind][1]}"><b>${KINDS[mk.kind][2]}</b>${mk.note?`<div class="muted">${esc(mk.note)}</div>`:''}<div class="muted">Поставлено в графике. Изменить может руководитель.</div></div>`:''}
+    box.innerHTML=`${!mk&&!S.lenSet&&perLabel(k)?`<div class="muted">🕘 Смена: ${perLabel(k)}</div>`:''}${mk?`<div class="card pad" style="background:${KINDS[mk.kind][1]}"><b>${KINDS[mk.kind][2]}</b>${mk.note?`<div class="muted">${esc(mk.note)}</div>`:''}<div class="muted">Поставлено в графике. Изменить может руководитель.</div></div>`:''}
     ${pd?`<div class="card pad col" style="border:2px dashed var(--ink)"><b>⏳ Отправлено на согласование: ${esc((KINDS[pd.kind]||[])[2]||pd.kind)}</b><div class="muted">${dRange(pd)}</div><button class="btn ghost" id="dm_cn">Отменить заявку</button></div>`
     :`<b>Отправить заявку на этот день</b><div class="two">${['otgul','do'].map(x=>`<button class="btn ghost" data-rq="${x}">${L[x][0]} ${L[x][1]}</button>`).join('')}</div><div class="two">${['sick','vac'].map(x=>`<button class="btn ghost" data-rq="${x}">${L[x][0]} ${L[x][1]}</button>`).join('')}</div><label>Если несколько дней: по какое число<input type="date" id="dm_to" min="${k}"></label><div class="muted">Заявку увидит руководитель. Когда одобрит, день появится в графике.</div>`}
     <label>📝 Комментарий к дню<textarea id="dm_note" placeholder="Например: съездить в банк, отпроситься на час">${esc(S.dnotes[k]||'')}</textarea></label><div class="muted">Комментарий виден руководителям.</div><button class="btn" id="dm_save">Сохранить комментарий</button><div class="err" id="dm_er"></div>`;
@@ -271,16 +277,19 @@ async function schView(){
   let h=head('График',m.toLocaleDateString('ru',{month:'long',year:'numeric'}));
   if(canMng())h+=`<label>Сотрудник<select id="who">${S.people.map(p=>`<option value="${p.id}" ${p.id===S.viewUser?'selected':''}>${esc(p.full_name)}</option>`).join('')}</select></label>`;
   h+=`<div style="display:flex;gap:8px"><button class="btn ghost" id="pm">←</button><button class="btn ghost" id="nm">→</button></div><div class="cal">${['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map(d=>`<div class="dh">${d}</div>`).join('')}${'<div></div>'.repeat(lead)}`;
-  let worked=0;const cnt={};
-  for(let d=1;d<=n;d++){const k=iso(new Date(y,mo,d)),mk=S.marks[k];
-    if(!mk)worked++;else cnt[mk.kind]=(cnt[mk.kind]||0)+1;
+  await loadPeriods();S.lenSet=lenSet;
+  let worked=0,wH=0,oH=0,dH=0;const cnt={};
+  for(let d=1;d<=n;d++){const k=iso(new Date(y,mo,d)),mk=S.marks[k],hh=dayH(k,dlen,lenSet);
+    if(!mk){worked++;wH+=hh}else{cnt[mk.kind]=(cnt[mk.kind]||0)+1;if(mk.kind==='otgul')oH+=hh;if(mk.kind==='do')dH+=hh}
     const pd=S.pendDay[k];
     h+=`<button class="day ${S.sel===k?'sel':''}" data-k="${k}" style="background:${mk?KINDS[mk.kind][1]:pd?KINDS[pd.kind]?.[1]||'var(--card)':'var(--card)'};${pd&&!mk?'border:2px dashed var(--ink);':''}">${d}<small>${mk?KINDS[mk.kind][0]:pd?'⏳ '+(KINDS[pd.kind]?.[0]||''):''}${S.dnotes[k]?' 📝':''}</small></button>`}
-  const cOt=cnt.otgul||0,cDo=cnt.do||0,base=(worked+cOt-cDo)*dlen;
+  const cOt=cnt.otgul||0,cDo=cnt.do||0,base=wH+oH-dH;
+  const pers=(S.periods||[]).filter(p=>p.date_to>=first&&p.date_from<=last);
   h+=`</div><div class="stat"><div style="background:var(--sage)"><b>${worked}</b>рабочих дней</div><div style="background:var(--gold)"><b>${fh(base)}</b>часов по графику</div></div>
   <div class="stat"><div style="background:var(--pink)"><b>${fh(otSum)}</b>переработки</div><div style="background:var(--blue)"><b>${fh(base+otSum)}</b>всего часов</div></div>
-  <div class="card pad col"><b>Как посчитано</b><div class="otr"><span>Рабочих дней × ${dlen} ч</span><b>${fh(worked*dlen)} ч</b></div><div class="otr"><span>Отгулы ${cOt} × ${dlen} ч (как отработанные)</span><b>+${fh(cOt*dlen)} ч</b></div><div class="otr"><span>ДО ${cDo} × ${dlen} ч (неоплачиваемый)</span><b>−${fh(cDo*dlen)} ч</b></div>${otSum?`<div class="otr"><span>Переработки</span><b>+${fh(otSum)} ч</b></div>`:''}<div class="otr"><span><b>Итого</b></span><b>${fh(base+otSum)} ч</b></div>
-  ${isManager()?`<label>Длина рабочего дня<select id="dlen">${[8,10,12].map(v=>`<option value="${v}" ${v===dlen?'selected':''}>${v} ч${v===8?' (5/2)':v===10?' (4/3, с учётом обеда)':' (сменный 12 ч)'}</option>`).join('')}</select></label>${lenSet?'':'<div class="muted">Сейчас по умолчанию. Выбери и сохранится.</div>'}`:`<div class="muted">Длина дня: ${dlen} ч. Выходные, больничные и отпуск в часы не входят.</div>`}</div>`;
+  <div class="card pad col"><b>Как посчитано</b><div class="otr"><span>Рабочих дней ${worked}</span><b>${fh(wH)} ч</b></div><div class="otr"><span>Отгулы ${cOt} (как отработанные)</span><b>+${fh(oH)} ч</b></div><div class="otr"><span>ДО ${cDo} (неоплачиваемый)</span><b>−${fh(dH)} ч</b></div>${otSum?`<div class="otr"><span>Переработки</span><b>+${fh(otSum)} ч</b></div>`:''}<div class="otr"><span><b>Итого</b></span><b>${fh(base+otSum)} ч</b></div>
+  ${!lenSet&&pers.length?`<div class="muted">Смены в этом месяце:${pers.map(p=>`<br>• ${dayLabel(p.date_from)} — ${dayLabel(p.date_to)}: ${String(p.start_time).slice(0,5)}–${String(p.end_time).slice(0,5)}${p.break_min?', перерыв '+(p.break_min%60?p.break_min+' мин':p.break_min/60+' ч'):''} (${String(p.hours).replace('.',',')} ч)${p.note?' · '+esc(p.note):''}`).join('')}</div>`:''}
+  ${isManager()?`<label>Длина рабочего дня<select id="dlen"><option value="" ${lenSet?'':'selected'}>По графику смен${pers.length?'':' (10 ч)'}</option>${[8,10,12].map(v=>`<option value="${v}" ${lenSet&&v===dlen?'selected':''}>${v} ч${v===8?' (5/2)':v===10?' (4/3, с учётом обеда)':' (сменный 12 ч)'}</option>`).join('')}</select></label><div class="muted">${lenSet?'У сотрудника личная длина дня, периоды смен на него не действуют.':'Считается по графику смен выше. Выбери число, чтобы задать личную длину дня.'}</div>`:`<div class="muted">${lenSet?`Длина дня: ${dlen} ч. `:''}Выходные, больничные и отпуск в часы не входят.</div>`}</div>`;
   const dl=Object.keys({...S.marks,...S.dnotes}).sort();
   if(dl.length)h+=`<div class="card pad col"><b>📋 Что и когда</b>${dl.map(k=>{const mk=S.marks[k];return `<div class="otr" style="align-items:flex-start"><span><b>${dayLabel(k)}</b>${mk?` · <span class="pill" style="background:${KINDS[mk.kind][1]}">${KINDS[mk.kind][2]}</span>${mk.note?` ${esc(mk.note)}`:''}`:''}${S.dnotes[k]?`<br><span class="muted">📝 ${esc(S.dnotes[k])}</span>`:''}</span></div>`}).join('')}</div>`;
   const defd=S.sel||(iso(new Date()).slice(0,7)===first.slice(0,7)?iso(new Date()):first);
@@ -290,7 +299,7 @@ async function schView(){
   if(S.sel&&!selfMode){const mk=S.marks[S.sel];
     h+=`<div class="card pad" style="display:flex;flex-direction:column;gap:10px"><b>${S.sel}</b><div class="tabs">${Object.entries(KINDS).map(([k,v])=>`<button data-m="${k}" style="background:${v[1]}" class="${mk?.kind===k?'on':''}">${v[2]}</button>`).join('')}<button data-m="" style="background:#fff;border:1px solid #ccc">Рабочий</button></div><textarea id="note" placeholder="Комментарий">${esc(mk?.note||'')}</textarea>${S.dnotes[S.sel]?`<div class="muted">📝 Личный комментарий сотрудника: ${esc(S.dnotes[S.sel])}</div>`:''}<button class="btn" id="save">Сохранить</button></div>`}
   app.innerHTML=h;
-  $('#dlen')?.addEventListener('change',async e=>{const v=+e.target.value;e.target.disabled=true;
+  $('#dlen')?.addEventListener('change',async e=>{const v=e.target.value?+e.target.value:null;e.target.disabled=true;
     const a=await sb.from('profiles').update({day_len:v}).eq('id',S.viewUser);if(a.error)return alert(a.error.message);
     if(vr.data)await sb.from('roster').update({day_len:v}).eq('id',vr.data.id);schView()});
   $('#who')?.addEventListener('change',e=>{S.viewUser=e.target.value;S.sel=null;schView()});

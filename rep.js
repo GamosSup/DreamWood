@@ -19,12 +19,12 @@ async function gridView(){
     mgr?cq('g:rm'+first,()=>sb.from('roster_marks').select('roster_id,day,kind,note').gte('day',first).lte('day',last)):Promise.resolve({data:[]}),
     cq('g:c'+first,()=>sb.from('checkins').select('user_id,day').gte('day',first).lte('day',last)),
     cq('g:o'+first,()=>sb.from('overtime').select('user_id,day,start_time,hours,note').gte('day',first).lte('day',last).order('day'))]);
-  let all=[];
+  let all=[];await loadPeriods();
   (pr.data||[]).forEach(p=>{if(!mgr&&p.team!==S.me.team)return;all.push({key:'u:'+p.id,id:p.id,reg:true,name:p.full_name,team:p.team||'',tab:p.tab_no,len:p.day_len||null,marks:{},ck:new Set(),ot:0})});
   (ro.data||[]).filter(r=>!r.profile_id).forEach(r=>all.push({key:'r:'+r.id,id:r.id,reg:false,name:r.full_name,team:r.team||'',len:r.day_len||null,marks:{},ck:new Set(),ot:0}));
   const byKey=new Map(all.map(r=>[r.key,r]));
   (ro.data||[]).filter(r=>r.profile_id&&r.day_len).forEach(r=>{const x=byKey.get('u:'+r.profile_id);if(x&&!x.len)x.len=r.day_len});
-  all.forEach(r=>{if(!r.len)r.len=r.team==='M'?12:10});
+  all.forEach(r=>{r.lenSet=!!r.len||r.team==='M';if(!r.len)r.len=r.team==='M'?12:10});
   (mk.data||[]).forEach(m=>{const r=byKey.get('u:'+m.user_id);if(r)r.marks[m.day]=m});
   (ck.data||[]).forEach(c=>{const r=byKey.get('u:'+c.user_id);if(r)r.ck.add(c.day)});
   (rm.data||[]).forEach(m=>{const r=byKey.get('r:'+m.roster_id);if(r)r.marks[m.day]=m});
@@ -39,9 +39,10 @@ async function gridView(){
   const view=()=>{ // строки с учётом команды и поиска
     const toks=gNorm(G.q).split(/\s+/).filter(Boolean);
     return all.filter(r=>(!G.team||r.team===G.team)&&toks.every(t=>gNorm(r.name).includes(t)))};
-  const calc=r=>{const marked=REP_K.reduce((a,k)=>a+days.filter(d=>r.marks[d.iso]?.kind===k).length,0),cnt={};
-    REP_K.forEach(k=>cnt[k]=days.filter(d=>r.marks[d.iso]?.kind===k).length);
-    const wd=n-marked,sch=(wd+cnt.otgul-cnt.do)*r.len;return {r,cnt,wd,sch,ot:r.ot,tot:sch+r.ot}};
+  const calc=r=>{const cnt={};REP_K.forEach(k=>cnt[k]=days.filter(d=>r.marks[d.iso]?.kind===k).length);
+    const marked=REP_K.reduce((a,k)=>a+cnt[k],0),wd=n-marked;
+    let sch=0;days.forEach(d=>{const m=r.marks[d.iso],hh=dayH(d.iso,r.len,r.lenSet);if(!m||m.kind==='otgul')sch+=hh;else if(m.kind==='do')sch-=hh});
+    return {r,cnt,wd,sch,ot:r.ot,tot:sch+r.ot}};
 
   let h=head('Общий график',mgr?'':(TN[S.me.team]||'моя команда'));
   h+=`<div class="gmon"><button class="btn ghost" id="gpm" aria-label="Прошлый месяц">←</button><div class="gmt"><b>${title}</b><small>график на этот месяц</small></div><button class="btn ghost" id="gnm" aria-label="Следующий месяц">→</button></div>`;
@@ -57,7 +58,7 @@ async function gridView(){
       const cs=rows.map(calc),sum=cs.reduce((a,c)=>{a.wd+=c.wd;a.sch+=c.sch;a.ot+=c.ot;a.tot+=c.tot;REP_K.forEach(k=>a[k]=(a[k]||0)+c.cnt[k]);return a},{wd:0,sch:0,ot:0,tot:0});
       body.innerHTML=`<div class="stat"><div style="background:var(--sage)"><b>${rows.length}</b>сотрудников</div><div style="background:var(--gold)"><b>${repFh(sum.sch)}</b>часов по графику</div></div>
       <div class="stat"><div style="background:var(--pink)"><b>${repFh(sum.ot)}</b>переработки</div><div style="background:var(--blue)"><b>${repFh(sum.tot)}</b>всего часов</div></div>
-      <div class="card pad col"><div class="muted">${title}. Нажми на сотрудника — откроется его график. Дни без отметки считаются рабочими; отгул — как отработанный день, ДО — минус день; длина дня у каждого своя (8, 10 или 12 ч).${mgr?' Серым ○ отмечены те, кто ещё не зарегистрировался.':''}</div><div class="rtw"><table class="rt"><thead><tr><th>Сотрудник</th><th>Дней</th><th>Часы</th><th>Пер.</th><th>Итого</th>${REP_K.map(k=>`<th title="${KINDS[k][2]}">${KINDS[k][0]}</th>`).join('')}</tr></thead><tbody>
+      <div class="card pad col"><div class="muted">${title}. Нажми на сотрудника — откроется его график. Дни без отметки считаются рабочими; отгул — как отработанный день, ДО — минус день; часы считаются по графику смен (9:30–20:30 с обедом и т.д.), у кого задана личная длина дня — по ней.${mgr?' Серым ○ отмечены те, кто ещё не зарегистрировался.':''}</div><div class="rtw"><table class="rt"><thead><tr><th>Сотрудник</th><th>Дней</th><th>Часы</th><th>Пер.</th><th>Итого</th>${REP_K.map(k=>`<th title="${KINDS[k][2]}">${KINDS[k][0]}</th>`).join('')}</tr></thead><tbody>
       ${cs.map(c=>`<tr data-k="${c.r.key}"><td>${esc(shortName(c.r.name))}${c.r.reg?'':' <span class="nr">○</span>'}<small>${c.r.team?TN[c.r.team]:''}</small></td><td>${c.wd}</td><td>${c.sch}</td><td>${c.ot?repFh(c.ot):'·'}</td><td><b>${repFh(c.tot)}</b></td>${REP_K.map(k=>`<td>${c.cnt[k]||'·'}</td>`).join('')}</tr>`).join('')||`<tr><td colspan="9" class="muted">Никого не нашли</td></tr>`}
       </tbody><tfoot><tr><td>Итого</td><td>${sum.wd}</td><td>${repFh(sum.sch)}</td><td>${repFh(sum.ot)}</td><td><b>${repFh(sum.tot)}</b></td>${REP_K.map(k=>`<td>${sum[k]||'·'}</td>`).join('')}</tr></tfoot></table></div></div>`;
       body.querySelectorAll('tr[data-k]').forEach(t=>t.onclick=()=>{const r=byKey.get(t.dataset.k);
