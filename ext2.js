@@ -186,7 +186,7 @@ async function contactsView(){
 function moreView(){
   const mgr=isManager(),b=S.badges||{};
   const items=[['news','📰','Новости','Что нового в парке'],['afisha','🎟️','Афиша','События и расписание'],['req','📨','Заявки','Отгул, ДО, отпуск, обмен сменами'],['kb','📚','База знаний','Регламенты и инструкции'],['inc','🚨','Происшествия',mgr?'Журнал происшествий':'Сообщить о происшествии'],['contacts','📞','Контакты','Телефоны команды'],
-    ...(canMng()&&VIEWS.rep?[['rep','📊','Сводка','Часы, переработки, отсутствия']]:[]),...(mgr?[['staff','👥','Команда','Заявки на регистрацию и список']]:[]),['set','⚙️','Настройки','Оформление и выход']];
+    ...(canMng()&&VIEWS.grid?[['grid','📆','Общий график','Все сотрудники по дням: ДО, отгулы, выходные']]:[]),...(canMng()&&VIEWS.rep?[['rep','📊','Сводка','Часы, переработки, отсутствия']]:[]),...(mgr?[['staff','👥','Команда','Заявки на регистрацию и список']]:[]),['set','⚙️','Настройки','Оформление и выход']];
   app.innerHTML=head('Ещё','Все разделы приложения')+items.map(([k,ic,n,d])=>`<div class="card pad" data-go="${k}" style="display:flex;gap:14px;align-items:center;cursor:pointer"><span style="font-size:28px">${ic}</span><span style="flex:1"><b style="font-size:16px">${n}</b><div class="muted">${d}</div></span>${b[k]?`<span class="pill" style="background:#C0392B;color:#fff;align-self:center">${b[k]}</span>`:''}</div>`).join('');
   app.querySelectorAll('[data-go]').forEach(c=>c.onclick=()=>go(c.dataset.go));
 }

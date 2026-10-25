@@ -31,7 +31,7 @@ async function rotView(){
   const mine=myShift(rot);
   if(mine.length)h+=`<div class="card pad col" style="border:2px solid var(--ink)"><b>👤 Твоя смена</b>${mine.map(x=>`<div><b>${esc(x.zone)}</b> <span class="muted">· ${esc(x.sec.replace(/^.*·\s*/,''))}${x.team==='W'?' · если дождь':''}</span>${x.p.brks?.length?`<div class="muted">Перерыв: ${x.p.brks.map(esc).join(' · ')}</div>`:''}${x.steps?.length?`<div class="muted">Замены: ${x.steps.map(s=>esc(s[0])+' '+esc(s[1])).join(' · ')}</div>`:''}</div>`).join('')}</div>`;
   const rimg=rot.images?.[S.team]||(rot.image&&(rot.imageTeams||['R','M']).includes(S.team)?rot.image:null);
-  if(rimg)h+=`<a href="${esc(rimg)}" target="_blank" rel="noopener" class="card" style="display:block;overflow:hidden;padding:0"><img src="${esc(rimg)}" alt="Ротация картинкой" loading="lazy" style="display:block;width:100%;height:auto"></a>`;
+  if(rimg)h+=`<button class="card rimg" id="rimg" aria-label="Увеличить картинку ротации"><img src="${esc(rimg)}" alt="Ротация картинкой" loading="lazy"><span>🔍 Нажми, чтобы увеличить</span></button>`;
   h+=`<div class="tabs">${TEAMS.map(([k,n,c])=>`<button data-t="${k}" class="${S.team===k?'on':''}" style="background:${c}">${n}</button>`).join('')}</div>`;
   const secs=rot.teams?.[S.team]||[];
   if(!secs.length)h+=`<div class="card pad"><b>Для этой команды ротации на этот день пока нет</b><div class="muted">Как только она появится, придёт уведомление.</div></div>`;
@@ -45,6 +45,7 @@ async function rotView(){
   const nt=await sb.from('rot_notes').select('note').eq('day',S.day).maybeSingle();
   h+=`<div class="card pad col"><b>📝 Моя пометка к этому дню</b><div class="muted">Видишь только ты.</div><textarea id="rn_t" placeholder="Например: взять рацию, поменяться с Таней обедом…">${esc(nt.data?.note||'')}</textarea><div class="muted" id="rn_s"></div></div>`;
   app.innerHTML=h;bindRot(rot);
+  $('#rimg')?.addEventListener('click',()=>rotZoom(rimg));
   let tm;const sv=async()=>{const r=await sb.from('rot_notes').upsert({day:S.day,note:$('#rn_t').value});$('#rn_s').textContent=r.error?'Не сохранилось: '+r.error.message:'Сохранено ✓'};
   $('#rn_t').oninput=()=>{$('#rn_s').textContent='…';clearTimeout(tm);tm=setTimeout(sv,900)};$('#rn_t').onblur=()=>{clearTimeout(tm);sv()};
 }
@@ -233,3 +234,15 @@ async function rotEditor(day,D,isNew){
 }
 
 VIEWS.rot=rotView;
+
+// картинка ротации: маленькая в ленте, по нажатию — на весь экран (двигай пальцем, щипок — увеличить)
+function rotZoom(src){
+  const ov=document.createElement('div');ov.className='ibox';
+  ov.innerHTML=`<button class="ibx" aria-label="Закрыть">✕</button><div class="ibs"><img src="${esc(src)}" alt="Ротация"></div>`;
+  const close=()=>{ov.remove();document.body.style.overflow='';document.removeEventListener('keydown',kd)};
+  const kd=e=>{if(e.key==='Escape')close()};
+  ov.querySelector('.ibx').onclick=close;
+  ov.querySelector('.ibs').onclick=e=>{if(e.target.classList.contains('ibs'))close()};
+  document.addEventListener('keydown',kd);
+  document.body.appendChild(ov);document.body.style.overflow='hidden';
+}

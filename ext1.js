@@ -30,7 +30,8 @@ async function shiftView(){
   S.offline=0;
   await ensurePeople();
   const today=iso(new Date()),day=S.sh.day||today;S.sh.day=day;
-  const [L,C]=await Promise.all([cq('shl',()=>sb.from('shift_lists').select('*').eq('active',true).order('sort')),cq('shc'+day,()=>sb.from('shift_checks').select('*').eq('day',day))]);
+  const [L,C,N]=await Promise.all([cq('shl',()=>sb.from('shift_lists').select('*').eq('active',true).order('sort')),cq('shc'+day,()=>sb.from('shift_checks').select('*').eq('day',day)),cq('shn'+day,()=>sb.from('shift_notes').select('*').eq('day',day).order('created_at'))]);
+  const notes=N.error?[]:(N.data||[]);
   const mgr=isManager(),all=(L.data||[]).filter(l=>l.kind===S.sh.kind),checks=C.data||[];
   const doneOf=l=>l.items.filter(it=>checks.some(c=>c.list_id===l.id&&c.item===it));
   const isFull=l=>l.items.length>0&&doneOf(l).length===l.items.length;
@@ -42,10 +43,12 @@ async function shiftView(){
   if(!can)h+='<div class="muted">Прошлые дни можно только смотреть.</div>';
   h+=all.map(l=>{
     const dn=doneOf(l),full=isFull(l),c=ZC[l.zone]||'#D3BFD0';
-    const last=full?checks.filter(x=>x.list_id===l.id).sort((a,b)=>a.at<b.at?1:-1)[0]:null;
-    return `<details class="card shl" ${full?'':'open'}><summary class="zh" style="background:${c}"><span>${esc(l.zone||l.title)}</span><span class="pill" style="background:${full?'#C9D4B0':'#FFFDF9'};align-self:center">${full?'✅ '+hm(last.at)+' · '+esc(shortName(pname(last.user_id))):dn.length+' / '+l.items.length}</span></summary>
+    const last=full?checks.filter(x=>x.list_id===l.id).sort((a,b)=>a.at<b.at?1:-1)[0]:null,nl=notes.filter(n=>n.list_id===l.id);
+    return `<details class="card shl" ${full?'':'open'}><summary class="zh" style="background:${c}"><span>${esc(l.zone||l.title)}</span><span class="pill" style="background:${full?'#C9D4B0':'#FFFDF9'};align-self:center">${nl.length?'💬'+nl.length+' · ':''}${full?'✅ '+hm(last.at)+' · '+esc(shortName(pname(last.user_id))):dn.length+' / '+l.items.length}</span></summary>
       <div class="zb">${l.items.map(it=>{const ck=checks.find(x=>x.list_id===l.id&&x.item===it);
-        return `<label class="shi"><input type="checkbox" data-l="${l.id}" data-i="${esc(it)}" ${ck?'checked':''} ${can?'':'disabled'}><span style="${ck?'text-decoration:line-through;color:var(--muted)':''}">${esc(it)}${ck?`<br><small class="muted" style="text-decoration:none">${esc(pname(ck.user_id))} · ${hm(ck.at)}</small>`:''}</span></label>`}).join('')||'<div class="muted">Пунктов нет</div>'}</div></details>`}).join('')||'<div class="card pad muted">Списков пока нет.</div>';
+        return `<label class="shi"><input type="checkbox" data-l="${l.id}" data-i="${esc(it)}" ${ck?'checked':''} ${can?'':'disabled'}><span style="${ck?'text-decoration:line-through;color:var(--muted)':''}">${esc(it)}${ck?`<br><small class="who">✔ ${esc(pname(ck.user_id))} · ${hm(ck.at)}</small>`:''}${notes.some(n=>n.list_id===l.id&&n.item===it)?` <small class="who" style="background:#F5E2A8">💬 ${notes.filter(n=>n.list_id===l.id&&n.item===it).length}</small>`:''}</span></label>`}).join('')||'<div class="muted">Пунктов нет</div>'}
+      <div class="shn"><b>💬 Комментарии${nl.length?' · '+nl.length:''}</b>${nl.map(n=>`<div class="shc"><div><b>${esc(shortName(pname(n.user_id)))}</b> <span class="muted">${hm(n.created_at)}${n.item?' · к пункту «'+esc(n.item)+'»':''}</span>${n.user_id===S.me.id||mgr?` <button class="x" data-nd="${n.id}" aria-label="Удалить">✕</button>`:''}</div><div>${esc(n.body)}</div></div>`).join('')}
+        ${can?`<div class="shnf"><select data-nl="${l.id}"><option value="">Ко всему списку</option>${l.items.map(it=>`<option value="${esc(it)}">${esc(it.length>46?it.slice(0,46)+'…':it)}</option>`).join('')}</select><textarea data-nt="${l.id}" placeholder="Например: закончились журналы, нужны новые"></textarea><button class="btn" data-ns="${l.id}" style="min-height:42px">Отправить</button></div>`:''}</div></div></details>`}).join('')||'<div class="card pad muted">Списков пока нет.</div>';
   if(mgr)h+='<button class="btn ghost" id="sh_ed">✏️ Править чек-листы</button>';
   app.innerHTML=h;
   const go2=d=>{const x=new Date(day+'T12:00:00');x.setDate(x.getDate()+d);S.sh.day=iso(x);shiftView()};
@@ -58,7 +61,15 @@ async function shiftView(){
     if(r.error&&r.error.code!=='23505')alert(r.error.message);
     keepScroll(shiftView);
   });
-  clearInterval(S.sh.timer);S.sh.timer=setInterval(()=>{if(S.tab!=='shift'){clearInterval(S.sh.timer);return}if(!document.querySelector('.ov')&&!document.hidden)keepScroll(shiftView)},30000);
+  app.querySelectorAll('[data-ns]').forEach(b=>b.onclick=async()=>{
+    const id=+b.dataset.ns,t=app.querySelector(`[data-nt="${id}"]`),body=t.value.trim();if(!body)return t.focus();
+    const item=app.querySelector(`[data-nl="${id}"]`).value||null;b.disabled=true;
+    const r=await sb.from('shift_notes').insert({list_id:id,day,item,body});
+    if(r.error){alert(r.error.message);b.disabled=false;return}
+    keepScroll(shiftView);
+  });
+  app.querySelectorAll('[data-nd]').forEach(b=>b.onclick=async()=>{if(!confirm('Удалить комментарий?'))return;const r=await sb.from('shift_notes').delete().eq('id',b.dataset.nd);if(r.error)alert(r.error.message);keepScroll(shiftView)});
+  clearInterval(S.sh.timer);S.sh.timer=setInterval(()=>{if(S.tab!=='shift'){clearInterval(S.sh.timer);return}if(!document.querySelector('.ov')&&!document.hidden&&!(document.activeElement&&document.activeElement.tagName==='TEXTAREA')&&![...app.querySelectorAll('textarea[data-nt]')].some(t=>t.value))keepScroll(shiftView)},30000);
 }
 function shiftEditor(){
   let edit=null;
