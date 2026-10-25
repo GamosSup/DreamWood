@@ -212,3 +212,8 @@ details.area>summary.ah::after{content:'▾';margin-left:6px;transition:transfor
 details.area[open]>summary.ah::after{transform:rotate(180deg)}
 details.area>.ab{padding:8px;display:flex;flex-direction:column;gap:8px}
 details.area .card{margin:0}
+
+.topr{display:flex;align-items:center;gap:8px;flex:none}
+.avb{background:none;border:0;padding:0;border-radius:50%;cursor:pointer;line-height:0}
+.av{border-radius:50%;object-fit:cover;flex:none;display:inline-block;border:2px solid #fff;box-shadow:0 1px 4px rgba(60,40,50,.25);background:#fff}
+.av.ini{display:inline-flex;align-items:center;justify-content:center;font-weight:800;background:var(--sage,#C9D4B0);color:#3B2A35}

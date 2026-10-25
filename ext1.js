@@ -24,8 +24,9 @@ async function apThread(box,kind,id){
 const apStOpts=(D,cur,legacy)=>Object.entries(D).filter(([k])=>!legacy.includes(k)||k===cur).map(([k,v])=>`<option value="${k}" ${k===cur?'selected':''}>${v[0]}</option>`).join('');
 async function ensurePeople(force){
   if(!force&&S.dg.people&&S.dg.people.length&&S.dg.people[0].position!==undefined)return;
-  const {data}=await sb.from('profiles').select('id,full_name,tab_no,team,phone,role,position').eq('status','approved').order('full_name');
-  S.dg.people=data||[];
+  let r=await sb.from('profiles').select('id,full_name,tab_no,team,phone,role,position,avatar_url').eq('status','approved').order('full_name');
+  if(r.error)r=await sb.from('profiles').select('id,full_name,tab_no,team,phone,role,position').eq('status','approved').order('full_name');
+  S.dg.people=r.data||[];
 }
 function keepScroll(fn){const st=app.scrollTop;return Promise.resolve(fn()).then(()=>{app.scrollTop=st})}
 function downloadCSV(name,rows){

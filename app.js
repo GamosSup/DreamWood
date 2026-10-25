@@ -165,7 +165,21 @@ async function refreshUnread(){
 }
 const firstName=()=>(S.me?.full_name||'').trim().split(/\s+/)[0]||'друг';
 const bell=()=>`<button class="bell" aria-label="Уведомления" onclick="openBell()">🔔<i id="bellN" ${S.unread>0?'':'hidden'}>${S.unread>9?'9+':S.unread}</i></button>`;
-const head=(h,sub)=>`<div class="top"><div class="brand"><img class="lg" src="stickers/logo.webp" alt="Дримвуд"><div class="hi">Привет, ${esc(firstName())}! 👋</div></div>${bell()}</div>${S.offline?`<div class="banner" style="background:#E6CC8F;color:#3B2A35;font-size:14px">📴 Нет сети — показаны сохранённые данные (от ${new Date(S.offline).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'})}). Менять что-либо пока нельзя.</div>`:''}${sub?`<div class="muted">${sub}</div>`:''}<h1>${h}</h1>`;
+
+// Фото профиля
+const avUrl=p=>p?sb.storage.from('avatars').getPublicUrl(p).data.publicUrl:'';
+const av=(p,sz=40)=>{const u=avUrl(p&&p.avatar_url);const nm=(p&&p.full_name||'?').trim();const ini=nm.split(/\s+/).slice(0,2).map(w=>w[0]||'').join('').toUpperCase()||'?';
+  return u?`<img class="av" src="${esc(u)}" alt="" width="${sz}" height="${sz}" loading="lazy" style="width:${sz}px;height:${sz}px">`:`<span class="av ini" style="width:${sz}px;height:${sz}px;font-size:${Math.round(sz*.4)}px">${esc(ini)}</span>`};
+function avResize(file,n=256){return new Promise((ok,no)=>{const im=new Image(),u=URL.createObjectURL(file);im.onload=()=>{const s=Math.min(im.width,im.height),c=document.createElement('canvas');c.width=c.height=n;c.getContext('2d').drawImage(im,(im.width-s)/2,(im.height-s)/2,s,s,0,0,n,n);URL.revokeObjectURL(u);c.toBlob(b=>b?ok(b):no(new Error('Не получилось обработать фото')),'image/jpeg',.85)};im.onerror=()=>no(new Error('Не удалось открыть картинку'));im.src=u})}
+async function avSet(file){
+  const old=S.me.avatar_url,path=S.me.id+'/'+Date.now()+'.jpg';
+  const blob=file?await avResize(file):null;
+  if(blob){const up=await sb.storage.from('avatars').upload(path,blob,{contentType:'image/jpeg'});if(up.error)throw up.error}
+  const r=await sb.rpc('set_my_avatar',{p:blob?path:null});if(r.error)throw r.error;
+  if(old)sb.storage.from('avatars').remove([old]);
+  S.me.avatar_url=blob?path:null;
+}
+const head=(h,sub)=>`<div class="top"><div class="brand"><img class="lg" src="stickers/logo.webp" alt="Дримвуд"><div class="hi">Привет, ${esc(firstName())}! 👋</div></div><div class="topr"><button class="avb" aria-label="Мой профиль" onclick="go('set')">${av(S.me,40)}</button>${bell()}</div></div>${S.offline?`<div class="banner" style="background:#E6CC8F;color:#3B2A35;font-size:14px">📴 Нет сети — показаны сохранённые данные (от ${new Date(S.offline).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'})}). Менять что-либо пока нельзя.</div>`:''}${sub?`<div class="muted">${sub}</div>`:''}<h1>${h}</h1>`;
 const NI={news:'📰',rotation:'🔄',afisha:'🎟️',signup:'🧑‍💼',task:'📋',request:'📨',incident:'🚨',shift:'💬',checkin:'☀️',repair:'🛠',feedback:'💡'};
 const ago=d=>{const m=Math.round((Date.now()-new Date(d))/6e4);return m<1?'только что':m<60?m+' мин назад':m<1440?Math.floor(m/60)+' ч назад':new Date(d).toLocaleDateString('ru',{day:'numeric',month:'short'})};
 async function openBell(){
@@ -520,6 +534,7 @@ async function settingsView(){
   let ct=null;if(adm){const r=await sb.from('app_settings').select('value').eq('key','checkin_time').maybeSingle();ct=r.data?.value||{h:9,m:30};const r2=await sb.from('app_settings').select('value').eq('key','shiftlist_time').maybeSingle();window._slt=r2.data?.value||{h:10,m:0}}
   let h=head('Настройки','Профиль и оформление');
   h+=`<div class="card pad"><b style="font-size:18px">${esc(S.me.full_name||'')}</b><div class="muted">${ROLE_RU[S.me.role]||'Сотрудник'}${S.me.position&&S.me.position!==ROLE_RU[S.me.role]?' · '+esc(S.me.position):''}${S.me.tab_no?` · табельный № ${esc(S.me.tab_no)}`:' · табельный номер пока не назначен'}</div></div>`;
+  h+=`<div class="card pad col"><b>📸 Фото профиля</b><div class="muted">Его увидят коллеги в контактах и в шапке. Подойдёт любое фото, оно само обрежется в круг.</div><div class="prow" style="align-items:center">${av(S.me,64)}<label class="btn ghost" style="display:flex;align-items:center;justify-content:center;min-height:44px;cursor:pointer;margin:0;flex:1">Выбрать фото<input id="st_av" type="file" accept="image/*" hidden></label>${S.me.avatar_url?'<button class="btn ghost" id="st_avd" style="flex:none">Убрать</button>':''}</div><div class="err" id="st_ave"></div></div>`;
   h+=`<div class="card pad"><b>Оформление</b><div class="muted">Четыре сезона, у каждого тёплый и холодный вариант</div>${Object.entries(THEMES).map(([k,[ic,n]])=>`<div class="trow"><span>${ic} ${n}</span>${[['warm','Тёплый'],['cold','Холодный']].map(([v,t])=>`<button class="tbtn ${cur===k+'-'+v?'on':''}" data-th="${k}-${v}"><i class="sw" data-theme="${k}-${v}"></i>${t}</button>`).join('')}</div>`).join('')}</div>`;
   h+=`<div class="card pad col"><b>📱 Мой телефон</b><div class="muted">Номер — твой логин для входа и виден коллегам в «Команда → Контакты».</div><div class="prow"><input id="st_ph" type="tel" class="pn" placeholder="+7 ..." value="${esc(S.me.phone||'')}"><button class="btn" id="st_phs">Сохранить</button></div></div>`;
   h+=`<div class="card pad col"><b>🔑 Сменить пароль</b><div class="muted">Письмо на почту не отправляется: пароль меняется сразу.</div><input id="st_p1" type="password" autocomplete="new-password" placeholder="Новый пароль (от 6 знаков)"><input id="st_p2" type="password" autocomplete="new-password" placeholder="Повтори пароль"><div class="err" id="st_pe"></div><button class="btn" id="st_pw">Сменить пароль</button></div>`;
@@ -529,6 +544,9 @@ async function settingsView(){
   h+=`<button class="btn ghost" id="out">Выйти из аккаунта</button>`;
   app.innerHTML=h;
   window.pushMount&&pushMount();
+  const avRun=async f=>{const er=$('#st_ave');er.style.color='';er.textContent='Загружаю…';try{await avSet(f);settingsView()}catch(e){er.textContent='Не получилось: '+(e.message||e)+(/avatar|bucket|not found|function/i.test(e.message||'')?' (в базе ещё не включены фото профиля)':'')}};
+  $('#st_av').onchange=e=>{const f=e.target.files[0];if(f)avRun(f)};
+  $('#st_avd')&&($('#st_avd').onclick=()=>{if(confirm('Убрать фото профиля?'))avRun(null)});
   $('#st_phs').onclick=async e=>{e.target.disabled=true;const v=normPhone($('#st_ph').value);if(!v){return alert('Введи номер полностью, например +7 978 123-45-67')}if(!confirm('Номер — это твой логин для входа. Менять на +'+v+'?')){e.target.disabled=false;return}const r=await sb.rpc('set_my_phone',{p:'+'+v});e.target.disabled=false;if(r.error)return alert(r.error.message);S.me.phone='+'+v;S.dg.people=[];e.target.textContent='✅';setTimeout(()=>e.target.textContent='Сохранить',1200)};
   $('#st_pw').onclick=async e=>{const p1=$('#st_p1').value,p2=$('#st_p2').value,er=$('#st_pe');er.style.color='';if(p1.length<6)return er.textContent='Пароль не короче 6 знаков';if(p1!==p2)return er.textContent='Пароли не совпадают';
     e.target.disabled=true;const r=await sb.auth.updateUser({password:p1});e.target.disabled=false;if(r.error)return er.textContent='Не получилось: '+r.error.message;$('#st_p1').value=$('#st_p2').value='';er.style.color='var(--ink)';er.textContent='Пароль изменён ✅'};
