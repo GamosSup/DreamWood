@@ -17,8 +17,27 @@ function dgxSheet(title,render,onClose,cls){
 }
 
 // ---------- файлы ----------
+const DRV_K={dg:'dg',inc:'inc',repairs:'repairs'};
+// отправка файла на Google Drive через /api/upload. Возвращает {id} или {err, off} (off — Drive не настроен, нужен запасной путь)
+async function driveSend(bucket,rec,file){
+  if(S.driveOff)return {off:1};
+  try{
+    const ses=(await sb.auth.getSession()).data.session;if(!ses)return {off:1};
+    const r=await fetch('/api/upload',{method:'POST',headers:{authorization:'Bearer '+ses.access_token,'x-kind':DRV_K[bucket],'x-rec':rec,'x-name':encodeURIComponent(file.name||'file'),'content-type':file.type||'application/octet-stream'},body:file});
+    const j=await r.json().catch(()=>({}));
+    if(r.ok&&j.id)return {id:j.id};
+    if(r.status===501||r.status===404||r.status===405){S.driveOff=1;return {off:1}}
+    if(r.status===413)return {err:j.message||'Файл слишком большой'};
+    return {off:1,err:j.message||('Drive: '+r.status)};
+  }catch(e){return {off:1,err:String(e.message||e)}}
+}
 async function dgxUrl(path,bucket='dg'){
   const key=bucket+'/'+path,c=dgxCache.get(key);if(c&&c.exp>Date.now())return c.url;
+  if(path.startsWith('drive:')){
+    try{const ses=(await sb.auth.getSession()).data.session;
+      const r=await fetch(`/api/link?k=${DRV_K[bucket]}&id=${encodeURIComponent(path.slice(6))}`,{headers:{authorization:'Bearer '+ses.access_token}});
+      const j=await r.json();if(!r.ok||!j.url)return null;dgxCache.set(key,{url:j.url,exp:Date.now()+3300e3});return j.url}catch(e){return null}
+  }
   const r=await sb.storage.from(bucket).createSignedUrl(path,3600);if(r.error)return null;
   dgxCache.set(key,{url:r.data.signedUrl,exp:Date.now()+3300e3});return r.data.signedUrl;
 }
@@ -34,6 +53,9 @@ function dgxShrink(file,max=1600){
 }
 async function dgxUpload(taskId,file){
   const f=await dgxShrink(file);
+  const dv=await driveSend('dg',taskId,f);
+  if(dv.id){const r=await sb.from('dg_files').insert({task_id:taskId,path:'drive:'+dv.id,name:file.name,mime:f.type,size:f.size});return r.error?'Не сохранилось: '+r.error.message:null}
+  if(dv.err&&!dv.off)return dv.err;
   if(f.size>10*1024*1024)return 'Файл «'+file.name+'» больше 10 МБ';
   const ext=((f.name.match(/\.(\w{1,5})$/)||[])[1]||'bin').toLowerCase();
   const path=`${taskId}/${crypto.randomUUID()}.${ext}`;

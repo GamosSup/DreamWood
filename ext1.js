@@ -37,6 +37,9 @@ function downloadCSV(name,rows){
 // универсальная загрузка файла в бакет + таблицу вложений
 async function fileUpload(bucket,table,fk,id,file,maxMb=10){
   const f=await dgxShrink(file);
+  const dv=await driveSend(bucket,id,f);
+  if(dv.id){const r=await sb.from(table).insert({[fk]:id,path:'drive:'+dv.id,name:file.name,mime:f.type,size:f.size});return r.error?'Не сохранилось: '+r.error.message:null}
+  if(dv.err&&!dv.off)return dv.err;
   if(f.size>maxMb*1024*1024)return 'Файл «'+file.name+'» больше '+maxMb+' МБ';
   const ext=((f.name.match(/\.(\w{1,5})$/)||[])[1]||'bin').toLowerCase();
   const path=`${id}/${crypto.randomUUID()}.${ext}`;
