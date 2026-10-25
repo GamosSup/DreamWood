@@ -14,6 +14,9 @@ const brkBg=t=>t.startsWith('Ос')?'#F3C29B':t.startsWith('О')?'#F5E2A8':'#E4E
 const TEAMS=[['R','Рейнджеры','#C9D4B0'],['K','Хранители','#B7CFC4'],['M','Метрополис','#E4B5A3'],['W','Если дождь','#7E98AE']];
 const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const isManager=()=>S.me?.role==='manager';
+const isLead=()=>S.me?.role==='lead';
+const canMng=()=>isManager()||isLead();
+const ROLE_RU={employee:'Сотрудник',lead:'Бригадир',manager:'Руководитель'};
 // запрос с запасным вариантом: если сети нет — показываем последние сохранённые данные
 async function cq(key,fn){
   const k='dw:'+(S.uid||'')+':'+key;
@@ -35,7 +38,9 @@ async function boot(){
   S.me=data||{id:session.user.id,full_name:session.user.email,role:'employee',status:'pending'};
   S.viewUser=S.me.id;
   if(S.me.status!=='approved')return pendingView();
-  nav.hidden=false;nav.querySelectorAll('[data-mgr]').forEach(b=>b.hidden=!isManager());go(S.tab==='staff'&&!isManager()?'rot':S.tab);
+  nav.hidden=false;nav.querySelectorAll('[data-mgr]').forEach(b=>b.hidden=!isManager());nav.querySelectorAll('[data-lead]').forEach(b=>b.hidden=!canMng());go(S.tab==='staff'&&!isManager()?'rot':S.tab);
+  const g=new URLSearchParams(location.search).get('go');if(g){history.replaceState(null,'',location.pathname);openLink(g)}
+  window.pushRefresh&&pushRefresh();
 }
 function authView(mode,err,ok){
   nav.hidden=true;const reg=mode==='up';
@@ -88,7 +93,7 @@ async function refreshUnread(){
     const el=$('#bellN'),tot=(S.unread||0)+S.due.length;if(el){el.hidden=!tot;el.textContent=tot>9?'9+':tot}}catch(e){S.due=[]}
   S.pending=p.count||0;const sn=$('#staffN');if(sn){sn.hidden=!S.pending;sn.textContent=S.pending}
   try{const q=await sb.from('requests').select('id,status,peer_id').in('status',['peer','pending']);
-    const rq=(q.data||[]).filter(x=>(x.status==='pending'&&isManager())||(x.status==='peer'&&x.peer_id===S.me.id)).length;
+    const rq=(q.data||[]).filter(x=>(x.status==='pending'&&canMng())||(x.status==='peer'&&x.peer_id===S.me.id)).length;
     S.badges={req:rq,staff:S.pending};const rn=$('#reqN');if(rn){rn.hidden=!rq;rn.textContent=rq}
     const mt=rq+S.pending,mn=$('#moreN');if(mn){mn.hidden=!mt;mn.textContent=mt}}catch(e){}
 }
@@ -139,15 +144,16 @@ function zoneCard(zone,blocks,c){
 const KINDS={off:['ВЫХ','#E8DCCB','Выходной'],otgul:['ОТ','#E4B5A3','Отгул'],do:['ДО','#F5E2A8','ДО'],sick:['Б','#BCC8D6','Больничный'],vac:['ОП','#C9D4B0','Отпуск']};
 async function schView(){
   S.offline=0;
-  if(isManager()&&!S.people.length){const {data}=await sb.from('profiles').select('id,full_name').eq('status','approved').order('full_name');S.people=data||[]}
+  if(canMng()&&!S.people.length){let q=sb.from('profiles').select('id,full_name,team').eq('status','approved').order('full_name');if(!isManager())q=q.eq('team',S.me.team);const {data}=await q;S.people=data||[]}
   const m=S.month,y=m.getFullYear(),mo=m.getMonth(),first=iso(new Date(y,mo,1)),last=iso(new Date(y,mo+1,0));
   const {data}=await cq('marks:'+S.viewUser+first,()=>sb.from('marks').select('*').eq('user_id',S.viewUser).gte('day',first).lte('day',last));
   const otr=await cq('ot:'+S.viewUser+first,()=>sb.from('overtime').select('*').eq('user_id',S.viewUser).gte('day',first).lte('day',last).order('day').order('start_time'));
+  const otOk=canMng()&&(isManager()||S.viewUser!==S.me.id);
   const otRows=otr.data||[],otSum=otRows.reduce((a,r)=>a+Number(r.hours),0),fh=x=>String(Math.round(x*100)/100).replace('.',',');
   S.marks={};(data||[]).forEach(r=>S.marks[r.day]=r);
   const n=new Date(y,mo+1,0).getDate(),lead=(new Date(y,mo,1).getDay()+6)%7;
   let h=head('График',m.toLocaleDateString('ru',{month:'long',year:'numeric'}));
-  if(isManager())h+=`<label>Сотрудник<select id="who">${S.people.map(p=>`<option value="${p.id}" ${p.id===S.viewUser?'selected':''}>${esc(p.full_name)}</option>`).join('')}</select></label>`;
+  if(canMng())h+=`<label>Сотрудник<select id="who">${S.people.map(p=>`<option value="${p.id}" ${p.id===S.viewUser?'selected':''}>${esc(p.full_name)}</option>`).join('')}</select></label>`;
   h+=`<div style="display:flex;gap:8px"><button class="btn ghost" id="pm">←</button><button class="btn ghost" id="nm">→</button></div><div class="cal">${['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map(d=>`<div class="dh">${d}</div>`).join('')}${'<div></div>'.repeat(lead)}`;
   let worked=0;const cnt={};
   for(let d=1;d<=n;d++){const k=iso(new Date(y,mo,d)),mk=S.marks[k];
@@ -155,10 +161,10 @@ async function schView(){
     h+=`<button class="day ${S.sel===k?'sel':''}" data-k="${k}" style="background:${mk?KINDS[mk.kind][1]:'var(--card)'}">${d}<small>${mk?KINDS[mk.kind][0]:''}</small></button>`}
   h+=`</div><div class="stat"><div style="background:var(--sage)"><b>${worked}</b>рабочих дней</div><div style="background:var(--gold)"><b>${worked*10}</b>часов по графику</div></div>
   <div class="stat"><div style="background:var(--pink)"><b>${fh(otSum)}</b>переработки</div><div style="background:var(--blue)"><b>${fh(worked*10+otSum)}</b>всего часов</div></div>
-  <div class="muted">Смена 11 ч, из них 1 ч обед → 10 рабочих часов. Дни без отметки считаются рабочими. Переработки вносит руководитель и они идут в общий итог.</div>`;
+  <div class="muted">Смена 11 ч, из них 1 ч обед → 10 рабочих часов. Дни без отметки считаются рабочими. Переработки вносит руководитель или бригадир и они идут в общий итог.</div>`;
   const defd=S.sel||(iso(new Date()).slice(0,7)===first.slice(0,7)?iso(new Date()):first);
-  h+=`<div class="card pad col"><b>⏱ Переработки</b>${otRows.length?otRows.map(r=>`<div class="otr"><span><b>${dayLabel(r.day)}</b> · с ${esc(String(r.start_time||'—').slice(0,5))} · ${fh(+r.hours)} ч${r.note?' · '+esc(r.note):''}</span>${isManager()?`<button class="x" data-od="${r.id}" aria-label="Удалить">✕</button>`:''}</div>`).join(''):'<div class="muted">В этом месяце переработок нет</div>'}
-  ${isManager()?`<div class="col" style="border-top:1px solid var(--line);padding-top:10px"><div class="muted">Добавить переработку для выбранного сотрудника</div><input type="date" id="otd" value="${defd}"><div class="two"><label>С какого времени<input type="time" id="ots" value="20:00"></label><label>Сколько часов<input type="number" id="oth" step="0.5" min="0.5" placeholder="2"></label></div><input id="otn" placeholder="Комментарий (необязательно)"><button class="btn" id="otadd">Добавить</button></div>`:''}</div>`;
+  h+=`<div class="card pad col"><b>⏱ Переработки</b>${otRows.length?otRows.map(r=>`<div class="otr"><span><b>${dayLabel(r.day)}</b> · с ${esc(String(r.start_time||'—').slice(0,5))} · ${fh(+r.hours)} ч${r.note?' · '+esc(r.note):''}</span>${otOk?`<button class="x" data-od="${r.id}" aria-label="Удалить">✕</button>`:''}</div>`).join(''):'<div class="muted">В этом месяце переработок нет</div>'}
+  ${otOk?`<div class="col" style="border-top:1px solid var(--line);padding-top:10px"><div class="muted">Добавить переработку для выбранного сотрудника</div><input type="date" id="otd" value="${defd}"><div class="two"><label>С какого времени<input type="time" id="ots" value="20:00"></label><label>Сколько часов<input type="number" id="oth" step="0.5" min="0.5" placeholder="2"></label></div><input id="otn" placeholder="Комментарий (необязательно)"><button class="btn" id="otadd">Добавить</button></div>`:''}</div>`;
   if(S.sel){const mk=S.marks[S.sel];
     h+=`<div class="card pad" style="display:flex;flex-direction:column;gap:10px"><b>${S.sel}</b><div class="tabs">${Object.entries(KINDS).map(([k,v])=>`<button data-m="${k}" style="background:${v[1]}" class="${mk?.kind===k?'on':''}">${v[2]}</button>`).join('')}<button data-m="" style="background:#fff;border:1px solid #ccc">Рабочий</button></div><textarea id="note" placeholder="Комментарий">${esc(mk?.note||'')}</textarea><button class="btn" id="save">Сохранить</button></div>`}
   app.innerHTML=h;
@@ -225,13 +231,17 @@ async function staffView(){
       return `<div class="col" style="border-top:1px solid var(--line);padding-top:10px"><div><b>${esc(p.full_name)}</b>${p.status==='rejected'?'<span class="pill" style="background:#E8B4B8;margin-left:6px">отклонена</span>':''}<div class="muted">${esc(p.email||'')} · ${dt(p.created_at)}</div></div>
       <label>Это сотрудник из списка:<select data-rs="${p.id}"><option value="">— не привязывать —</option>${opts.map(({r,sc})=>`<option value="${r.id}" ${sc>=3&&r===opts[0].r?'selected':''}>${sc>0?'★ ':''}${esc(r.full_name)} · ${TN[r.team]}</option>`).join('')}</select></label>
       <div class="two"><button class="btn" data-ok="${p.id}">Одобрить</button>${p.status==='rejected'?'':`<button class="btn ghost" data-no="${p.id}">Отклонить</button>`}</div></div>`}).join(''):'<div class="muted">Новых заявок нет</div>'}<div class="muted">★ — похоже по имени и фамилии. Табельный номер присваивается автоматически при одобрении.</div></div>`;
-  h+=`<div class="card pad col"><b>👥 Команда · ${ap.length}</b><div class="muted">Имя (первое слово идёт в приветствие) и табельный номер</div>${ap.map(p=>`<div class="prow"><input class="pn" data-pn="${p.id}" value="${esc(p.full_name||'')}" placeholder="Имя Фамилия"><input class="pt" data-pt="${p.id}" value="${esc(p.tab_no||'')}" placeholder="№"><button class="btn" style="padding:0 14px" data-sp="${p.id}" aria-label="Сохранить">💾</button></div><div class="muted" style="margin-top:-6px">${p.role==='manager'?'руководитель':'сотрудник'}${rl.get(p.id)?' · в списке: '+esc(rl.get(p.id)):''}${p.team?' · '+(TN[p.team]||''):''} · с ${dt(p.created_at)}</div>`).join('')}</div>`;
+  h+=`<div class="card pad col"><b>👥 Команда · ${ap.length}</b><div class="muted">Имя (первое слово идёт в приветствие) и табельный номер</div>${ap.map(p=>`<div class="prow"><input class="pn" data-pn="${p.id}" value="${esc(p.full_name||'')}" placeholder="Имя Фамилия"><input class="pt" data-pt="${p.id}" value="${esc(p.tab_no||'')}" placeholder="№"><button class="btn" style="padding:0 14px" data-sp="${p.id}" aria-label="Сохранить">💾</button></div><div class="muted" style="margin-top:-6px">${p.id===S.me.id?ROLE_RU[p.role].toLowerCase():`<select class="rl" data-rl="${p.id}">${Object.entries(ROLE_RU).map(([k,v])=>`<option value="${k}" ${p.role===k?'selected':''}>${v}</option>`).join('')}</select>`}${rl.get(p.id)?' · в списке: '+esc(rl.get(p.id)):''}${p.team?' · '+(TN[p.team]||''):''} · с ${dt(p.created_at)}</div>`).join('')}</div>`;
   h+=`<div class="card pad col"><b>📋 Ещё не зарегистрировались · ${free.length}</b><div class="muted">${free.length?free.map(r=>esc(r.full_name)).join(', '):'Все из списка уже в приложении'}</div></div>`;
   app.innerHTML=h;
   app.querySelectorAll('[data-ok]').forEach(b=>b.onclick=async()=>{const id=b.dataset.ok,rs=app.querySelector(`[data-rs="${id}"]`).value;b.disabled=true;
     const r=await sb.rpc('approve_member',{p_id:id,p_roster:rs?+rs:null});if(r.error){alert('Не удалось одобрить: '+r.error.message);return staffView()}
     alert('Одобрено. Табельный номер: '+r.data);S.people=[];staffView().then(refreshUnread)});
   app.querySelectorAll('[data-no]').forEach(b=>b.onclick=async()=>{if(!confirm('Отклонить заявку?'))return;const r=await sb.rpc('reject_member',{p_id:b.dataset.no});if(r.error)alert(r.error.message);staffView().then(refreshUnread)});
+  app.querySelectorAll('[data-rl]').forEach(sel=>sel.onchange=async()=>{const nm=ap.find(x=>x.id===sel.dataset.rl);
+    if(sel.value==='lead'&&!nm?.team)alert('У сотрудника не указана команда (он не привязан к списку), поэтому бригадир увидит только себя.');
+    const r=await sb.from('profiles').update({role:sel.value}).eq('id',sel.dataset.rl);if(r.error){alert('Не удалось сменить роль: '+r.error.message);return staffView()}
+    sel.style.outline='2px solid var(--sage)';setTimeout(()=>sel.style.outline='',900)});
   app.querySelectorAll('[data-sp]').forEach(b=>b.onclick=async()=>{const id=b.dataset.sp,full_name=app.querySelector(`[data-pn="${id}"]`).value.trim(),tab_no=app.querySelector(`[data-pt="${id}"]`).value.trim()||null;
     const r=await sb.from('profiles').update({full_name,tab_no}).eq('id',id);if(r.error)return alert('Не удалось сохранить: '+r.error.message);
     if(id===S.me.id){S.me.full_name=full_name;S.me.tab_no=tab_no}S.people=[];b.textContent='✅';setTimeout(()=>staffView(),600)});
@@ -389,13 +399,17 @@ async function dgOpen(id,colId){
 async function settingsView(){
   const cur=getTheme();
   let h=head('Настройки','Профиль и оформление');
-  h+=`<div class="card pad"><b style="font-size:18px">${esc(S.me.full_name||'')}</b><div class="muted">${isManager()?'Руководитель':'Сотрудник'}${S.me.tab_no?` · табельный № ${esc(S.me.tab_no)}`:' · табельный номер пока не назначен'}</div></div>`;
+  h+=`<div class="card pad"><b style="font-size:18px">${esc(S.me.full_name||'')}</b><div class="muted">${ROLE_RU[S.me.role]||'Сотрудник'}${S.me.tab_no?` · табельный № ${esc(S.me.tab_no)}`:' · табельный номер пока не назначен'}</div></div>`;
   h+=`<div class="card pad"><b>Оформление</b><div class="muted">Четыре сезона, у каждого тёплый и холодный вариант</div>${Object.entries(THEMES).map(([k,[ic,n]])=>`<div class="trow"><span>${ic} ${n}</span>${[['warm','Тёплый'],['cold','Холодный']].map(([v,t])=>`<button class="tbtn ${cur===k+'-'+v?'on':''}" data-th="${k}-${v}"><i class="sw" data-theme="${k}-${v}"></i>${t}</button>`).join('')}</div>`).join('')}</div>`;
+  h+='<div id="pushbox"></div>';
   h+=`<button class="btn ghost" id="out">Выйти из аккаунта</button>`;
   app.innerHTML=h;
+  window.pushMount&&pushMount();
   app.querySelectorAll('[data-th]').forEach(b=>b.onclick=()=>{applyTheme(b.dataset.th);settingsView()});
   $('#out').onclick=()=>sb.auth.signOut().then(()=>{clearCache();S.me=null;S.unread=0;boot()});
 }
 sb.auth.onAuthStateChange(()=>{});
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
+function openLink(l){if(!l)return;if(String(l).startsWith('rot:')){S.day=l.slice(4);go('rot')}else go(l)}
+if('serviceWorker'in navigator)navigator.serviceWorker.addEventListener('message',e=>{if(e.data&&e.data.go&&S.me)openLink(e.data.go)});
 boot();

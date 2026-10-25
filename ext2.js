@@ -8,7 +8,7 @@ const dispName=id=>shortName(pname(id));
 async function reqView(){
   await ensurePeople();
   const r=await sb.from('requests').select('*').order('created_at',{ascending:false}).limit(200);
-  const all=r.data||[],me=S.me.id,mgr=isManager();
+  const all=r.data||[],me=S.me.id,mgr=canMng();
   const toMe=all.filter(x=>x.status==='peer'&&x.peer_id===me);
   const pend=mgr?all.filter(x=>x.status==='pending'):[];
   const mine=all.filter(x=>x.user_id===me);
@@ -186,7 +186,7 @@ async function contactsView(){
 function moreView(){
   const mgr=isManager(),b=S.badges||{};
   const items=[['news','📰','Новости','Что нового в парке'],['afisha','🎟️','Афиша','События и расписание'],['req','📨','Заявки','Отгул, ДО, отпуск, обмен сменами'],['kb','📚','База знаний','Регламенты и инструкции'],['inc','🚨','Происшествия',mgr?'Журнал происшествий':'Сообщить о происшествии'],['contacts','📞','Контакты','Телефоны команды'],
-    ...(mgr?[...(VIEWS.rep?[['rep','📊','Сводка','Часы, переработки, отсутствия']]:[]),['staff','👥','Команда','Заявки на регистрацию и список']]:[]),['set','⚙️','Настройки','Оформление и выход']];
+    ...(canMng()&&VIEWS.rep?[['rep','📊','Сводка','Часы, переработки, отсутствия']]:[]),...(mgr?[['staff','👥','Команда','Заявки на регистрацию и список']]:[]),['set','⚙️','Настройки','Оформление и выход']];
   app.innerHTML=head('Ещё','Все разделы приложения')+items.map(([k,ic,n,d])=>`<div class="card pad" data-go="${k}" style="display:flex;gap:14px;align-items:center;cursor:pointer"><span style="font-size:28px">${ic}</span><span style="flex:1"><b style="font-size:16px">${n}</b><div class="muted">${d}</div></span>${b[k]?`<span class="pill" style="background:#C0392B;color:#fff;align-self:center">${b[k]}</span>`:''}</div>`).join('');
   app.querySelectorAll('[data-go]').forEach(c=>c.onclick=()=>go(c.dataset.go));
 }
