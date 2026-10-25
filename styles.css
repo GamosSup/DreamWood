@@ -200,3 +200,4 @@ select.rl{width:auto;min-height:0;padding:2px 6px;font-size:13px;display:inline-
 
 h1,#app>.muted,.top+.muted{text-shadow:0 0 5px var(--bg),0 0 9px var(--bg),0 0 12px var(--bg)}
 .btn.ghost:hover{background:var(--tab)}
+#app>label,#app>.two label,#app>.err,#app>.muted,#app>div>.muted{text-shadow:0 0 5px var(--bg),0 0 9px var(--bg),0 0 12px var(--bg)}

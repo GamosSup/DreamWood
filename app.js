@@ -44,31 +44,34 @@ async function boot(){
   const g=new URLSearchParams(location.search).get('go');if(g){history.replaceState(null,'',location.pathname);openLink(g)}
   window.pushRefresh&&pushRefresh();
 }
+const normPhone=v=>{let d=String(v||'').replace(/\D/g,'');if(d.length===11&&d[0]==='8')d='7'+d.slice(1);if(d.length===10)d='7'+d;return d.length>=11&&d.length<=15?d:''};
+const phEmail=d=>d+'@dreamwood.pages.dev';
 function authView(mode,err,ok){
   nav.hidden=true;const reg=mode==='up';
   app.innerHTML=`<div style="margin-top:24px"><div class="authhd"><img class="alogo" src="stickers/logo.webp" alt="Дримвуд — парк чудес и приключений"><img class="amas" src="stickers/mascot-hi.webp" alt=""></div><h1>Чудеса начинаются здесь</h1><p class="muted">Приложение команды парка: ротации, график, афиша и новости.</p></div>
   <div class="seg"><button id="tin" class="${reg?'':'on'}">Вход</button><button id="tup" class="${reg?'on':''}">Регистрация</button></div>
   ${reg?`<div class="two"><label>Имя<input id="fn" autocomplete="given-name" placeholder="Игорь"></label><label>Фамилия<input id="ln" autocomplete="family-name" placeholder="Шубчик"></label></div>
-  <label>Телефон<input id="ph" type="tel" autocomplete="tel" placeholder="+7 ..."></label>`:''}
-  <label>Почта${reg?' (лучше рабочая)':''}<input id="em" type="email" autocomplete="username" placeholder="name@company.ru"></label>
+  `:''}
+  <label>${reg?'Телефон (это твой логин)':'Телефон'}<input id="ph" type="tel" autocomplete="${reg?'tel':'username'}" placeholder="+7 978 123-45-67"></label>
+  ${reg?'<label>Почта (необязательно)<input id="em" type="email" autocomplete="email" placeholder="name@company.ru"></label>':''}
   <label>Пароль${reg?' (придумай сам, не короче 6 знаков)':''}<input id="pw" type="password" autocomplete="${reg?'new-password':'current-password'}"></label>
   <div class="err">${esc(err||'')}</div>${ok?`<div class="card pad" style="background:var(--sage)">${esc(ok)}</div>`:''}
   <button class="btn" id="go">${reg?'Отправить заявку':'Войти в приключение'}</button>
-  ${reg?'<div class="muted">Почта нужна только как логин: мы ничего на неё не отправляем. Руководитель получит имя, телефон и почту и подтвердит доступ. Пароль знаешь только ты.</div>':'<div class="muted">Нет аккаунта? Открой «Регистрацию»: руководитель подтвердит заявку. Забыл пароль — напиши руководителю, он задаст новый.</div>'}`;
+  ${reg?'<div class="muted">Номер телефона — твой логин, почта не обязательна и нужна только для связи: мы ничего на неё не отправляем. Руководитель подтвердит доступ. Пароль знаешь только ты.</div>':'<div class="muted">Нет аккаунта? Открой «Регистрацию»: руководитель подтвердит заявку. Забыл пароль — напиши руководителю, он задаст новый.</div>'}`;
   $('#tin').onclick=()=>authView('in');$('#tup').onclick=()=>authView('up');
   $('#go').onclick=async()=>{
-    const email=$('#em').value.trim(),password=$('#pw').value;
-    if(!reg){const {error}=await sb.auth.signInWithPassword({email,password});return error?authView('in','Не получилось войти: проверь почту и пароль'):boot()}
+    const password=$('#pw').value,ph=normPhone($('#ph').value),email=$('#em')?.value.trim()||'';
+    if(!ph)return authView(reg?'up':'in','Введи номер телефона полностью, например +7 978 123-45-67');
+    if(!reg){const {error}=await sb.auth.signInWithPassword({email:phEmail(ph),password});return error?authView('in','Не получилось войти: проверь номер и пароль'):boot()}
     const fn=$('#fn').value.trim(),ln=$('#ln').value.trim();
     if(!fn||!ln)return authView('up','Укажи имя и фамилию');
-    const phone=$('#ph').value.trim();if(phone.replace(/\D/g,'').length<10)return authView('up','Укажи номер телефона');
-    if(!/^\S+@\S+\.\S+$/.test(email))return authView('up','Проверь почту');
+    if(email&&!/^\S+@\S+\.\S+$/.test(email))return authView('up','Проверь почту или оставь поле пустым');
     if(password.length<6)return authView('up','Пароль должен быть не короче 6 знаков');
     $('#go').disabled=true;
-    const {data,error}=await sb.auth.signUp({email,password,options:{data:{full_name:fn+' '+ln,phone}}});
-    if(error)return authView('up',/registered|already/i.test(error.message)?'Эта почта уже зарегистрирована: открой «Вход»':'Не удалось зарегистрироваться: '+error.message);
+    const {data,error}=await sb.auth.signUp({email:phEmail(ph),password,options:{data:{full_name:fn+' '+ln,phone:'+'+ph,contact_email:email}}});
+    if(error)return authView('up',/registered|already/i.test(error.message)?'Этот номер уже зарегистрирован: открой «Вход»':'Не удалось зарегистрироваться: '+error.message);
     if(data.session)return boot();
-    authView('in','', 'Заявка отправлена. Руководитель подтвердит доступ: тогда войдёшь с этой почтой и паролем.');
+    authView('in','', 'Заявка отправлена. Руководитель подтвердит доступ: тогда войдёшь по номеру телефона и паролю.');
   };
 }
 const loginView=err=>authView('in',err);
@@ -466,7 +469,7 @@ async function settingsView(){
   let h=head('Настройки','Профиль и оформление');
   h+=`<div class="card pad"><b style="font-size:18px">${esc(S.me.full_name||'')}</b><div class="muted">${ROLE_RU[S.me.role]||'Сотрудник'}${S.me.position&&S.me.position!==ROLE_RU[S.me.role]?' · '+esc(S.me.position):''}${S.me.tab_no?` · табельный № ${esc(S.me.tab_no)}`:' · табельный номер пока не назначен'}</div></div>`;
   h+=`<div class="card pad"><b>Оформление</b><div class="muted">Четыре сезона, у каждого тёплый и холодный вариант</div>${Object.entries(THEMES).map(([k,[ic,n]])=>`<div class="trow"><span>${ic} ${n}</span>${[['warm','Тёплый'],['cold','Холодный']].map(([v,t])=>`<button class="tbtn ${cur===k+'-'+v?'on':''}" data-th="${k}-${v}"><i class="sw" data-theme="${k}-${v}"></i>${t}</button>`).join('')}</div>`).join('')}</div>`;
-  h+=`<div class="card pad col"><b>📱 Мой телефон</b><div class="muted">Номер сам появится у коллег в «Команда → Контакты». Вводить его больше нигде не нужно.</div><div class="prow"><input id="st_ph" type="tel" class="pn" placeholder="+7 ..." value="${esc(S.me.phone||'')}"><button class="btn" id="st_phs">Сохранить</button></div></div>`;
+  h+=`<div class="card pad col"><b>📱 Мой телефон</b><div class="muted">Номер — твой логин для входа и виден коллегам в «Команда → Контакты».</div><div class="prow"><input id="st_ph" type="tel" class="pn" placeholder="+7 ..." value="${esc(S.me.phone||'')}"><button class="btn" id="st_phs">Сохранить</button></div></div>`;
   h+=`<div class="card pad col"><b>🔑 Сменить пароль</b><div class="muted">Письмо на почту не отправляется: пароль меняется сразу.</div><input id="st_p1" type="password" autocomplete="new-password" placeholder="Новый пароль (от 6 знаков)"><input id="st_p2" type="password" autocomplete="new-password" placeholder="Повтори пароль"><div class="err" id="st_pe"></div><button class="btn" id="st_pw">Сменить пароль</button></div>`;
   h+=`<div class="card pad col"><b>🔔 Что присылать на телефон</b><div class="muted">Колокольчик внутри приложения работает всегда. Утреннюю отметку «Ты сегодня на смене?» и срочные поломки отключить нельзя.</div>${[['req','📨 Заявки, поломки и ответы по ним'],['news','📰 Новости и афиша'],['rot','🔄 Ротации'],['task','📋 Задачи и комментарии в смене']].map(([k,n])=>`<label class="chk"><input type="checkbox" data-pp="${k}" ${pon(k)?'checked':''}><span>${n}</span></label>`).join('')}</div>`;
   if(adm)h+=`<div class="card pad col"><b>⚙️ Настройки приложения (только админ)</b><div class="muted">Во сколько утром приходит «Ты сегодня на смене?» (по Москве).</div><div class="prow"><input id="st_ct" type="time" class="pn" value="${String(ct.h).padStart(2,'0')}:${String(ct.m).padStart(2,'0')}"><button class="btn" id="st_cts">Сохранить</button></div><div class="err" id="st_cte"></div><div class="muted" style="margin-top:6px">Во сколько приходит напоминание «Заполни чек-лист открытия» (по Москве).</div><div class="prow"><input id="st_lt" type="time" class="pn" value="${String(window._slt.h).padStart(2,'0')}:${String(window._slt.m).padStart(2,'0')}"><button class="btn" id="st_lts">Сохранить</button></div><div class="err" id="st_lte"></div></div>`;
@@ -474,7 +477,7 @@ async function settingsView(){
   h+=`<button class="btn ghost" id="out">Выйти из аккаунта</button>`;
   app.innerHTML=h;
   window.pushMount&&pushMount();
-  $('#st_phs').onclick=async e=>{e.target.disabled=true;const v=$('#st_ph').value.trim(),r=await sb.rpc('set_my_phone',{p:v});e.target.disabled=false;if(r.error)return alert(r.error.message);S.me.phone=v||null;S.dg.people=[];e.target.textContent='✅';setTimeout(()=>e.target.textContent='Сохранить',1200)};
+  $('#st_phs').onclick=async e=>{e.target.disabled=true;const v=normPhone($('#st_ph').value);if(!v){return alert('Введи номер полностью, например +7 978 123-45-67')}if(!confirm('Номер — это твой логин для входа. Менять на +'+v+'?')){e.target.disabled=false;return}const r=await sb.rpc('set_my_phone',{p:'+'+v});e.target.disabled=false;if(r.error)return alert(r.error.message);S.me.phone='+'+v;S.dg.people=[];e.target.textContent='✅';setTimeout(()=>e.target.textContent='Сохранить',1200)};
   $('#st_pw').onclick=async e=>{const p1=$('#st_p1').value,p2=$('#st_p2').value,er=$('#st_pe');er.style.color='';if(p1.length<6)return er.textContent='Пароль не короче 6 знаков';if(p1!==p2)return er.textContent='Пароли не совпадают';
     e.target.disabled=true;const r=await sb.auth.updateUser({password:p1});e.target.disabled=false;if(r.error)return er.textContent='Не получилось: '+r.error.message;$('#st_p1').value=$('#st_p2').value='';er.style.color='var(--ink)';er.textContent='Пароль изменён ✅'};
   app.querySelectorAll('[data-pp]').forEach(c=>c.onchange=async()=>{const p={};app.querySelectorAll('[data-pp]').forEach(x=>p[x.dataset.pp]=x.checked);const r=await sb.rpc('set_my_push_prefs',{p});if(r.error){alert(r.error.message);c.checked=!c.checked;return}S.me.push_prefs=p});
