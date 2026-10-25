@@ -1,14 +1,18 @@
 // Главная «Сегодня»: моя смена, отметка выхода, быстрые кнопки, события дня, для руководителей — что требует внимания
 async function todayView(){
-  const me=S.me.id,t=iso(new Date()),mgr=isManager();
+  const me=S.me.id,t=iso(new Date()),mgr=isManager(),tm=(()=>{const x=new Date(t+'T12:00:00');x.setDate(x.getDate()+1);return iso(x)})(),ym=t.slice(0,7),ms=ym+'-01';
   if(S.rname===undefined){const r=await sb.rpc('my_roster_name');S.rname=r.error?null:(r.data||null)}
   const cnt=(tb,f)=>{let q=sb.from(tb).select('id',{count:'exact',head:true});return f(q).then(r=>r.count||0,()=>0)};
-  const [mk,ck,rt,ev,nw]=await Promise.all([
+  const [mk,ck,rt,ev,nw,rt2,rq,mm,ot]=await Promise.all([
     sb.from('marks').select('kind,note').eq('user_id',me).eq('day',t).maybeSingle(),
     sb.from('checkins').select('at').eq('user_id',me).eq('day',t).maybeSingle(),
     sb.from('rotations').select('data').eq('day',t).maybeSingle(),
     S.ev?Promise.resolve({data:S.ev.filter(e=>e.day===t)}):sb.from('events').select('*').eq('day',t).order('time'),
-    sb.from('news').select('id,title,body,created_at,pinned').order('pinned',{ascending:false}).order('created_at',{ascending:false}).limit(1)]);
+    sb.from('news').select('id,title,body,created_at,pinned').order('pinned',{ascending:false}).order('created_at',{ascending:false}).limit(1),
+    sb.from('rotations').select('data').eq('day',tm).maybeSingle(),
+    sb.from('requests').select('id,kind,day,day_to,status,created_at').eq('user_id',me).neq('status','cancelled').order('created_at',{ascending:false}).limit(4),
+    sb.from('marks').select('day,kind').eq('user_id',me).gte('day',ms).lte('day',ym+'-31'),
+    sb.from('overtime').select('hours').eq('user_id',me).gte('day',ms).lte('day',ym+'-31')]);
   let adm=null;
   if(mgr){
     await ensurePeople();
@@ -22,9 +26,17 @@ async function todayView(){
   // статус дня
   if(K)h+=`<div class="card pad col" style="background:${K[1]}"><b style="font-size:18px">Сегодня у тебя: ${mk.data.kind==='do'?'день отдыха (ДО)':K[2].toLowerCase()}</b>${mk.data.note?`<div class="muted">${esc(mk.data.note)}</div>`:''}</div>`;
   else h+=`<div class="card pad col"><b style="font-size:18px">Сегодня рабочий день</b>${ck.data?`<div class="pill" style="background:#C9D4B0;align-self:flex-start">✅ Выход подтверждён в ${new Date(ck.data.at).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'})}</div>`:`<button class="btn" id="td_ck">☀️ Я на смене</button>`}</div>`;
-  h+=myShiftCard(mine);
+  h+=myShiftCard(mine,'Сегодня ты стоишь здесь');
+  // завтра — когда ротация уже вышла
+  const rot2=rt2.data?.data;
+  if(rot2&&window.myShift){const m2=myShift(rot2);h+=m2.length?myShiftCard(m2,'Завтра, '+dayLabel(tm)):`<div class="card pad col"><b>🌙 Завтра, ${dayLabel(tm)}</b><div class="muted">Ротация вышла, тебя в ней нет (выходной или не поставили?). Если это ошибка, напиши руководителю.</div></div>`}
+  else if(!mgr)h+=`<div class="card pad col"><b>🌙 Завтра</b><div class="muted">Ротация на завтра ещё не вышла: придёт уведомление.</div></div>`;
   // быстрые кнопки
   h+=`<div class="two"><button class="btn ghost" data-go="rot">🔄 Ротация</button><button class="btn ghost" data-go="shift">✅ Смена</button></div><div class="two"><button class="btn ghost" id="td_fix">🛠 Сообщить о поломке</button><button class="btn ghost" data-go="sch">📅 Мой график</button></div>`;
+  // мои заявки и итоги месяца
+  if((rq.data||[]).length)h+=`<div class="card pad col" data-go="req" style="cursor:pointer"><b>📨 Мои заявки</b>${rq.data.map(x=>`<div class="otr"><span>${(REQ_K[x.kind]||['','Заявка'])[0]} ${(REQ_K[x.kind]||['','Заявка'])[1]} · ${dRange(x)}</span><span class="pill" style="background:${(REQ_ST[x.status]||['','#E8DCCB'])[1]}">${(REQ_ST[x.status]||['?'])[0]}</span></div>`).join('')}</div>`;
+  {const cnt=k=>(mm.data||[]).filter(x=>x.kind===k).length,hrs=(ot.data||[]).reduce((a,x)=>a+(+x.hours||0),0),dim=new Date(+ym.slice(0,4),+ym.slice(5),0).getDate(),off=(mm.data||[]).length;
+   h+=`<div class="card pad col" data-go="sch" style="cursor:pointer"><b>📊 Мой месяц</b><div class="otr"><span>Рабочих дней по графику</span><b>${dim-off} из ${dim}</b></div><div class="otr"><span>Отгулов</span><b>${cnt('otgul')}</b></div><div class="otr"><span>Отпуск / больничный</span><b>${cnt('vac')} / ${cnt('sick')}</b></div><div class="otr"><span>Переработка</span><b>${hrs?hrs+' ч':'—'}</b></div></div>`}
   // руководителям
   if(adm){
     const row=(ic,n,v,k)=>`<div class="otr" data-go="${k}" style="cursor:pointer"><span>${ic} ${n}</span><b${v?' style="color:#C0392B"':''}>${v}</b></div>`;

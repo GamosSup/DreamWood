@@ -247,4 +247,4 @@ function rotZoom(src){
   document.body.appendChild(ov);document.body.style.overflow='hidden';
 }
 
-function myShiftCard(mine){return mine.length?`<div class="card pad col" style="border:2px solid var(--ink)"><b>👤 Твоя смена</b>${mine.map(x=>`<div><b>${esc(x.zone)}</b> <span class="muted">· ${esc(x.sec.replace(/^.*·\s*/,''))}${x.team==='W'?' · если дождь':''}</span>${x.p.brks?.length?`<div class="muted">Перерыв: ${x.p.brks.map(esc).join(' · ')}</div>`:''}${x.steps?.length?`<div class="muted">Замены: ${x.steps.map(s=>esc(s[0])+' '+esc(s[1])).join(' · ')}</div>`:''}</div>`).join('')}</div>`:''}
+function myShiftCard(mine,label){return mine.length?`<div class="card pad col" style="border:2px solid var(--ink)"><b>👤 ${label||'Твоя смена'}</b>${mine.map(x=>`<div><b>${esc(x.zone)}</b> <span class="muted">· ${esc(x.sec.replace(/^.*·\s*/,''))}${x.team==='W'?' · если дождь':''}</span>${x.p.brks?.length?`<div class="muted">Перерыв: ${x.p.brks.map(esc).join(' · ')}</div>`:''}${x.steps?.length?`<div class="muted">Замены: ${x.steps.map(s=>esc(s[0])+' '+esc(s[1])).join(' · ')}</div>`:''}</div>`).join('')}</div>`:''}
