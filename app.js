@@ -44,7 +44,7 @@ async function boot(){
 }
 function authView(mode,err,ok){
   nav.hidden=true;const reg=mode==='up';
-  app.innerHTML=`<div style="margin-top:40px"><div class="muted" style="text-transform:uppercase;font-weight:700">Дримвуд · Mriya Resort &amp; Spa</div><h1>Чудеса начинаются здесь</h1><p class="muted">Приложение команды парка: ротации, график, афиша и новости.</p></div>
+  app.innerHTML=`<div style="margin-top:24px"><div class="authhd"><img class="alogo" src="stickers/logo.webp" alt="Дримвуд — парк чудес и приключений"><img class="amas" src="stickers/mascot-hi.webp" alt=""></div><h1>Чудеса начинаются здесь</h1><p class="muted">Приложение команды парка: ротации, график, афиша и новости.</p></div>
   <div class="seg"><button id="tin" class="${reg?'':'on'}">Вход</button><button id="tup" class="${reg?'on':''}">Регистрация</button></div>
   ${reg?`<div class="two"><label>Имя<input id="fn" autocomplete="given-name" placeholder="Игорь"></label><label>Фамилия<input id="ln" autocomplete="family-name" placeholder="Шубчик"></label></div>`:''}
   <label>Почта<input id="em" type="email" autocomplete="username" placeholder="name@company.ru"></label>
@@ -102,7 +102,7 @@ async function refreshUnread(){
 }
 const firstName=()=>(S.me?.full_name||'').trim().split(/\s+/)[0]||'друг';
 const bell=()=>`<button class="bell" aria-label="Уведомления" onclick="openBell()">🔔<i id="bellN" ${S.unread>0?'':'hidden'}>${S.unread>9?'9+':S.unread}</i></button>`;
-const head=(h,sub)=>`<div class="top"><div class="hi">Привет, ${esc(firstName())}! 👋</div>${bell()}</div>${S.offline?`<div class="banner" style="background:#E6CC8F;color:#3B2A35;font-size:14px">📴 Нет сети — показаны сохранённые данные (от ${new Date(S.offline).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'})}). Менять что-либо пока нельзя.</div>`:''}${sub?`<div class="muted">${sub}</div>`:''}<h1>${h}</h1>`;
+const head=(h,sub)=>`<div class="top"><div class="brand"><img class="lg" src="stickers/logo.webp" alt="Дримвуд"><div class="hi">Привет, ${esc(firstName())}! 👋</div></div>${bell()}</div>${S.offline?`<div class="banner" style="background:#E6CC8F;color:#3B2A35;font-size:14px">📴 Нет сети — показаны сохранённые данные (от ${new Date(S.offline).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'})}). Менять что-либо пока нельзя.</div>`:''}${sub?`<div class="muted">${sub}</div>`:''}<h1>${h}</h1>`;
 const NI={news:'📰',rotation:'🔄',afisha:'🎟️',signup:'🧑‍💼',task:'📋',request:'📨',incident:'🚨',shift:'💬',checkin:'☀️',repair:'🛠'};
 const ago=d=>{const m=Math.round((Date.now()-new Date(d))/6e4);return m<1?'только что':m<60?m+' мин назад':m<1440?Math.floor(m/60)+' ч назад':new Date(d).toLocaleDateString('ru',{day:'numeric',month:'short'})};
 async function openBell(){
@@ -424,3 +424,21 @@ if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
 function openLink(l){if(!l)return;if(String(l).startsWith('checkin:'))return openBell();if(String(l).startsWith('rot:')){S.day=l.slice(4);go('rot')}else go(l)}
 if('serviceWorker'in navigator)navigator.serviceWorker.addEventListener('message',e=>{if(e.data&&e.data.go&&S.me)openLink(e.data.go)});
 boot();
+
+// ---------- фон со стикерами (Дримми и значки из фирменного набора) ----------
+(function(){
+  const D=[ // файл, css-позиция, ширина, поворот
+    ['mascot-balloon','right:-3vw;top:54vh','clamp(110px,20vw,200px)',6],
+    ['mascot-hi','left:-4vw;bottom:13vh','clamp(110px,22vw,210px)',-5],
+    ['sunglasses','right:24vw;top:36vh','clamp(70px,12vw,120px)',-14],
+    ['cloud','right:9vw;top:21vh','clamp(90px,16vw,150px)',4],
+    ['tree','left:2vw;top:41vh','clamp(46px,8vw,76px)',-8],
+    ['smile','right:32vw;bottom:24vh','clamp(46px,8vw,72px)',10],
+    ['sparkle','left:44vw;top:74vh','clamp(36px,6vw,58px)',0],
+    ['burst','right:13vw;top:9vh','clamp(40px,7vw,64px)',12],
+    ['bird','left:34vw;top:44vh','clamp(46px,8vw,76px)',10],
+    ['heart','right:5vw;bottom:21vh','clamp(40px,7vw,64px)',-10],
+    ['thumb','left:17vw;bottom:33vh','clamp(46px,8vw,72px)',-6]];
+  const box=document.getElementById('bgs');if(!box)return;
+  box.innerHTML=D.map(([f,pos,w,r])=>`<img src="stickers/${f}.webp" alt="" loading="lazy" decoding="async" style="${pos};width:${w};transform:rotate(${r}deg)">`).join('');
+})();

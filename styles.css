@@ -186,3 +186,11 @@ select.rl{width:auto;min-height:0;padding:2px 6px;font-size:13px;display:inline-
 .gmt{flex:1;text-align:center;cursor:pointer;background:var(--gold);border-radius:18px;padding:8px 6px}.gmt b{display:block;font-size:22px;line-height:1.2}.gmt small{display:block;font-size:12px;color:var(--muted)}
 .gsrch{display:flex;gap:8px}.gsrch input{flex:1;min-width:0}.gsrch .btn{width:auto;flex:none;padding:0 16px}
 .rt .nr{color:var(--muted);font-size:11px}
+
+/* фон со стикерами и логотип */
+#bgs{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+#bgs img{position:absolute;height:auto;opacity:.55;filter:drop-shadow(0 3px 5px rgba(60,40,50,.14))}
+#app{position:relative;z-index:1}nav{position:relative!important;z-index:5}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}.brand .lg{height:56px;width:auto;flex:none;filter:drop-shadow(0 2px 3px rgba(60,40,50,.18))}
+.authhd{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}.authhd .alogo{width:min(52vw,210px);height:auto;filter:drop-shadow(0 3px 5px rgba(60,40,50,.18))}.authhd .amas{width:min(34vw,150px);height:auto;margin-bottom:-6px;filter:drop-shadow(0 3px 5px rgba(60,40,50,.18))}
+@media (min-width:900px){#bgs img{opacity:.7}}
