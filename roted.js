@@ -30,15 +30,16 @@ async function rotView(){
   // моя смена
   const mine=myShift(rot);
   if(mine.length)h+=`<div class="card pad col" style="border:2px solid var(--ink)"><b>👤 Твоя смена</b>${mine.map(x=>`<div><b>${esc(x.zone)}</b> <span class="muted">· ${esc(x.sec.replace(/^.*·\s*/,''))}${x.team==='W'?' · если дождь':''}</span>${x.p.brks?.length?`<div class="muted">Перерыв: ${x.p.brks.map(esc).join(' · ')}</div>`:''}${x.steps?.length?`<div class="muted">Замены: ${x.steps.map(s=>esc(s[0])+' '+esc(s[1])).join(' · ')}</div>`:''}</div>`).join('')}</div>`;
-  if(rot.image)h+=`<a href="${esc(rot.image)}" target="_blank" rel="noopener" class="card" style="display:block;overflow:hidden;padding:0"><img src="${esc(rot.image)}" alt="Ротация картинкой" loading="lazy" style="display:block;width:100%;height:auto"></a>`;
+  if(rot.image&&(rot.imageTeams||['R','M']).includes(S.team))h+=`<a href="${esc(rot.image)}" target="_blank" rel="noopener" class="card" style="display:block;overflow:hidden;padding:0"><img src="${esc(rot.image)}" alt="Ротация картинкой" loading="lazy" style="display:block;width:100%;height:auto"></a>`;
   h+=`<div class="tabs">${TEAMS.map(([k,n,c])=>`<button data-t="${k}" class="${S.team===k?'on':''}" style="background:${c}">${n}</button>`).join('')}</div>`;
   const secs=rot.teams?.[S.team]||[];
+  if(!secs.length)h+=`<div class="card pad"><b>Для этой команды ротации на этот день пока нет</b><div class="muted">Как только она появится, придёт уведомление.</div></div>`;
   h+=secs.filter(s=>s.note).map(s=>`<div class="n" style="background:${s.noteBg||'#E8B4B8'};padding:8px 12px;border-radius:12px;font-weight:700;font-size:13px">${esc(s.note)}</div>`).join('');
   const order=[],byZone={};
   secs.forEach(s=>{const range=parseRange(s.title);s.rows.forEach(r=>{if(!byZone[r.zone]){byZone[r.zone]=[];order.push(r.zone)}
     byZone[r.zone].push({range,title:s.title==='Весь день'?'Весь день · 10:00–'+fmtH(S.dayEnd):s.title.replace(/^.*·\s*/,''),people:r.people,steps:r.steps})})});
   order.forEach(z=>{const c=S.team==='W'?'#7E98AE':(ZC[z]||'#D3BFD0');h+=zoneCard(z,byZone[z],c)});
-  if(rot.legend)h+=`<div class="card pad muted">${rot.legend.map(esc).join('<br>')}</div>`;
+  if(rot.legend&&secs.length)h+=`<div class="card pad muted">${rot.legend.map(esc).join('<br>')}</div>`;
   // личная пометка
   const nt=await sb.from('rot_notes').select('note').eq('day',S.day).maybeSingle();
   h+=`<div class="card pad col"><b>📝 Моя пометка к этому дню</b><div class="muted">Видишь только ты.</div><textarea id="rn_t" placeholder="Например: взять рацию, поменяться с Таней обедом…">${esc(nt.data?.note||'')}</textarea><div class="muted" id="rn_s"></div></div>`;
