@@ -2,8 +2,8 @@
 const hm=ts=>new Date(ts).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'});
 const shortName=n=>String(n||'—').trim().split(/\s+/).slice(0,2).join(' ');
 async function ensurePeople(force){
-  if(!force&&S.dg.people&&S.dg.people.length&&S.dg.people[0].phone!==undefined)return;
-  const {data}=await sb.from('profiles').select('id,full_name,tab_no,team,phone,role').eq('status','approved').order('full_name');
+  if(!force&&S.dg.people&&S.dg.people.length&&S.dg.people[0].position!==undefined)return;
+  const {data}=await sb.from('profiles').select('id,full_name,tab_no,team,phone,role,position').eq('status','approved').order('full_name');
   S.dg.people=data||[];
 }
 function keepScroll(fn){const st=app.scrollTop;return Promise.resolve(fn()).then(()=>{app.scrollTop=st})}

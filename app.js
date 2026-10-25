@@ -13,10 +13,11 @@ const STEPC={'Шахта':'#BCC8D6','Джипы':'#B7CFC4','Карусель':'#
 const brkBg=t=>t.startsWith('Ос')||t.startsWith('Пс')?'#F3C29B':t.startsWith('О')?'#F5E2A8':'#CFE0EE';
 const TEAMS=[['R','Рейнджеры','#C9D4B0'],['K','Хранители','#B7CFC4'],['M','Метрополис','#E4B5A3'],['W','Если дождь','#7E98AE']];
 const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-const isManager=()=>S.me?.role==='manager';
+const isManager=()=>S.me?.role==='manager'||S.me?.role==='admin';
+const isAdmin=()=>S.me?.role==='admin';
 const isLead=()=>S.me?.role==='lead';
 const canMng=()=>isManager()||isLead();
-const ROLE_RU={employee:'Сотрудник',lead:'Бригадир',manager:'Руководитель'};
+const ROLE_RU={employee:'Сотрудник',lead:'Бригадир',manager:'Руководитель',admin:'Админ'};
 // запрос с запасным вариантом: если сети нет — показываем последние сохранённые данные
 async function cq(key,fn){
   const k='dw:'+(S.uid||'')+':'+key;
