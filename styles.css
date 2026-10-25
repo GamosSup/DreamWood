@@ -82,3 +82,40 @@ nav span{font-size:11px}
 .tk{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 .tk.lift{opacity:.35}
 .tk.ghost{position:fixed;z-index:200;margin:0;pointer-events:none;box-shadow:0 14px 30px rgba(59,42,53,.35);transform:rotate(2deg) scale(1.03);opacity:.96}
+
+/* ---------- Планшет и ПК ---------- */
+#app>*{flex-shrink:0}
+@media (min-width:640px){#app{max-width:760px}}
+@media (min-width:900px){
+  body{flex-direction:row}
+  nav{order:-1;width:240px!important;flex:none;flex-direction:column;justify-content:flex-start;gap:6px;padding:24px 14px;border-top:0;border-right:1px solid var(--line);overflow-y:auto}
+  nav::before{content:"🌲 Дримвуд";font:800 24px Alegreya,Georgia,serif;padding:4px 14px 18px;color:var(--ink)}
+  nav button,nav button.on{flex:none;min-height:52px;flex-direction:row;justify-content:flex-start;gap:12px;padding:0 16px;font-size:20px;border-radius:16px;margin:0}
+  nav button:hover{background:var(--tab);color:var(--ink)}
+  nav span{font-size:15px}
+  nav button i{position:static;margin-left:auto}
+  #app{max-width:none;margin:0;padding:32px clamp(28px,4vw,64px) 48px;gap:18px;flex:1 1 0;min-width:0}
+  h1{font-size:40px}
+  /* по умолчанию — аккуратная колонка по центру */
+  #app>*{width:100%;max-width:880px;margin-left:auto;margin-right:auto}
+  .btn:hover,.tabs button:hover,.seg button:hover{filter:brightness(.96)}
+  /* Ротация и афиша — сетка карточек */
+  body[data-tab=rot] #app,body[data-tab=afisha] #app{display:grid;grid-template-columns:repeat(auto-fill,minmax(440px,1fr));align-items:start;gap:18px}
+  body[data-tab=rot] #app>*,body[data-tab=afisha] #app>*{grid-column:1/-1;max-width:none;margin:0}
+  body[data-tab=rot] #app>.zcard,body[data-tab=afisha] #app>.card.pad{grid-column:auto}
+  body[data-tab=rot] #app>a.card{max-width:640px;justify-self:start}
+  body[data-tab=rot] #app>.tabs,body[data-tab=afisha] #app>.tabs{max-width:none}
+  body[data-tab=afisha] #app>.seg{max-width:560px}
+  /* DreamGile — колонки на всю ширину */
+  body[data-tab=dg] #app>*{max-width:none;margin:0}
+  body[data-tab=dg] #app>.two{max-width:760px}
+  .dgcols{scroll-snap-type:none;gap:16px;align-items:flex-start}
+  .dgcol{flex:1 1 280px;width:auto;min-width:260px;max-width:440px}
+  .dgtasks{max-height:calc(100vh - 360px);overflow-y:auto}
+  .tk:hover{border-color:var(--ink);box-shadow:0 4px 14px rgba(59,42,53,.12)}
+  /* Окна поверх страницы — по центру */
+  .ov{align-items:center}
+  .sheet{max-width:680px;max-height:88vh;border-radius:24px}
+}
+/* вход и ожидание — узкая карточка */
+body:has(nav[hidden]) #app>*{max-width:460px;margin-left:auto;margin-right:auto;width:100%}

@@ -61,7 +61,7 @@ function pendingView(){
   $('#chk').onclick=boot;$('#out').onclick=()=>sb.auth.signOut().then(()=>{S.me=null;boot()});
 }
 nav.onclick=e=>{const b=e.target.closest('button');if(b)go(b.dataset.tab)};
-function go(t){S.tab=t;nav.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));window.scrollTo(0,0);
+function go(t){S.tab=t;document.body.dataset.tab=t;nav.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));window.scrollTo(0,0);
   Promise.resolve(({rot:rotView,sch:schView,afisha:afishaView,dg:dgView,staff:staffView,set:settingsView})[t]()).then(refreshUnread)}
 async function refreshUnread(){
   if(!S.me||S.me.status!=='approved')return;
