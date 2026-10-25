@@ -183,7 +183,7 @@ async function contactsView(){
 // ================= МЕНЮ «ЕЩЁ» (телефон) =================
 function moreView(){
   const mgr=isManager(),b=S.badges||{};
-  const items=[['shift','✅','Смена','Открытие и закрытие: чек-листы зон'],['park','📰','Парк','Новости и афиша событий'],['kb','📚','База знаний','Регламенты и инструкции'],['team','👥','Команда','Телефоны'+(mgr?', заявки на регистрацию, роли':'')],
+  const items=[['shift','✅','Смена','Открытие и закрытие: чек-листы зон'],['park','📰','Парк','Новости и афиша событий'],['kb','📚','База знаний','Регламенты и инструкции'],['team','👥','Команда','Телефоны'+(isAdmin()?', заявки на регистрацию, роли':'')],
     ...(canMng()&&VIEWS.grid?[['grid','📆','График и сводка','Все сотрудники по дням, часы и переработки, Excel']]:[]),['set','⚙️','Настройки','Телефон, пароль, уведомления, оформление']];
   app.innerHTML=head('Ещё','Все разделы приложения')+items.map(([k,ic,n,d])=>`<div class="card pad" data-go="${k}" style="display:flex;gap:14px;align-items:center;cursor:pointer"><span style="font-size:28px">${ic}</span><span style="flex:1"><b style="font-size:16px">${n}</b><div class="muted">${d}</div></span>${b[k]?`<span class="pill" style="background:#C0392B;color:#fff;align-self:center">${b[k]}</span>`:''}</div>`).join('');
   app.querySelectorAll('[data-go]').forEach(c=>c.onclick=()=>go(c.dataset.go));

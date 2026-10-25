@@ -30,7 +30,7 @@ async function shiftView(){
   S.offline=0;
   await ensurePeople();
   const today=iso(new Date()),day=S.sh.day||today;S.sh.day=day;
-  const [L,C,N]=await Promise.all([cq('shl',()=>sb.from('shift_lists').select('*').eq('active',true).order('sort')),cq('shc'+day,()=>sb.from('shift_checks').select('*').eq('day',day)),cq('shn'+day,()=>sb.from('shift_notes').select('*').eq('day',day).order('created_at'))]);
+  const [L,C,N]=await Promise.all([cq('shl',()=>sb.from('shift_lists').select('*').eq('active',true).order('sort')),cq('shc'+day+S.me.id,()=>sb.from('shift_checks').select('*').eq('day',day).eq('user_id',S.me.id)),cq('shn'+day,()=>sb.from('shift_notes').select('*').eq('day',day).order('created_at'))]);
   const notes=N.error?[]:(N.data||[]);
   const mgr=isManager(),all=(L.data||[]).filter(l=>l.kind===S.sh.kind),checks=C.data||[];
   const doneOf=l=>l.items.filter(it=>checks.some(c=>c.list_id===l.id&&c.item===it));
@@ -49,7 +49,14 @@ async function shiftView(){
         return `<label class="shi"><input type="checkbox" data-l="${l.id}" data-i="${esc(it)}" ${ck?'checked':''} ${can?'':'disabled'}><span style="${ck?'text-decoration:line-through;color:var(--muted)':''}">${esc(it)}${ck?`<br><small class="who">✔ ${esc(pname(ck.user_id))} · ${hm(ck.at)}</small>`:''}${notes.some(n=>n.list_id===l.id&&n.item===it)?` <small class="who" style="background:#F5E2A8">💬 ${notes.filter(n=>n.list_id===l.id&&n.item===it).length}</small>`:''}</span></label>`}).join('')||'<div class="muted">Пунктов нет</div>'}
       <div class="shn"><b>💬 Комментарии${nl.length?' · '+nl.length:''}</b>${nl.map(n=>`<div class="shc"><div><b>${esc(shortName(pname(n.user_id)))}</b> <span class="muted">${hm(n.created_at)}${n.item?' · к пункту «'+esc(n.item)+'»':''}</span>${n.user_id===S.me.id||mgr?` <button class="x" data-nd="${n.id}" aria-label="Удалить">✕</button>`:''}</div><div>${esc(n.body)}</div></div>`).join('')}
         ${can?`<div class="shnf"><select data-nl="${l.id}"><option value="">Ко всему списку</option>${l.items.map(it=>`<option value="${esc(it)}">${esc(it.length>46?it.slice(0,46)+'…':it)}</option>`).join('')}</select><textarea data-nt="${l.id}" placeholder="Например: закончились журналы, нужны новые"></textarea><button class="btn" data-ns="${l.id}" style="min-height:42px">Отправить</button></div>`:''}</div></div></details>`}).join('')||'<div class="card pad muted">Списков пока нет.</div>';
-  if(mgr)h+='<button class="btn ghost" id="sh_ed">✏️ Править чек-листы</button>';
+  if(mgr){
+    const [ac,mk]=await Promise.all([sb.from('shift_checks').select('list_id,user_id,item').eq('day',day),sb.from('marks').select('user_id').eq('day',day)]);
+    const off=new Set((mk.data||[]).map(x=>x.user_id)),tot=all.reduce((a,l)=>a+l.items.length,0),by={};
+    (ac.data||[]).forEach(c=>{const l=all.find(x=>x.id===c.list_id);if(l&&l.items.includes(c.item))by[c.user_id]=(by[c.user_id]||0)+1});
+    const ppl=(S.dg.people||[]).filter(p=>!off.has(p.id)),done=ppl.filter(p=>by[p.id]),none=ppl.filter(p=>!by[p.id]);
+    h+=`<div class="card pad col"><b>👥 Кто ${S.sh.kind==='open'?'открывал':'закрывал'} зоны · ${dayLabel(day)}</b><div class="muted">У каждого сотрудника чек-лист свой, здесь общая картина.</div>${done.map(p=>`<div class="otr"><span>${esc(shortName(p.full_name))}</span><b>${by[p.id]} из ${tot}${by[p.id]>=tot&&tot?' ✅':''}</b></div>`).join('')}${none.length?`<div class="muted">Не начинали: ${none.map(p=>esc(shortName(p.full_name))).join(', ')}</div>`:''}</div>`;
+    h+='<button class="btn ghost" id="sh_ed">✏️ Править чек-листы</button>';
+  }
   app.innerHTML=h;
   const go2=d=>{const x=new Date(day+'T12:00:00');x.setDate(x.getDate()+d);S.sh.day=iso(x);shiftView()};
   $('#sh_p').onclick=()=>go2(-1);$('#sh_n').onclick=()=>go2(1);$('#sh_t').onclick=()=>{S.sh.day=today;shiftView()};
@@ -57,7 +64,7 @@ async function shiftView(){
   $('#sh_ed')?.addEventListener('click',shiftEditor);
   app.querySelectorAll('.shi input').forEach(b=>b.onchange=async()=>{
     const list_id=+b.dataset.l,item=b.dataset.i;b.disabled=true;
-    const r=b.checked?await sb.from('shift_checks').insert({list_id,day,item}):await sb.from('shift_checks').delete().eq('list_id',list_id).eq('day',day).eq('item',item);
+    const r=b.checked?await sb.from('shift_checks').insert({list_id,day,item}):await sb.from('shift_checks').delete().eq('list_id',list_id).eq('day',day).eq('item',item).eq('user_id',S.me.id);
     if(r.error&&r.error.code!=='23505')alert(r.error.message);
     keepScroll(shiftView);
   });

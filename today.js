@@ -28,8 +28,8 @@ async function todayView(){
   // руководителям
   if(adm){
     const row=(ic,n,v,k)=>`<div class="otr" data-go="${k}" style="cursor:pointer"><span>${ic} ${n}</span><b${v?' style="color:#C0392B"':''}>${v}</b></div>`;
-    h+=`<div class="card pad col"><b>👀 Требует внимания</b>${row('📨','Заявки на рассмотрении',b.req||0,'req')}${row('🛠','Новые поломки',b.fix||0,'fix')}${row('🚨','Новые происшествия',(adm.inc||0),'inc')}${row('👥','Новые регистрации',S.pending||0,'staff')}${row('💬','Комментарии в смене сегодня',(adm.sn||0),'shift')}<div class="otr"><span>☀️ Подтвердили выход</span><b>${adm.ok} из ${adm.work}</b></div></div>`;
-  }else if(S.due?.length){
+    h+=`<div class="card pad col"><b>👀 Требует внимания</b>${row('📨','Заявки на рассмотрении',b.req||0,'req')}${row('🛠','Новые поломки',b.fix||0,'fix')}${row('🚨','Новые происшествия',(adm.inc||0),'inc')}${isAdmin()?row('👥','Новые регистрации',S.pending||0,'staff'):''}${row('💬','Комментарии в смене сегодня',(adm.sn||0),'shift')}<div class="otr"><span>☀️ Подтвердили выход</span><b>${adm.ok} из ${adm.work}</b></div></div>`;
+  }else if(false){
     h+=`<div class="card pad col" data-go="dg" style="cursor:pointer"><b>📋 Задачи на сегодня и завтра · ${S.due.length}</b>${S.due.slice(0,3).map(x=>`<div class="muted">· ${esc(x.title)}</div>`).join('')}</div>`;
   }
   // события дня

@@ -83,14 +83,14 @@ function pendingView(){
 nav.onclick=e=>{const b=e.target.closest('button');if(b)go(b.dataset.tab)};
 const VIEWS={sch:schView,afisha:afishaView,dg:dgView,staff:staffView,set:settingsView};
 VIEWS.ap=()=>VIEWS[S.sub.ap]();VIEWS.park=()=>VIEWS[S.sub.park]();
-VIEWS.team=()=>{if(!isManager())S.sub.team='contacts';return VIEWS[S.sub.team]()};
-function subBar(g,cur){const L={ap:[['req','📨','Заявки'],['fix','🛠','Поломки'],['inc','🚨','Происшествия']],park:[['news','📰','Новости'],['afisha','🎟️','Афиша']],team:[['contacts','📞','Контакты'],...(isManager()?[['staff','👥','Сотрудники']]:[])]}[g];if(!L||L.length<2)return '';const b=S.badges||{};
+VIEWS.team=()=>{if(!isAdmin())S.sub.team='contacts';return VIEWS[S.sub.team]()};
+function subBar(g,cur){const L={ap:[['req','📨','Заявки'],['fix','🛠','Поломки'],['inc','🚨','Происшествия']],park:[['news','📰','Новости'],['afisha','🎟️','Афиша']],team:[['contacts','📞','Контакты'],...(isAdmin()?[['staff','👥','Сотрудники']]:[])]}[g];if(!L||L.length<2)return '';const b=S.badges||{};
   return `<div class="seg subbar">${L.map(([k,ic,n])=>`<button data-sub="${k}" class="${k===cur?'on':''}">${ic} ${n}${b[k]&&k!==cur?` <i class="sbn">${b[k]}</i>`:''}</button>`).join('')}</div>`}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-sub]');if(b&&S.me)go(b.dataset.sub)});
 const MORE_TABS=['shift','park','kb','team','grid','set'];
 const SUBG={req:'ap',fix:'ap',inc:'ap',news:'park',afisha:'park',contacts:'team',staff:'team'};
 const onTab=k=>SUBG[k]?(S.tab===SUBG[k]&&S.sub[SUBG[k]]===k):S.tab===k;
-function go(t){if(SUBG[t]){S.sub[SUBG[t]]=t;t=SUBG[t]}if(!VIEWS[t])t='today';S.tab=t;S.offline=0;document.body.dataset.tab=S.sub[t]||t;
+function go(t){if(SUBG[t]){S.sub[SUBG[t]]=t;t=SUBG[t]}if(!VIEWS[t]||(t==='dg'&&!isManager()))t='today';S.tab=t;S.offline=0;document.body.dataset.tab=S.sub[t]||t;
   nav.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t||(b.dataset.tab==='more'&&MORE_TABS.includes(t))));window.scrollTo(0,0);app.scrollTop=0;
   Promise.resolve(VIEWS[t]()).then(refreshUnread)}
 const NKNOWN=new Set(['req','fix','inc','news','afisha','staff','rot','dg','shift','set']);
@@ -123,11 +123,11 @@ async function markSeen(){
 }
 async function refreshUnread(){
   if(!S.me||S.me.status!=='approved')return;
-  const [n,r,p]=await Promise.all([sb.from('notifications').select('id,kind,link'),sb.from('notif_reads').select('notif_id').eq('user_id',S.me.id),isManager()?sb.from('profiles').select('id',{count:'exact',head:true}).eq('status','pending'):Promise.resolve({count:0})]);
+  const [n,r,p]=await Promise.all([sb.from('notifications').select('id,kind,link'),sb.from('notif_reads').select('notif_id').eq('user_id',S.me.id),isAdmin()?sb.from('profiles').select('id',{count:'exact',head:true}).eq('status','pending'):Promise.resolve({count:0})]);
   if(!n.error&&!r.error){const seen=new Set((r.data||[]).map(x=>x.notif_id));const un=(n.data||[]).filter(x=>!seen.has(x.id));S.unread=un.length;S.nl=un.map(x=>({id:x.id,k:NLK(x.link)})).filter(x=>x.k)}
   try{const today=iso(new Date());S.ckPending=false;
     if(!n.error&&(n.data||[]).some(x=>x.kind==='checkin'&&x.link==='checkin:'+today)){const c=await sb.from('checkins').select('at').eq('user_id',S.me.id).eq('day',today).maybeSingle();S.ckPending=!c.data}}catch(e){}
-  try{const q=await sb.from('dg_tasks').select('id,title,deadline,assignees').eq('done',false).not('deadline','is',null);
+  try{if(!isManager())throw 0;const q=await sb.from('dg_tasks').select('id,title,deadline,assignees').eq('done',false).not('deadline','is',null);
     const lim=iso(new Date(Date.now()+864e5));S.due=(q.data||[]).filter(t=>(t.assignees||[]).includes(S.me.id)&&t.deadline<=lim).sort((a,b)=>a.deadline<b.deadline?-1:1)}catch(e){S.due=[]}
   S.pending=p.count||0;
   try{const q=await sb.from('requests').select('id,status,peer_id').in('status',['peer','pending']);
@@ -273,7 +273,7 @@ const norm=t=>String(t||'').toLowerCase().replace(/ё/g,'е').replace(/[^a-zа-�
 function simScore(a,b){const A=norm(a),B=norm(b);let sc=0;A.forEach(x=>B.forEach(y=>{if(x===y)sc+=3;else if(x.length>=3&&y.length>=3&&(x.startsWith(y.slice(0,3))||y.startsWith(x.slice(0,3))))sc+=1}));return sc}
 const TN={R:'Рейнджеры',K:'Хранители',M:'Метрополис'};
 async function staffView(){
-  if(!isManager())return go('rot');
+  if(!isAdmin())return go('contacts');
   const [pr,ro]=await Promise.all([sb.from('profiles').select('id,full_name,email,role,status,tab_no,team,created_at,phone,position').order('created_at'),sb.from('roster').select('*').order('team').order('full_name')]);
   const all=pr.data||[],roster=ro.data||[];
   const ap=all.filter(p=>p.status==='approved'),req=all.filter(p=>p.status!=='approved').sort((a,b)=>(a.status==='pending'?0:1)-(b.status==='pending'?0:1));
