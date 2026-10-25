@@ -100,7 +100,7 @@ nav span{font-size:11px}
   #app>*{width:100%;max-width:880px;margin-left:auto;margin-right:auto}
   .btn:hover,.tabs button:hover,.seg button:hover{filter:brightness(.96)}
   /* Ротация и афиша — сетка карточек */
-  body[data-tab=rot] #app,body[data-tab=afisha] #app{display:grid;grid-template-columns:repeat(auto-fill,minmax(440px,1fr));align-items:start;gap:18px}
+  body[data-tab=rot] #app,body[data-tab=afisha] #app{display:grid;grid-template-columns:repeat(auto-fill,minmax(440px,1fr));align-items:start;align-content:start;grid-auto-rows:max-content;gap:18px}
   body[data-tab=rot] #app>*,body[data-tab=afisha] #app>*{grid-column:1/-1;max-width:none;margin:0}
   body[data-tab=rot] #app>.zcard,body[data-tab=afisha] #app>.card.pad{grid-column:auto}
   body[data-tab=rot] #app>a.card{max-width:640px;justify-self:start}
