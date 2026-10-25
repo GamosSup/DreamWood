@@ -138,6 +138,7 @@ function zoneCard(zone,blocks,c){
 // ---------- График ----------
 const KINDS={off:['ВЫХ','#E8DCCB','Выходной'],otgul:['ОТ','#E4B5A3','Отгул'],do:['ДО','#F5E2A8','ДО'],sick:['Б','#BCC8D6','Больничный'],vac:['ОП','#C9D4B0','Отпуск']};
 async function schView(){
+  S.offline=0;
   if(isManager()&&!S.people.length){const {data}=await sb.from('profiles').select('id,full_name').eq('status','approved').order('full_name');S.people=data||[]}
   const m=S.month,y=m.getFullYear(),mo=m.getMonth(),first=iso(new Date(y,mo,1)),last=iso(new Date(y,mo+1,0));
   const {data}=await cq('marks:'+S.viewUser+first,()=>sb.from('marks').select('*').eq('user_id',S.viewUser).gte('day',first).lte('day',last));
@@ -246,6 +247,7 @@ const pname=id=>(S.dg.people||[]).find(p=>p.id===id)?.full_name||'—';
 const dgFmt=d=>d?new Date(d+'T12:00:00').toLocaleDateString('ru',{day:'numeric',month:'short'}):'';
 const dgOver=t=>t.deadline&&!t.done&&t.deadline<iso(new Date());
 async function dgLoad(){
+  S.offline=0;
   const [b,p]=await Promise.all([cq('dgb',()=>sb.from('dg_boards').select('*').order('created_at')),cq('dgp',()=>sb.from('profiles').select('id,full_name,tab_no').eq('status','approved').order('full_name'))]);
   S.dg.boards=b.data||[];S.dg.people=p.data||[];
   if(!S.dg.board||!S.dg.boards.find(x=>x.id===S.dg.board))S.dg.board=S.dg.boards[0]?.id;

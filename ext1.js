@@ -27,6 +27,7 @@ async function fileUpload(bucket,table,fk,id,file){
 // ================= СМЕНА =================
 S.sh={day:null,kind:'open'};
 async function shiftView(){
+  S.offline=0;
   await ensurePeople();
   const today=iso(new Date()),day=S.sh.day||today;S.sh.day=day;
   const [L,C]=await Promise.all([cq('shl',()=>sb.from('shift_lists').select('*').eq('active',true).order('sort')),cq('shc'+day,()=>sb.from('shift_checks').select('*').eq('day',day))]);

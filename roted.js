@@ -11,6 +11,7 @@ S.rainSeen={};
 
 // ---------- просмотр ----------
 async function rotView(){
+  S.offline=0;
   const todayIso=iso(new Date()),from=iso(new Date(Date.now()-7*864e5));
   const lr=await cq('rotlist',()=>sb.from('rotations').select('day').gte('day',from).order('day'));
   const days=[...new Set([...(lr.data||[]).map(x=>x.day),todayIso])].sort();
