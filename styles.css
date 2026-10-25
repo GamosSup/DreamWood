@@ -66,3 +66,15 @@ html,body{height:100%}
 body{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden}
 #app{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;width:100%;-webkit-overflow-scrolling:touch;padding-bottom:24px}
 nav{position:static!important;flex:none;width:100%}
+
+nav span{font-size:11px}
+.dgcols{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:8px;-webkit-overflow-scrolling:touch}
+.dgcol{flex:none;width:min(82vw,300px);scroll-snap-align:start;background:var(--card);border:1px solid var(--line);border-radius:18px;display:flex;flex-direction:column;overflow:hidden}
+.dgcol.over{outline:3px solid var(--ink)}
+.dgch{display:flex;align-items:center;gap:8px;padding:10px 12px;color:#3B2A35}.dgch b{flex:1;font-family:Alegreya,Georgia,serif;font-size:17px}.cnt{background:rgba(255,255,255,.65);border-radius:10px;padding:1px 9px;font-weight:800;font-size:13px}
+.dgtasks{display:flex;flex-direction:column;gap:8px;padding:8px}
+.tk{background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:10px 12px;cursor:pointer;display:flex;flex-direction:column;gap:8px}.tk .tt{font-weight:700;font-size:14px;line-height:1.3}
+.tm{display:flex;flex-wrap:wrap;gap:4px}.av{display:flex}.av i{width:26px;height:26px;border-radius:50%;background:var(--ink);color:var(--card);font:800 10px Manrope,sans-serif;font-style:normal;display:flex;align-items:center;justify-content:center;margin-right:-6px;border:2px solid var(--bg)}
+.lb{width:34px;height:34px;border-radius:50%;border:2px solid var(--line);font-weight:800;padding:0}.lb.on{outline:3px solid var(--ink)}
+.as{min-height:40px;padding:0 12px;border-radius:20px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);font-weight:700;font-size:13px}.as.on{background:var(--ink);color:var(--card)}
+.cmt{padding:8px 0;border-top:1px solid var(--line);font-size:14px}

@@ -62,7 +62,7 @@ function pendingView(){
 }
 nav.onclick=e=>{const b=e.target.closest('button');if(b)go(b.dataset.tab)};
 function go(t){S.tab=t;nav.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));window.scrollTo(0,0);
-  Promise.resolve(({rot:rotView,sch:schView,afisha:afishaView,staff:staffView,set:settingsView})[t]()).then(refreshUnread)}
+  Promise.resolve(({rot:rotView,sch:schView,afisha:afishaView,dg:dgView,staff:staffView,set:settingsView})[t]()).then(refreshUnread)}
 async function refreshUnread(){
   if(!S.me||S.me.status!=='approved')return;
   const [n,r,p]=await Promise.all([sb.from('notifications').select('id'),sb.from('notif_reads').select('notif_id').eq('user_id',S.me.id),isManager()?sb.from('profiles').select('id',{count:'exact',head:true}).eq('status','pending'):Promise.resolve({count:0})]);
@@ -73,7 +73,7 @@ async function refreshUnread(){
 const firstName=()=>(S.me?.full_name||'').trim().split(/\s+/)[0]||'друг';
 const bell=()=>`<button class="bell" aria-label="Уведомления" onclick="openBell()">🔔<i id="bellN" ${S.unread>0?'':'hidden'}>${S.unread>9?'9+':S.unread}</i></button>`;
 const head=(h,sub)=>`<div class="top"><div class="hi">Привет, ${esc(firstName())}! 👋</div>${bell()}</div>${sub?`<div class="muted">${sub}</div>`:''}<h1>${h}</h1>`;
-const NI={news:'📰',rotation:'🔄',afisha:'🎟️',signup:'🧑‍💼'};
+const NI={news:'📰',rotation:'🔄',afisha:'🎟️',signup:'🧑‍💼',task:'📋'};
 const ago=d=>{const m=Math.round((Date.now()-new Date(d))/6e4);return m<1?'только что':m<60?m+' мин назад':m<1440?Math.floor(m/60)+' ч назад':new Date(d).toLocaleDateString('ru',{day:'numeric',month:'short'})};
 async function openBell(){
   const [n,r]=await Promise.all([sb.from('notifications').select('*').order('created_at',{ascending:false}).limit(50),sb.from('notif_reads').select('notif_id').eq('user_id',S.me.id)]);
@@ -242,6 +242,116 @@ async function staffView(){
     if(id===S.me.id){S.me.full_name=full_name;S.me.tab_no=tab_no}S.people=[];b.textContent='✅';setTimeout(()=>staffView(),600)});
 }
 // ---------- Настройки ----------
+
+// ---------- DreamGile ----------
+const PRI={low:['Низкий','#B7CFC4'],normal:['Обычный','#BCC8D6'],high:['Высокий','#F3C29B'],urgent:['Срочно','#E08A7A']};
+const LBL=['#C9D4B0','#E6CC8F','#B7CFC4','#D3BFD0','#BCC8D6','#E4B5A3'];
+S.dg={board:null,mine:false,rt:false};
+const ini=n=>(String(n||'?').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('')||'?').toUpperCase();
+const pname=id=>(S.dg.people||[]).find(p=>p.id===id)?.full_name||'—';
+const dgFmt=d=>d?new Date(d+'T12:00:00').toLocaleDateString('ru',{day:'numeric',month:'short'}):'';
+const dgOver=t=>t.deadline&&!t.done&&t.deadline<iso(new Date());
+async function dgLoad(){
+  const [b,p]=await Promise.all([sb.from('dg_boards').select('*').order('created_at'),sb.from('profiles').select('id,full_name,tab_no').eq('status','approved').order('full_name')]);
+  S.dg.boards=b.data||[];S.dg.people=p.data||[];
+  if(!S.dg.board||!S.dg.boards.find(x=>x.id===S.dg.board))S.dg.board=S.dg.boards[0]?.id;
+  S.dg.cols=[];S.dg.tasks=[];S.dg.cl={};S.dg.cm={};
+  if(!S.dg.board)return;
+  const [c,t]=await Promise.all([sb.from('dg_columns').select('*').eq('board_id',S.dg.board).order('pos'),sb.from('dg_tasks').select('*').eq('board_id',S.dg.board).order('pos')]);
+  S.dg.cols=c.data||[];S.dg.tasks=t.data||[];
+  const ids=S.dg.tasks.map(x=>x.id);if(!ids.length)return;
+  const [cl,cm]=await Promise.all([sb.from('dg_checklist').select('task_id,done').in('task_id',ids),sb.from('dg_comments').select('task_id').in('task_id',ids)]);
+  (cl.data||[]).forEach(x=>{const o=S.dg.cl[x.task_id]||(S.dg.cl[x.task_id]=[0,0]);o[1]++;if(x.done)o[0]++});
+  (cm.data||[]).forEach(x=>S.dg.cm[x.task_id]=(S.dg.cm[x.task_id]||0)+1);
+}
+async function dgView(){
+  await dgLoad();const D=S.dg;
+  if(!D.rt){D.rt=true;try{sb.channel('dg-live').on('postgres_changes',{event:'*',schema:'public',table:'dg_tasks'},()=>{if(S.tab==='dg'&&!document.querySelector('.ov'))dgView()}).subscribe()}catch(e){}}
+  let h=head('DreamGile','Задачи команды');
+  if(!D.board){app.innerHTML=h+`<div class="card pad">Досок пока нет.${isManager()?'<br><button class="btn" id="nb" style="margin-top:10px">Создать доску</button>':''}</div>`;$('#nb')?.addEventListener('click',dgNewBoard);return}
+  h+=`<div class="two"><label style="flex:1"><select id="bsel">${D.boards.map(b=>`<option value="${b.id}" ${b.id===D.board?'selected':''}>${esc(b.title)}</option>`).join('')}</select></label>${isManager()?'<button class="btn ghost" id="nb" style="min-height:48px">+ Доска</button>':''}</div>`;
+  h+=`<div class="tabs"><button data-f="all" class="${D.mine?'':'on'}" style="background:#E3EAD2">${isManager()?'Все задачи':'Мои задачи'}</button>${isManager()?`<button data-f="mine" class="${D.mine?'on':''}" style="background:#E3EAD2">Только мои</button>`:''}${isManager()?'<button id="ac" style="background:#E3EAD2">+ Колонка</button>':''}</div>`;
+  const last=D.cols[D.cols.length-1]?.id;
+  const vis=D.tasks.filter(t=>!D.mine||t.assignees.includes(S.me.id));
+  h+=`<div class="dgcols">${D.cols.map(c=>{const ts=vis.filter(t=>t.column_id===c.id);return `<div class="dgcol" data-col="${c.id}"><div class="dgch" style="background:${c.color||'#BCC8D6'}"><b>${esc(c.title)}</b><span class="cnt">${ts.length}</span>${isManager()?`<button class="x" data-cm="${c.id}" style="width:30px;height:30px;font-size:14px">⋯</button>`:''}</div><div class="dgtasks">${ts.map(t=>dgCard(t)).join('')||'<div class="muted" style="padding:8px">Пусто</div>'}</div>${isManager()?`<button class="btn ghost" data-add="${c.id}" style="min-height:40px;margin:0 8px 8px">+ Задача</button>`:''}</div>`}).join('')}</div>`;
+  if(!D.cols.length)h+='<div class="card pad">В доске нет колонок.'+(isManager()?' Нажми «+ Колонка».':'')+'</div>';
+  app.innerHTML=h;
+  $('#bsel').onchange=e=>{D.board=e.target.value;dgView()};$('#nb')?.addEventListener('click',dgNewBoard);
+  $('#ac')?.addEventListener('click',async()=>{const n=prompt('Название колонки');if(!n)return;const pos=(D.cols.reduce((m,c)=>Math.max(m,+c.pos),0))+1;const r=await sb.from('dg_columns').insert({board_id:D.board,title:n.trim(),pos});if(r.error)alert(r.error.message);dgView()});
+  app.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{D.mine=b.dataset.f==='mine';dgView()});
+  app.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>dgOpen(null,b.dataset.add));
+  app.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>dgOpen(b.dataset.open));
+  app.querySelectorAll('[data-cm]').forEach(b=>b.onclick=e=>{e.stopPropagation();dgColMenu(b.dataset.cm)});
+  app.querySelectorAll('.tk').forEach(el=>{el.ondragstart=e=>{e.dataTransfer.setData('text/plain',el.dataset.open)}});
+  app.querySelectorAll('.dgcol').forEach(el=>{el.ondragover=e=>{e.preventDefault();el.classList.add('over')};el.ondragleave=()=>el.classList.remove('over');el.ondrop=e=>{e.preventDefault();el.classList.remove('over');dgMove(e.dataTransfer.getData('text/plain'),el.dataset.col)}});
+}
+function dgCard(t){
+  const cl=S.dg.cl[t.id],cm=S.dg.cm[t.id];
+  return `<div class="tk" draggable="true" data-open="${t.id}" style="border-left:6px solid ${t.label||'transparent'}"><div class="tt">${t.done?'✅ ':''}${esc(t.title)}</div><div class="tm">${t.priority!=='normal'?`<span class="pill" style="background:${PRI[t.priority][1]}">${PRI[t.priority][0]}</span>`:''}${t.deadline?`<span class="pill" style="background:${dgOver(t)?'#E08A7A':'#F1E8DA'}">📅 ${dgFmt(t.deadline)}</span>`:''}${cl?`<span class="pill" style="background:#F1E8DA">☑ ${cl[0]}/${cl[1]}</span>`:''}${cm?`<span class="pill" style="background:#F1E8DA">💬 ${cm}</span>`:''}</div>${t.assignees.length?`<div class="av">${t.assignees.slice(0,4).map(a=>`<i title="${esc(pname(a))}">${esc(ini(pname(a)))}</i>`).join('')}${t.assignees.length>4?`<i>+${t.assignees.length-4}</i>`:''}</div>`:''}</div>`}
+async function dgMove(id,colId){
+  const D=S.dg,t=D.tasks.find(x=>x.id===id);if(!t||t.column_id===colId)return;
+  const pos=D.tasks.filter(x=>x.column_id===colId).reduce((m,x)=>Math.max(m,+x.pos),0)+1;
+  const last=D.cols[D.cols.length-1]?.id;
+  const r=await sb.from('dg_tasks').update({column_id:colId,pos,done:colId===last}).eq('id',id);
+  if(r.error)alert('Не удалось перенести: '+r.error.message);dgView();
+}
+async function dgNewBoard(){
+  const n=prompt('Название доски');if(!n)return;
+  const b=await sb.from('dg_boards').insert({title:n.trim()}).select().single();
+  if(b.error)return alert(b.error.message);
+  await sb.from('dg_columns').insert(['Нужно сделать','В работе','На проверке','Готово'].map((t,i)=>({board_id:b.data.id,title:t,pos:i+1,color:['#BCC8D6','#E6CC8F','#D3BFD0','#C9D4B0'][i]})));
+  S.dg.board=b.data.id;dgView();
+}
+async function dgColMenu(id){
+  const c=S.dg.cols.find(x=>x.id===id);const a=prompt('Колонка «'+c.title+'»\n1 — переименовить\n2 — сдвинуть влево\n3 — сдвинуть вправо\n4 — удалить (вместе с задачами)','1');
+  if(a==='1'){const n=prompt('Новое название',c.title);if(n)await sb.from('dg_columns').update({title:n.trim()}).eq('id',id)}
+  else if(a==='2'||a==='3'){const L=S.dg.cols,i=L.findIndex(x=>x.id===id),j=a==='2'?i-1:i+1;if(L[j]){await sb.from('dg_columns').update({pos:L[j].pos}).eq('id',id);await sb.from('dg_columns').update({pos:c.pos}).eq('id',L[j].id)}}
+  else if(a==='4'&&confirm('Удалить колонку и все её задачи?'))await sb.from('dg_columns').delete().eq('id',id);
+  dgView();
+}
+async function dgOpen(id,colId){
+  const D=S.dg,mgr=isManager();
+  let t=id?D.tasks.find(x=>x.id===id):{id:null,column_id:colId,title:'',descr:'',assignees:[],deadline:null,priority:'normal',label:null,done:false};
+  if(!t)return;
+  let cl=[],cm=[];
+  if(id){const [a,b]=await Promise.all([sb.from('dg_checklist').select('*').eq('task_id',id).order('pos'),sb.from('dg_comments').select('*').eq('task_id',id).order('created_at')]);cl=a.data||[];cm=b.data||[]}
+  const ov=document.createElement('div');ov.className='ov';
+  const ro=!mgr?'disabled':'';
+  const draw=()=>{ov.innerHTML=`<div class="sheet"><div class="sh"><button class="x" id="bk" aria-label="Назад">←</button><b>${id?'Задача':'Новая задача'}</b><span></span></div><div class="sb col">
+  <label>Название<input id="f_t" value="${esc(t.title)}" ${ro}></label>
+  <label>Описание<textarea id="f_d" ${ro}>${esc(t.descr||'')}</textarea></label>
+  <label>Колонка<select id="f_c">${D.cols.map(c=>`<option value="${c.id}" ${c.id===t.column_id?'selected':''}>${esc(c.title)}</option>`).join('')}</select></label>
+  <div class="two"><label>Срок<input id="f_dl" type="date" value="${t.deadline||''}" ${ro}></label><label>Приоритет<select id="f_p" ${ro}>${Object.entries(PRI).map(([k,v])=>`<option value="${k}" ${k===t.priority?'selected':''}>${v[0]}</option>`).join('')}</select></label></div>
+  <div><b style="font-size:14px">Метка</b><div class="chips" style="margin-top:6px">${[null,...LBL].map(c=>`<button class="lb ${(t.label||null)===c?'on':''}" data-l="${c||''}" style="background:${c||'#fff'}" ${ro}>${c?'':'—'}</button>`).join('')}</div></div>
+  <div><b style="font-size:14px">Исполнители</b><div class="chips" style="margin-top:6px">${D.people.map(p=>`<button class="as ${t.assignees.includes(p.id)?'on':''}" data-a="${p.id}" ${ro}>${esc(p.full_name||'?')}</button>`).join('')}</div></div>
+  ${id?`<div><b style="font-size:14px">Чек-лист</b>${cl.map(x=>`<div class="otr"><label style="flex-direction:row;align-items:center;gap:8px;font-weight:600"><input type="checkbox" data-ck="${x.id}" ${x.done?'checked':''} style="width:22px;min-height:22px"> <span style="${x.done?'text-decoration:line-through;color:var(--muted)':''}">${esc(x.text)}</span></label>${mgr?`<button class="x" data-cd="${x.id}">×</button>`:''}</div>`).join('')}${mgr?'<div class="prow" style="margin-top:6px"><input id="f_ck" placeholder="Новый пункт" class="pn"><button class="btn" id="f_cka">+</button></div>':''}</div>
+  <div><b style="font-size:14px">Комментарии</b>${cm.map(x=>`<div class="cmt"><b>${esc(pname(x.author))}</b> <span class="muted">${ago(x.created_at)}</span><div style="white-space:pre-wrap">${esc(x.body)}</div></div>`).join('')||'<div class="muted">Пока нет</div>'}<div class="prow" style="margin-top:6px"><input id="f_cm" placeholder="Написать комментарий" class="pn"><button class="btn" id="f_cma">➤</button></div></div>`:''}
+  ${mgr?'<button class="btn" id="sv">Сохранить</button>':''}${mgr&&id?'<button class="btn ghost" id="dl" style="color:#9b2c2c;border-color:#9b2c2c">Удалить задачу</button>':''}
+  <div class="err" id="er"></div></div></div>`;bind()};
+  const close=()=>{ov.remove();document.body.style.overflow='';dgView()};
+  const reload=async()=>{const [a,b]=await Promise.all([sb.from('dg_checklist').select('*').eq('task_id',id).order('pos'),sb.from('dg_comments').select('*').eq('task_id',id).order('created_at')]);cl=a.data||[];cm=b.data||[];readForm();draw()};
+  const readForm=()=>{if(mgr){t.title=$('#f_t').value;t.descr=$('#f_d').value;t.deadline=$('#f_dl').value||null;t.priority=$('#f_p').value}t.column_id=$('#f_c').value};
+  const bind=()=>{
+    ov.querySelector('#bk').onclick=close;
+    ov.querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>{readForm();t.label=b.dataset.l||null;draw()});
+    ov.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{readForm();const a=b.dataset.a;t.assignees=t.assignees.includes(a)?t.assignees.filter(x=>x!==a):[...t.assignees,a];draw()});
+    ov.querySelectorAll('[data-ck]').forEach(b=>b.onchange=async()=>{await sb.from('dg_checklist').update({done:b.checked}).eq('id',b.dataset.ck);reload()});
+    ov.querySelectorAll('[data-cd]').forEach(b=>b.onclick=async()=>{await sb.from('dg_checklist').delete().eq('id',b.dataset.cd);reload()});
+    ov.querySelector('#f_cka')?.addEventListener('click',async()=>{const v=$('#f_ck').value.trim();if(!v)return;await sb.from('dg_checklist').insert({task_id:id,text:v,pos:cl.reduce((m,x)=>Math.max(m,+x.pos),0)+1});reload()});
+    ov.querySelector('#f_cma')?.addEventListener('click',async()=>{const v=$('#f_cm').value.trim();if(!v)return;const r=await sb.from('dg_comments').insert({task_id:id,body:v});if(r.error)ov.querySelector('#er').textContent=r.error.message;else reload()});
+    ov.querySelector('#dl')?.addEventListener('click',async()=>{if(!confirm('Удалить задачу?'))return;await sb.from('dg_tasks').delete().eq('id',id);close()});
+    ov.querySelector('#sv')?.addEventListener('click',async()=>{
+      readForm();if(!t.title.trim())return ov.querySelector('#er').textContent='Введи название';
+      const last=D.cols[D.cols.length-1]?.id;const pos=id&&t.column_id===D.tasks.find(x=>x.id===id).column_id?D.tasks.find(x=>x.id===id).pos:D.tasks.filter(x=>x.column_id===t.column_id).reduce((m,x)=>Math.max(m,+x.pos),0)+1;
+      const row={board_id:D.board,column_id:t.column_id,title:t.title.trim(),descr:t.descr,assignees:t.assignees,deadline:t.deadline,priority:t.priority,label:t.label,pos,done:t.column_id===last};
+      const r=id?await sb.from('dg_tasks').update(row).eq('id',id):await sb.from('dg_tasks').insert(row);
+      if(r.error)ov.querySelector('#er').textContent=r.error.message;else close()});
+    // сотрудник: смена колонки сразу сохраняется
+    if(!mgr)ov.querySelector('#f_c').onchange=async e=>{await dgMove(id,e.target.value);ov.remove();document.body.style.overflow=''};
+  };
+  document.body.appendChild(ov);document.body.style.overflow='hidden';draw();
+}
+
 async function settingsView(){
   const cur=getTheme();
   let h=head('Настройки','Профиль и оформление');
