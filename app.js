@@ -23,7 +23,7 @@ async function boot(){
   S.me=data||{id:session.user.id,full_name:session.user.email,role:'employee',status:'pending'};
   S.viewUser=S.me.id;
   if(S.me.status!=='approved')return pendingView();
-  nav.hidden=false;nav.querySelector('[data-tab=staff]').hidden=!isManager();go(S.tab==='staff'&&!isManager()?'rot':S.tab);
+  nav.hidden=false;nav.querySelectorAll('[data-mgr]').forEach(b=>b.hidden=!isManager());go(S.tab==='staff'&&!isManager()?'rot':S.tab);
 }
 function authView(mode,err,ok){
   nav.hidden=true;const reg=mode==='up';
@@ -61,8 +61,11 @@ function pendingView(){
   $('#chk').onclick=boot;$('#out').onclick=()=>sb.auth.signOut().then(()=>{S.me=null;boot()});
 }
 nav.onclick=e=>{const b=e.target.closest('button');if(b)go(b.dataset.tab)};
-function go(t){S.tab=t;document.body.dataset.tab=t;nav.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));window.scrollTo(0,0);
-  Promise.resolve(({rot:rotView,sch:schView,afisha:afishaView,dg:dgView,staff:staffView,set:settingsView})[t]()).then(refreshUnread)}
+const VIEWS={rot:rotView,sch:schView,afisha:afishaView,dg:dgView,staff:staffView,set:settingsView};
+const MORE_TABS=['news','afisha','req','kb','inc','contacts','rep','staff','set'];
+function go(t){if(!VIEWS[t])t='rot';S.tab=t;document.body.dataset.tab=t;
+  nav.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t||(b.dataset.tab==='more'&&MORE_TABS.includes(t))));window.scrollTo(0,0);app.scrollTop=0;
+  Promise.resolve(VIEWS[t]()).then(refreshUnread)}
 async function refreshUnread(){
   if(!S.me||S.me.status!=='approved')return;
   const [n,r,p]=await Promise.all([sb.from('notifications').select('id'),sb.from('notif_reads').select('notif_id').eq('user_id',S.me.id),isManager()?sb.from('profiles').select('id',{count:'exact',head:true}).eq('status','pending'):Promise.resolve({count:0})]);
@@ -72,16 +75,20 @@ async function refreshUnread(){
     const lim=iso(new Date(Date.now()+864e5));S.due=(q.data||[]).filter(t=>(t.assignees||[]).includes(S.me.id)&&t.deadline<=lim).sort((a,b)=>a.deadline<b.deadline?-1:1);
     const el=$('#bellN'),tot=(S.unread||0)+S.due.length;if(el){el.hidden=!tot;el.textContent=tot>9?'9+':tot}}catch(e){S.due=[]}
   S.pending=p.count||0;const sn=$('#staffN');if(sn){sn.hidden=!S.pending;sn.textContent=S.pending}
+  try{const q=await sb.from('requests').select('id,status,peer_id').in('status',['peer','pending']);
+    const rq=(q.data||[]).filter(x=>(x.status==='pending'&&isManager())||(x.status==='peer'&&x.peer_id===S.me.id)).length;
+    S.badges={req:rq,staff:S.pending};const rn=$('#reqN');if(rn){rn.hidden=!rq;rn.textContent=rq}
+    const mt=rq+S.pending,mn=$('#moreN');if(mn){mn.hidden=!mt;mn.textContent=mt}}catch(e){}
 }
 const firstName=()=>(S.me?.full_name||'').trim().split(/\s+/)[0]||'друг';
 const bell=()=>`<button class="bell" aria-label="Уведомления" onclick="openBell()">🔔<i id="bellN" ${S.unread>0?'':'hidden'}>${S.unread>9?'9+':S.unread}</i></button>`;
 const head=(h,sub)=>`<div class="top"><div class="hi">Привет, ${esc(firstName())}! 👋</div>${bell()}</div>${sub?`<div class="muted">${sub}</div>`:''}<h1>${h}</h1>`;
-const NI={news:'📰',rotation:'🔄',afisha:'🎟️',signup:'🧑‍💼',task:'📋'};
+const NI={news:'📰',rotation:'🔄',afisha:'🎟️',signup:'🧑‍💼',task:'📋',request:'📨',incident:'🚨'};
 const ago=d=>{const m=Math.round((Date.now()-new Date(d))/6e4);return m<1?'только что':m<60?m+' мин назад':m<1440?Math.floor(m/60)+' ч назад':new Date(d).toLocaleDateString('ru',{day:'numeric',month:'short'})};
 async function openBell(){
   const [n,r]=await Promise.all([sb.from('notifications').select('*').order('created_at',{ascending:false}).limit(50),sb.from('notif_reads').select('notif_id').eq('user_id',S.me.id)]);
   const seen=new Set((r.data||[]).map(x=>x.notif_id)),list=n.data||[];
-  const ov=document.createElement('div');ov.className='ov';ov.innerHTML=`<div class="sheet"><div class="sh"><button class="x" id="bk" aria-label="Назад">←</button><b>Уведомления</b><span></span></div><div class="sb">${(S.due||[]).map(t=>{const od=t.deadline<iso(new Date()),td=t.deadline===iso(new Date());return `<div class="nt new" style="border-left:6px solid ${od?'#E08A7A':'#E6CC8F'}"><div class="ni">⏰</div><div class="nb"><b>${od?'Просрочена':td?'Срок сегодня':'Срок завтра'}: ${esc(t.title)}</b><div class="muted" style="margin-top:4px">📅 ${dgFmt(t.deadline)} · <a href="#" class="lnk" data-l="dg">открыть доску</a></div></div></div>`}).join('')}${list.map(x=>{const lg=(x.body||'').length>160;return `<div class="nt ${seen.has(x.id)?'':'new'}" data-id="${x.id}"><div class="ni">${NI[x.kind]||'🔔'}</div><div class="nb"><b>${esc(x.title)}</b>${seen.has(x.id)?'':'<span class="newb">новое</span>'}<div class="nbody ${lg?'cl':''}">${esc(x.body||'')}</div><div class="muted" style="margin-top:4px">${ago(x.created_at)}${lg?' · <a href="#" class="more">читать полностью</a>':''}${x.link&&x.link!=='news'?` · <a href="#" class="lnk" data-l="${esc(x.link)}">открыть</a>`:''}</div></div></div>`}).join('')||'<div class="muted" style="padding:20px">Пока ничего нового</div>'}</div></div>`;
+  const ov=document.createElement('div');ov.className='ov';ov.innerHTML=`<div class="sheet"><div class="sh"><button class="x" id="bk" aria-label="Назад">←</button><b>Уведомления</b><span></span></div><div class="sb">${(S.due||[]).map(t=>{const od=t.deadline<iso(new Date()),td=t.deadline===iso(new Date());return `<div class="nt new" style="border-left:6px solid ${od?'#E08A7A':'#E6CC8F'}"><div class="ni">⏰</div><div class="nb"><b>${od?'Просрочена':td?'Срок сегодня':'Срок завтра'}: ${esc(t.title)}</b><div class="muted" style="margin-top:4px">📅 ${dgFmt(t.deadline)} · <a href="#" class="lnk" data-l="dg">открыть доску</a></div></div></div>`}).join('')}${list.map(x=>{const lg=(x.body||'').length>160;return `<div class="nt ${seen.has(x.id)?'':'new'}" data-id="${x.id}"><div class="ni">${NI[x.kind]||'🔔'}</div><div class="nb"><b>${esc(x.title)}</b>${seen.has(x.id)?'':'<span class="newb">новое</span>'}<div class="nbody ${lg?'cl':''}">${esc(x.body||'')}</div><div class="muted" style="margin-top:4px">${ago(x.created_at)}${lg?' · <a href="#" class="more">читать полностью</a>':''}${x.link?` · <a href="#" class="lnk" data-l="${esc(x.link)}">открыть</a>`:''}</div></div></div>`}).join('')||'<div class="muted" style="padding:20px">Пока ничего нового</div>'}</div></div>`;
   document.body.appendChild(ov);document.body.style.overflow='hidden';
   const close=()=>{ov.remove();document.body.style.overflow=''};
   ov.onclick=e=>{if(e.target===ov)close()};ov.querySelector('#bk').onclick=close;

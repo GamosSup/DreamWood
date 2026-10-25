@@ -126,3 +126,18 @@ body:has(nav[hidden]) #app>*{max-width:460px;margin-left:auto;margin-right:auto;
 .fi:has(img) a{padding:0}.fi:has(img) img{margin:0}
 .fi .x{position:absolute;top:3px;right:3px;width:26px;height:26px;font-size:15px;line-height:1;padding:0}
 details summary{padding:6px 0}
+
+/* ---------- Этап 2 ---------- */
+nav button[hidden]{display:none!important}
+nav button.dsk{display:none}
+@media (min-width:900px){nav button.dsk{display:flex}nav button.mob{display:none!important}}
+.shl summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px}.shl summary::-webkit-details-marker{display:none}
+.shi{flex-direction:row;align-items:flex-start;gap:12px;font-weight:600;font-size:15px;padding:6px 0}.shi input{width:26px;min-height:26px;flex:none;margin-top:1px;accent-color:var(--ink)}
+.kbbody h2{font:800 24px Alegreya,Georgia,serif;margin:10px 0 4px}.kbbody h3{font:800 19px Alegreya,Georgia,serif;margin:10px 0 2px}.kbbody p{margin:4px 0;line-height:1.5}.kbbody ul{margin:4px 0;padding-left:22px;line-height:1.5}.kbbody a{color:var(--ink);font-weight:700}
+.kbl{display:flex;flex-direction:column;gap:10px}
+@media (min-width:900px){body[data-tab=kb] .kbl,body[data-tab=inc] #app,body[data-tab=news] #app{}
+  body[data-tab=kb] .kbl{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:14px}
+  body[data-tab=shift] #app{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));align-items:start;align-content:start;grid-auto-rows:max-content;gap:18px}
+  body[data-tab=shift] #app>*{grid-column:1/-1;max-width:none;margin:0}
+  body[data-tab=shift] #app>details.shl{grid-column:auto}
+}

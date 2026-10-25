@@ -4,9 +4,9 @@ const DGX_DAYS=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
 const dgxCache=new Map();
 
 // универсальное окно
-function dgxSheet(title,render){
+function dgxSheet(title,render,onClose){
   const ov=document.createElement('div');ov.className='ov';
-  const close=(refresh=true)=>{ov.remove();document.body.style.overflow='';if(refresh&&S.tab==='dg')dgView()};
+  const close=(refresh=true)=>{ov.remove();document.body.style.overflow='';if(refresh){if(onClose)onClose();else if(S.tab==='dg')dgView()}};
   const paint=async()=>{
     ov.innerHTML=`<div class="sheet"><div class="sh"><button class="x" id="bk" aria-label="Назад">←</button><b>${title}</b><span></span></div><div class="sb col" id="sbd"></div></div>`;
     ov.querySelector('#bk').onclick=()=>close();
@@ -17,10 +17,10 @@ function dgxSheet(title,render){
 }
 
 // ---------- файлы ----------
-async function dgxUrl(path){
-  const c=dgxCache.get(path);if(c&&c.exp>Date.now())return c.url;
-  const r=await sb.storage.from('dg').createSignedUrl(path,3600);if(r.error)return null;
-  dgxCache.set(path,{url:r.data.signedUrl,exp:Date.now()+3300e3});return r.data.signedUrl;
+async function dgxUrl(path,bucket='dg'){
+  const key=bucket+'/'+path,c=dgxCache.get(key);if(c&&c.exp>Date.now())return c.url;
+  const r=await sb.storage.from(bucket).createSignedUrl(path,3600);if(r.error)return null;
+  dgxCache.set(key,{url:r.data.signedUrl,exp:Date.now()+3300e3});return r.data.signedUrl;
 }
 function dgxShrink(file,max=1600){
   return new Promise(res=>{
