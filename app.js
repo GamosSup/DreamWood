@@ -90,23 +90,23 @@ VIEWS.team=()=>{if(!isAdmin())S.sub.team='contacts';return VIEWS[S.sub.team]()};
 function subBar(g,cur){const L={ap:[['req','📨','Заявки'],['fix','🛠','Поломки'],['inc','🚨','Происшествия']],park:[['news','📰','Новости'],['afisha','🎟️','Афиша']],team:[['contacts','📞','Контакты'],...(isAdmin()?[['staff','👥','Сотрудники']]:[])]}[g];if(!L||L.length<2)return '';const b=S.badges||{};
   return `<div class="seg subbar">${L.map(([k,ic,n])=>`<button data-sub="${k}" class="${k===cur?'on':''}">${ic} ${n}${b[k]&&k!==cur?` <i class="sbn">${b[k]}</i>`:''}</button>`).join('')}</div>`}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-sub]');if(b&&S.me)go(b.dataset.sub)});
-const MORE_TABS=['shift','park','kb','team','grid','set'];
+const MORE_TABS=['shift','park','kb','team','grid','feedback','todo','set'];
 const SUBG={req:'ap',fix:'ap',inc:'ap',news:'park',afisha:'park',contacts:'team',staff:'team'};
 const onTab=k=>SUBG[k]?(S.tab===SUBG[k]&&S.sub[SUBG[k]]===k):S.tab===k;
 function go(t){if(SUBG[t]){S.sub[SUBG[t]]=t;t=SUBG[t]}if(!VIEWS[t]||(t==='dg'&&!isManager()))t='today';S.tab=t;S.offline=0;document.body.dataset.tab=S.sub[t]||t;
   nav.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t||(b.dataset.tab==='more'&&MORE_TABS.includes(t))));window.scrollTo(0,0);app.scrollTop=0;
   Promise.resolve(VIEWS[t]()).then(refreshUnread)}
-const NKNOWN=new Set(['req','fix','inc','news','afisha','staff','rot','dg','shift','set']);
+const NKNOWN=new Set(['req','fix','inc','news','afisha','staff','rot','dg','shift','set','feedback']);
 const NLK=l=>{l=String(l||'');return l.startsWith('rot:')?'rot':l.startsWith('checkin')?'':l};
 const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}},lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
 function paintBell(){const el=$('#bellN');if(!el)return;const tot=(S.unread||0)+(S.due||[]).length+(S.ckPending?1:0);el.hidden=!tot;el.textContent=tot>9?'9+':tot}
 // красные кружки у пунктов меню: считаем непросмотренные уведомления по разделам (+ «База знаний» и «График» — по изменениям)
 function paintBadges(){
   const c=k=>(S.nl||[]).filter(x=>x.k===k).length,B={};
-  ['req','fix','inc','news','afisha','staff','rot','dg','shift','set'].forEach(k=>B[k]=c(k));
+  ['req','fix','inc','news','afisha','staff','rot','dg','shift','set','feedback'].forEach(k=>B[k]=c(k));
   B.contacts=0;B.kb=S.kbNew||0;B.sch=S.schNew||0;
   B.ap=B.req+B.fix+B.inc;B.park=B.news+B.afisha;B.team=B.staff;B.today=0;B.grid=0;
-  B.more=B.shift+B.park+B.kb+B.team+B.set;
+  B.more=B.shift+B.park+B.kb+B.team+B.set+B.feedback;
   S.badges=B;
   nav.querySelectorAll('button[data-tab]').forEach(btn=>{let i=btn.querySelector('i');const n=B[btn.dataset.tab]||0;
     if(!i){i=document.createElement('i');i.hidden=true;btn.appendChild(i)}
@@ -151,7 +151,7 @@ async function refreshUnread(){
 const firstName=()=>(S.me?.full_name||'').trim().split(/\s+/)[0]||'друг';
 const bell=()=>`<button class="bell" aria-label="Уведомления" onclick="openBell()">🔔<i id="bellN" ${S.unread>0?'':'hidden'}>${S.unread>9?'9+':S.unread}</i></button>`;
 const head=(h,sub)=>`<div class="top"><div class="brand"><img class="lg" src="stickers/logo.webp" alt="Дримвуд"><div class="hi">Привет, ${esc(firstName())}! 👋</div></div>${bell()}</div>${S.offline?`<div class="banner" style="background:#E6CC8F;color:#3B2A35;font-size:14px">📴 Нет сети — показаны сохранённые данные (от ${new Date(S.offline).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'})}). Менять что-либо пока нельзя.</div>`:''}${sub?`<div class="muted">${sub}</div>`:''}<h1>${h}</h1>`;
-const NI={news:'📰',rotation:'🔄',afisha:'🎟️',signup:'🧑‍💼',task:'📋',request:'📨',incident:'🚨',shift:'💬',checkin:'☀️',repair:'🛠'};
+const NI={news:'📰',rotation:'🔄',afisha:'🎟️',signup:'🧑‍💼',task:'📋',request:'📨',incident:'🚨',shift:'💬',checkin:'☀️',repair:'🛠',feedback:'💡'};
 const ago=d=>{const m=Math.round((Date.now()-new Date(d))/6e4);return m<1?'только что':m<60?m+' мин назад':m<1440?Math.floor(m/60)+' ч назад':new Date(d).toLocaleDateString('ru',{day:'numeric',month:'short'})};
 async function openBell(){
   const [n,r,ckq]=await Promise.all([sb.from('notifications').select('*').order('created_at',{ascending:false}).limit(50),sb.from('notif_reads').select('notif_id').eq('user_id',S.me.id),sb.from('checkins').select('day,at').eq('user_id',S.me.id).order('day',{ascending:false}).limit(40)]);
@@ -200,6 +200,28 @@ function zoneCard(zone,blocks,c){
     h+=`</div>`});
   return h+`</div>`}
 // ---------- График ----------
+// сотрудник нажал на дату: заявка (отгул/ДО/больничный/отпуск) или личный комментарий
+function dayModal(k){
+  const me=S.me.id,mk=S.marks[k],pd=S.pendDay[k];
+  dgxSheet(dayLabel(k),(box,paint,close)=>{
+    const L={otgul:['🏖','Отгул'],do:['📌','ДО'],sick:['🤒','Больничный'],vac:['🌴','Отпуск']};
+    box.innerHTML=`${mk?`<div class="card pad" style="background:${KINDS[mk.kind][1]}"><b>${KINDS[mk.kind][2]}</b>${mk.note?`<div class="muted">${esc(mk.note)}</div>`:''}<div class="muted">Поставлено в графике. Изменить может руководитель.</div></div>`:''}
+    ${pd?`<div class="card pad col" style="border:2px dashed var(--ink)"><b>⏳ Отправлено на согласование: ${esc((KINDS[pd.kind]||[])[2]||pd.kind)}</b><div class="muted">${dRange(pd)}</div><button class="btn ghost" id="dm_cn">Отменить заявку</button></div>`
+    :`<b>Отправить заявку на этот день</b><div class="two">${['otgul','do'].map(x=>`<button class="btn ghost" data-rq="${x}">${L[x][0]} ${L[x][1]}</button>`).join('')}</div><div class="two">${['sick','vac'].map(x=>`<button class="btn ghost" data-rq="${x}">${L[x][0]} ${L[x][1]}</button>`).join('')}</div><label>Если несколько дней: по какое число<input type="date" id="dm_to" min="${k}"></label><div class="muted">Заявку увидит руководитель. Когда одобрит, день появится в графике.</div>`}
+    <label>📝 Комментарий к дню<textarea id="dm_note" placeholder="Например: съездить в банк, отпроситься на час">${esc(S.dnotes[k]||'')}</textarea></label><div class="muted">Комментарий виден руководителям.</div><button class="btn" id="dm_save">Сохранить комментарий</button><div class="err" id="dm_er"></div>`;
+    box.querySelectorAll('[data-rq]').forEach(b=>b.onclick=async()=>{
+      const to=box.querySelector('#dm_to')?.value,er=box.querySelector('#dm_er');
+      if(to&&to<k)return er.textContent='Конец раньше начала';
+      b.disabled=true;const row={kind:b.dataset.rq,day:k,status:'pending'};if(to&&to!==k)row.day_to=to;
+      const r=await sb.from('requests').insert(row);if(r.error){b.disabled=false;return er.textContent='Не получилось: '+r.error.message}
+      close(false);S.sel=null;schView();refreshUnread()});
+    box.querySelector('#dm_cn')?.addEventListener('click',async()=>{if(!confirm('Отменить заявку?'))return;const r=await sb.from('requests').update({status:'cancelled'}).eq('id',pd.id);if(r.error)return alert(r.error.message);close(false);S.sel=null;schView()});
+    box.querySelector('#dm_save').onclick=async e=>{const t=box.querySelector('#dm_note').value.trim();e.target.disabled=true;
+      const r=t?await sb.from('day_notes').upsert({user_id:me,day:k,body:t,updated_at:new Date().toISOString()}):await sb.from('day_notes').delete().eq('user_id',me).eq('day',k);
+      if(r.error){e.target.disabled=false;return box.querySelector('#dm_er').textContent=r.error.message}
+      close(false);S.sel=null;schView()};
+  },()=>{S.sel=null});
+}
 const KINDS={off:['ВЫХ','#E8DCCB','Выходной'],otgul:['ОТ','#E4B5A3','Отгул'],do:['ДО','#F5E2A8','ДО'],sick:['Б','#BCC8D6','Больничный'],vac:['ОП','#C9D4B0','Отпуск']};
 async function schView(){
   S.offline=0;
@@ -207,6 +229,12 @@ async function schView(){
   const m=S.month,y=m.getFullYear(),mo=m.getMonth(),first=iso(new Date(y,mo,1)),last=iso(new Date(y,mo+1,0));
   const {data}=await cq('marks:'+S.viewUser+first,()=>sb.from('marks').select('*').eq('user_id',S.viewUser).gte('day',first).lte('day',last));
   const otr=await cq('ot:'+S.viewUser+first,()=>sb.from('overtime').select('*').eq('user_id',S.viewUser).gte('day',first).lte('day',last).order('day').order('start_time'));
+  const selfMode=S.viewUser===S.me.id&&!isManager();
+  const [vp,vr]=await Promise.all([sb.from('profiles').select('day_len,team').eq('id',S.viewUser).maybeSingle(),isManager()?sb.from('roster').select('id,day_len').eq('profile_id',S.viewUser).maybeSingle():Promise.resolve({data:null})]);
+  const dlen=vp.data?.day_len||vr.data?.day_len||(vp.data?.team==='M'?12:10),lenSet=!!(vp.data?.day_len||vr.data?.day_len);
+  const [pq,dq]=await Promise.all([sb.from('requests').select('id,kind,day,day_to').eq('user_id',S.viewUser).eq('status','pending').neq('kind','swap').lte('day',last),sb.from('day_notes').select('day,body').eq('user_id',S.viewUser).gte('day',first).lte('day',last)]);
+  S.pendDay={};(pq.data||[]).forEach(x=>{const to=x.day_to||x.day;for(let d=new Date(x.day+'T12:00:00');iso(d)<=to;d.setDate(d.getDate()+1)){const k=iso(d);if(k>=first&&k<=last)S.pendDay[k]=x}});
+  S.dnotes={};(dq.data||[]).forEach(x=>S.dnotes[x.day]=x.body);
   const otOk=canMng()&&(isManager()||S.viewUser!==S.me.id);
   const otRows=otr.data||[],otSum=otRows.reduce((a,r)=>a+Number(r.hours),0),fh=x=>String(Math.round(x*100)/100).replace('.',',');
   S.marks={};(data||[]).forEach(r=>S.marks[r.day]=r);
@@ -217,19 +245,28 @@ async function schView(){
   let worked=0;const cnt={};
   for(let d=1;d<=n;d++){const k=iso(new Date(y,mo,d)),mk=S.marks[k];
     if(!mk)worked++;else cnt[mk.kind]=(cnt[mk.kind]||0)+1;
-    h+=`<button class="day ${S.sel===k?'sel':''}" data-k="${k}" style="background:${mk?KINDS[mk.kind][1]:'var(--card)'}">${d}<small>${mk?KINDS[mk.kind][0]:''}</small></button>`}
-  h+=`</div><div class="stat"><div style="background:var(--sage)"><b>${worked}</b>рабочих дней</div><div style="background:var(--gold)"><b>${worked*10}</b>часов по графику</div></div>
-  <div class="stat"><div style="background:var(--pink)"><b>${fh(otSum)}</b>переработки</div><div style="background:var(--blue)"><b>${fh(worked*10+otSum)}</b>всего часов</div></div>
-  <div class="muted">Смена 11 ч, из них 1 ч обед → 10 рабочих часов. Дни без отметки считаются рабочими. Переработки вносит руководитель или бригадир и они идут в общий итог.</div>`;
+    const pd=S.pendDay[k];
+    h+=`<button class="day ${S.sel===k?'sel':''}" data-k="${k}" style="background:${mk?KINDS[mk.kind][1]:pd?KINDS[pd.kind]?.[1]||'var(--card)':'var(--card)'};${pd&&!mk?'border:2px dashed var(--ink);':''}">${d}<small>${mk?KINDS[mk.kind][0]:pd?'⏳ '+(KINDS[pd.kind]?.[0]||''):''}${S.dnotes[k]?' 📝':''}</small></button>`}
+  const cOt=cnt.otgul||0,cDo=cnt.do||0,base=(worked+cOt-cDo)*dlen;
+  h+=`</div><div class="stat"><div style="background:var(--sage)"><b>${worked}</b>рабочих дней</div><div style="background:var(--gold)"><b>${fh(base)}</b>часов по графику</div></div>
+  <div class="stat"><div style="background:var(--pink)"><b>${fh(otSum)}</b>переработки</div><div style="background:var(--blue)"><b>${fh(base+otSum)}</b>всего часов</div></div>
+  <div class="card pad col"><b>Как посчитано</b><div class="otr"><span>Рабочих дней × ${dlen} ч</span><b>${fh(worked*dlen)} ч</b></div><div class="otr"><span>Отгулы ${cOt} × ${dlen} ч (как отработанные)</span><b>+${fh(cOt*dlen)} ч</b></div><div class="otr"><span>ДО ${cDo} × ${dlen} ч (неоплачиваемый)</span><b>−${fh(cDo*dlen)} ч</b></div>${otSum?`<div class="otr"><span>Переработки</span><b>+${fh(otSum)} ч</b></div>`:''}<div class="otr"><span><b>Итого</b></span><b>${fh(base+otSum)} ч</b></div>
+  ${isManager()?`<label>Длина рабочего дня<select id="dlen">${[8,10,12].map(v=>`<option value="${v}" ${v===dlen?'selected':''}>${v} ч${v===8?' (5/2)':v===10?' (4/3, с учётом обеда)':' (сменный 12 ч)'}</option>`).join('')}</select></label>${lenSet?'':'<div class="muted">Сейчас по умолчанию. Выбери и сохранится.</div>'}`:`<div class="muted">Длина дня: ${dlen} ч. Выходные, больничные и отпуск в часы не входят.</div>`}</div>`;
+  const dl=Object.keys({...S.marks,...S.dnotes}).sort();
+  if(dl.length)h+=`<div class="card pad col"><b>📋 Что и когда</b>${dl.map(k=>{const mk=S.marks[k];return `<div class="otr" style="align-items:flex-start"><span><b>${dayLabel(k)}</b>${mk?` · <span class="pill" style="background:${KINDS[mk.kind][1]}">${KINDS[mk.kind][2]}</span>${mk.note?` ${esc(mk.note)}`:''}`:''}${S.dnotes[k]?`<br><span class="muted">📝 ${esc(S.dnotes[k])}</span>`:''}</span></div>`}).join('')}</div>`;
   const defd=S.sel||(iso(new Date()).slice(0,7)===first.slice(0,7)?iso(new Date()):first);
   h+=`<div class="card pad col"><b>⏱ Переработки</b>${otRows.length?otRows.map(r=>`<div class="otr"><span><b>${dayLabel(r.day)}</b> · с ${esc(String(r.start_time||'—').slice(0,5))} · ${fh(+r.hours)} ч${r.note?' · '+esc(r.note):''}</span>${otOk?`<button class="x" data-od="${r.id}" aria-label="Удалить">✕</button>`:''}</div>`).join(''):'<div class="muted">В этом месяце переработок нет</div>'}
   ${otOk?`<div class="col" style="border-top:1px solid var(--line);padding-top:10px"><div class="muted">Добавить переработку для выбранного сотрудника</div><input type="date" id="otd" value="${defd}"><div class="two"><label>С какого времени<input type="time" id="ots" value="20:00"></label><label>Сколько часов<input type="number" id="oth" step="0.5" min="0.5" placeholder="2"></label></div><input id="otn" placeholder="Комментарий (необязательно)"><button class="btn" id="otadd">Добавить</button></div>`:''}</div>`;
-  if(S.sel){const mk=S.marks[S.sel];
-    h+=`<div class="card pad" style="display:flex;flex-direction:column;gap:10px"><b>${S.sel}</b><div class="tabs">${Object.entries(KINDS).map(([k,v])=>`<button data-m="${k}" style="background:${v[1]}" class="${mk?.kind===k?'on':''}">${v[2]}</button>`).join('')}<button data-m="" style="background:#fff;border:1px solid #ccc">Рабочий</button></div><textarea id="note" placeholder="Комментарий">${esc(mk?.note||'')}</textarea><button class="btn" id="save">Сохранить</button></div>`}
+  if(selfMode)h+=`<div class="muted">Нажми на дату: можно отправить заявку на отгул, ДО, больничный или отпуск и оставить комментарий. ⏳ — отправлено на согласование руководителю.</div>`;
+  if(S.sel&&!selfMode){const mk=S.marks[S.sel];
+    h+=`<div class="card pad" style="display:flex;flex-direction:column;gap:10px"><b>${S.sel}</b><div class="tabs">${Object.entries(KINDS).map(([k,v])=>`<button data-m="${k}" style="background:${v[1]}" class="${mk?.kind===k?'on':''}">${v[2]}</button>`).join('')}<button data-m="" style="background:#fff;border:1px solid #ccc">Рабочий</button></div><textarea id="note" placeholder="Комментарий">${esc(mk?.note||'')}</textarea>${S.dnotes[S.sel]?`<div class="muted">📝 Личный комментарий сотрудника: ${esc(S.dnotes[S.sel])}</div>`:''}<button class="btn" id="save">Сохранить</button></div>`}
   app.innerHTML=h;
+  $('#dlen')?.addEventListener('change',async e=>{const v=+e.target.value;e.target.disabled=true;
+    const a=await sb.from('profiles').update({day_len:v}).eq('id',S.viewUser);if(a.error)return alert(a.error.message);
+    if(vr.data)await sb.from('roster').update({day_len:v}).eq('id',vr.data.id);schView()});
   $('#who')?.addEventListener('change',e=>{S.viewUser=e.target.value;S.sel=null;schView()});
   $('#pm').onclick=()=>{S.month=new Date(y,mo-1,1);S.sel=null;schView()};$('#nm').onclick=()=>{S.month=new Date(y,mo+1,1);S.sel=null;schView()};
-  app.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{S.sel=b.dataset.k;S.pick=S.marks[S.sel]?.kind||'';schView()});
+  app.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{S.sel=b.dataset.k;S.pick=S.marks[S.sel]?.kind||'';if(selfMode)dayModal(S.sel);else schView()});
   app.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{S.pick=b.dataset.m;app.querySelectorAll('[data-m]').forEach(x=>x.classList.toggle('on',x===b))});
   $('#otadd')?.addEventListener('click',async()=>{
     const day=$('#otd').value,hours=parseFloat(String($('#oth').value).replace(',','.'));

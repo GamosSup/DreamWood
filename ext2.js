@@ -1,5 +1,5 @@
 // Заявки (отгулы, обмен сменами), новости, база знаний, контакты, меню «Ещё»
-const REQ_K={otgul:['🏖','Отгул'],do:['📌','ДО'],vac:['🌴','Отпуск'],swap:['🔄','Обмен сменами']};
+const REQ_K={otgul:['🏖','Отгул'],do:['📌','ДО'],vac:['🌴','Отпуск'],sick:['🤒','Больничный'],swap:['🔄','Обмен сменами']};
 const REQ_ST={peer:['Ждём коллегу','#E6CC8F'],pending:['На рассмотрении','#BCC8D6'],approved:['Одобрено','#C9D4B0'],rejected:['Отклонено','#E8B4B8'],cancelled:['Отменено','#E8DCCB']};
 const dRange=x=>x.day_to&&x.day_to!==x.day?`${dayLabel(x.day)} — ${dayLabel(x.day_to)}`:dayLabel(x.day);
 const dispName=id=>shortName(pname(id));
@@ -25,13 +25,15 @@ async function reqView(){
   let h=head('Заявки','Отгулы, ДО, отпуск и обмен сменами')+subBar('ap','req');
   h+='<button class="btn" id="rq_new">➕ Новая заявка</button>';
   if(toMe.length)h+=`<div class="card pad col"><b>⏳ Ждут твоего ответа</b>${toMe.map(x=>`<div class="col" style="border-top:1px solid var(--line);padding-top:10px">${what(x)}${x.note?`<div>${esc(x.note)}</div>`:''}<div class="two"><button class="btn" data-pa="${x.id}" data-ok="1">Согласен</button><button class="btn ghost" data-pa="${x.id}" data-ok="0">Отказаться</button></div></div>`).join('')}</div>`;
-  if(mgr)h+=`<div class="card pad col"><b>📋 На рассмотрении · ${pend.length}</b>${pend.map(x=>`<div class="col" style="border-top:1px solid var(--line);padding-top:10px">${what(x)}${x.note?`<div>${esc(x.note)}</div>`:''}
+  if(mgr)h+=`<div class="card pad col"><b>📋 На рассмотрении · ${pend.length}</b>${pend.map(x=>`<div class="col" data-dcard="${x.id}" style="border-top:1px solid var(--line);padding-top:10px">${what(x)}${apSeenPill('req',x)}${x.note?`<div>${esc(x.note)}</div>`:''}
       ${clash[x.id]?.length?`<div class="pill" style="background:#F3C29B;align-self:flex-start">⚠ В эти даты уже отсутствуют (${clash[x.id].length}): ${esc(clash[x.id].slice(0,4).map(dispName).join(', '))}${clash[x.id].length>4?'…':''}</div>`:'<div class="muted">В эти даты других отсутствующих нет</div>'}
-      <input data-dn="${x.id}" placeholder="Комментарий (необязательно)"><div class="two"><button class="btn" data-dc="${x.id}" data-ok="1">Одобрить</button><button class="btn ghost" data-dc="${x.id}" data-ok="0">Отклонить</button></div></div>`).join('')||'<div class="muted">Новых заявок нет 👌</div>'}</div>`;
-  h+=`<div class="card pad col"><b>📨 Мои заявки</b>${mine.map(x=>`<div class="otr" style="align-items:flex-start"><span>${x.kind==='swap'?`${REQ_K.swap[0]} с ${esc(dispName(x.peer_id))}: ${dayLabel(x.day)} ↔ ${dayLabel(x.peer_day)}`:`${REQ_K[x.kind][0]} ${REQ_K[x.kind][1]} · ${dRange(x)}`}${x.decision_note?`<br><span class="muted">${esc(x.decision_note)}</span>`:''}<br>${stp(x)}</span>${['peer','pending'].includes(x.status)?`<button class="btn ghost" data-cn="${x.id}" style="min-height:36px;padding:0 12px">Отменить</button>`:''}</div>`).join('')||'<div class="muted">Ты пока ничего не подавал(а).</div>'}</div>`;
+      <details class="apth" data-th="${x.id}"><summary class="muted" style="cursor:pointer">💬 Переписка</summary><div class="col" style="margin-top:8px"></div></details><input data-dn="${x.id}" placeholder="Комментарий (необязательно)"><div class="two"><button class="btn" data-dc="${x.id}" data-ok="1">Одобрить</button><button class="btn ghost" data-dc="${x.id}" data-ok="0">Отклонить</button></div></div>`).join('')||'<div class="muted">Новых заявок нет 👌</div>'}</div>`;
+  h+=`<div class="card pad col"><b>📨 Мои заявки</b>${mine.map(x=>`<div class="otr" style="align-items:flex-start"><span>${x.kind==='swap'?`${REQ_K.swap[0]} с ${esc(dispName(x.peer_id))}: ${dayLabel(x.day)} ↔ ${dayLabel(x.peer_day)}`:`${REQ_K[x.kind][0]} ${REQ_K[x.kind][1]} · ${dRange(x)}`}${x.decision_note?`<br><span class="muted">${esc(x.decision_note)}</span>`:''}<br>${stp(x)} ${apSeenPill('req',x)}<details class="apth" data-th="${x.id}"><summary class="muted" style="cursor:pointer">💬 Переписка</summary><div class="col" style="margin-top:8px"></div></details></span>${['peer','pending'].includes(x.status)?`<button class="btn ghost" data-cn="${x.id}" style="min-height:36px;padding:0 12px">Отменить</button>`:''}</div>`).join('')||'<div class="muted">Ты пока ничего не подавал(а).</div>'}</div>`;
   if(rest.length)h+=`<details class="card pad"><summary style="font-weight:800;cursor:pointer">🗂 Недавние решения · ${rest.length}</summary>${rest.map(x=>`<div class="otr" style="align-items:flex-start"><span>${what(x)}${stp(x)}</span></div>`).join('')}</details>`;
   app.innerHTML=h;
   $('#rq_new').onclick=reqForm;
+  apWatch('req',all,'[data-dcard]','data-dcard');
+  app.querySelectorAll('.apth').forEach(d=>d.addEventListener('toggle',()=>{if(d.open&&!d.dataset.l){d.dataset.l=1;apThread(d.querySelector('div'),'req',d.dataset.th)}}));
   const call=async(fn,args)=>{const r=await sb.rpc(fn,args);if(r.error)alert(r.error.message);reqView().then(refreshUnread)};
   app.querySelectorAll('[data-pa]').forEach(b=>b.onclick=()=>call('peer_answer',{p_id:b.dataset.pa,p_ok:b.dataset.ok==='1'}));
   app.querySelectorAll('[data-dc]').forEach(b=>b.onclick=()=>call('decide_request',{p_id:b.dataset.dc,p_ok:b.dataset.ok==='1',p_note:app.querySelector(`[data-dn="${b.dataset.dc}"]`).value||null}));
@@ -184,7 +186,7 @@ async function contactsView(){
 function moreView(){
   const mgr=isManager(),b=S.badges||{};
   const items=[['shift','✅','Смена','Открытие и закрытие: чек-листы зон'],['park','📰','Парк','Новости и афиша событий'],['kb','📚','База знаний','Регламенты и инструкции'],['team','👥','Команда','Телефоны'+(isAdmin()?', заявки на регистрацию, роли':'')],
-    ...(canMng()&&VIEWS.grid?[['grid','📆','График и сводка','Все сотрудники по дням, часы и переработки, Excel']]:[]),['set','⚙️','Настройки','Телефон, пароль, уведомления, оформление']];
+    ...(canMng()&&VIEWS.grid?[['grid','📆','График и сводка','Все сотрудники по дням, часы и переработки, Excel']]:[]),['todo','📝','Мой блокнот','Личные дела, видите только вы'],['feedback','💡','Обратная связь',isAdmin()?'Идеи и сообщения от сотрудников':'Предложить идею или сообщить, что что-то не работает'],['set','⚙️','Настройки','Телефон, пароль, уведомления, оформление']];
   app.innerHTML=head('Ещё','Все разделы приложения')+items.map(([k,ic,n,d])=>`<div class="card pad" data-go="${k}" style="display:flex;gap:14px;align-items:center;cursor:pointer"><span style="font-size:28px">${ic}</span><span style="flex:1"><b style="font-size:16px">${n}</b><div class="muted">${d}</div></span>${b[k]?`<span class="pill" style="background:#C0392B;color:#fff;align-self:center">${b[k]}</span>`:''}</div>`).join('');
   app.querySelectorAll('[data-go]').forEach(c=>c.onclick=()=>go(c.dataset.go));
 }

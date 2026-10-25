@@ -1,6 +1,27 @@
 // Смена (чек-листы открытия/закрытия) и журнал происшествий
 const hm=ts=>new Date(ts).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'});
 const shortName=n=>String(n||'—').trim().split(/\s+/).slice(0,2).join(' ');
+
+// ---- Обращения: «просмотрено» и переписка с руководителем ----
+const apSeenSet=new Set();
+const apCan=k=>k==='req'?canMng():isManager();
+const apOwner=x=>x.reported_by||x.user_id;
+const apSeenPill=(kind,x)=>{const own=apOwner(x)===S.me.id,pl=(bg,t)=>`<span class="pill apseen" data-aps="${kind}${x.id}" style="background:${bg};font-size:11px;align-self:flex-start">${t}</span>`;
+  if(own)return x.seen_at?pl('#C9D4B0','👁 Просмотрено '+hm(x.seen_at)):pl('#EEE6D8','Пока не просмотрено');
+  if(!apCan(kind))return '';
+  return x.seen_at?pl('#EEE6D8','👁 '+hm(x.seen_at)+' · '+esc(shortName(pname(x.seen_by)))):pl('#E8B4B8','● не просмотрено')};
+function apMark(kind,x){if(apOwner(x)===S.me.id||x.seen_at||!apCan(kind)||apSeenSet.has(kind+x.id))return;apSeenSet.add(kind+x.id);x.seen_at=new Date().toISOString();x.seen_by=S.me.id;
+  sb.rpc('mark_seen',{p_kind:kind,p_id:x.id}).then(()=>{});document.querySelectorAll(`[data-aps="${kind}${x.id}"]`).forEach(el=>el.outerHTML=apSeenPill(kind,x))}
+// руководитель навёл мышь или карточка побыла на экране — «просмотрено»
+function apWatch(kind,rows,sel,attr){if(!apCan(kind))return;const by=new Map(rows.map(x=>[String(x.id),x])),tm=new Map();
+  const io='IntersectionObserver' in window?new IntersectionObserver(es=>es.forEach(e=>{const id=e.target.getAttribute(attr);if(e.isIntersecting&&e.intersectionRatio>=.6){const x=by.get(id);if(x)tm.set(id,setTimeout(()=>apMark(kind,x),900))}else clearTimeout(tm.get(id))}),{threshold:[.6]}):null;
+  app.querySelectorAll(sel).forEach(el=>{const x=by.get(el.getAttribute(attr));if(!x||x.seen_at||apOwner(x)===S.me.id)return;el.addEventListener('mouseenter',()=>apMark(kind,x));io&&io.observe(el)})}
+async function apThread(box,kind,id){
+  const r=await sb.from('ap_msgs').select('*').eq('kind',kind).eq('ref_id',id).order('created_at');const msgs=r.error?[]:(r.data||[]);
+  box.innerHTML=`<b>💬 Переписка</b>${msgs.map(m=>`<div class="shc"><div><b>${esc(shortName(pname(m.user_id)))}</b> <span class="muted">${hm(m.created_at)}</span></div><div style="white-space:pre-wrap">${esc(m.body)}</div></div>`).join('')||'<div class="muted">Вопросов и ответов пока нет.</div>'}<div class="shnf"><textarea id="am_t" placeholder="Написать вопрос или ответ…"></textarea><button class="btn" id="am_s">Отправить</button></div>`;
+  box.querySelector('#am_s').onclick=async e=>{const t=box.querySelector('#am_t').value.trim();if(!t)return;e.target.disabled=true;const r=await sb.from('ap_msgs').insert({kind,ref_id:id,body:t});if(r.error){e.target.disabled=false;return alert(r.error.message)}apThread(box,kind,id)};
+}
+const apStOpts=(D,cur,legacy)=>Object.entries(D).filter(([k])=>!legacy.includes(k)||k===cur).map(([k,v])=>`<option value="${k}" ${k===cur?'selected':''}>${v[0]}</option>`).join('');
 async function ensurePeople(force){
   if(!force&&S.dg.people&&S.dg.people.length&&S.dg.people[0].position!==undefined)return;
   const {data}=await sb.from('profiles').select('id,full_name,tab_no,team,phone,role,position').eq('status','approved').order('full_name');
@@ -110,24 +131,24 @@ function shiftEditor(){
 // ================= ПРОИСШЕСТВИЯ =================
 const INC_K={injury:['🩹','Травма'],breakdown:['🛠','Поломка'],conflict:['🗣','Конфликт'],loss:['🔍','Потеря'],other:['📝','Другое']};
 const INC_S={low:['Лёгкое','#B7CFC4'],mid:['Среднее','#F3C29B'],high:['Серьёзное','#E08A7A']};
-const INC_ST={new:['Новое','#E8B4B8'],review:['В разборе','#E6CC8F'],closed:['Закрыто','#C9D4B0']};
+const INC_ST={new:['Новое','#E8B4B8'],work:['Принято в работу','#E6CC8F'],clarify:['Нужно уточнение','#F3C29B'],done:['Выполнено','#C9D4B0'],rejected:['Отклонено','#E8DCCB'],review:['В разборе','#E6CC8F'],closed:['Закрыто','#C9D4B0']};
 S.inc={f:'all'};
 async function incView(){
   await ensurePeople();
   const r=await sb.from('incidents').select('*').order('created_at',{ascending:false}).limit(300);
-  const mgr=isManager(),all=r.data||[],list=all.filter(x=>S.inc.f==='all'||x.status===S.inc.f);
+  const mgr=isManager(),all=r.data||[],list=all.filter(x=>S.inc.f==='all'||x.status===S.inc.f||(S.inc.f==='work'&&x.status==='review')||(S.inc.f==='done'&&x.status==='closed'));
   let h=head('Происшествия',mgr?'Журнал происшествий парка':'Твои сообщения о происшествиях')+subBar('ap','inc');
   h+=`<button class="btn" id="inc_new">➕ Сообщить о происшествии</button>`;
   if(mgr){
     const cnt=s=>all.filter(x=>x.status===s).length;
-    h+=`<div class="tabs">${[['all','Все',all.length],['new','Новые',cnt('new')],['review','В разборе',cnt('review')],['closed','Закрытые',cnt('closed')]].map(([k,n,c])=>`<button data-f="${k}" class="${S.inc.f===k?'on':''}" style="background:var(--tab)">${n} · ${c}</button>`).join('')}<button id="inc_csv" style="background:var(--tab)">⬇️ Excel</button></div>`;
+    h+=`<div class="tabs">${[['all','Все',all.length],['new','Новые',cnt('new')],['work','В работе',cnt('work')+cnt('review')],['clarify','Уточнение',cnt('clarify')],['done','Выполнены',cnt('done')+cnt('closed')],['rejected','Отклонены',cnt('rejected')]].map(([k,n,c])=>`<button data-f="${k}" class="${S.inc.f===k?'on':''}" style="background:var(--tab)">${n} · ${c}</button>`).join('')}<button id="inc_csv" style="background:var(--tab)">⬇️ Excel</button></div>`;
   }
   h+=list.map(x=>`<div class="card pad col" data-inc="${x.id}" style="cursor:pointer;border-left:8px solid ${INC_S[x.severity][1]}">
-    <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><b>${INC_K[x.kind][0]} ${esc(x.zone||'—')}</b><span class="pill" style="background:${INC_ST[x.status][1]}">${INC_ST[x.status][0]}</span></div>
+    <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><b>${INC_K[x.kind][0]} ${esc(x.zone||'—')}</b><span class="pill" style="background:${INC_ST[x.status][1]}">${INC_ST[x.status][0]}</span></div>${apSeenPill('inc',x)}
     <div style="font-size:14px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">${esc(x.descr)}</div>
     <div class="muted">${dayLabel(x.day)}${x.at_time?' · '+esc(x.at_time):''} · ${INC_K[x.kind][1]} · ${INC_S[x.severity][0]}${mgr?' · '+esc(shortName(pname(x.reported_by))):''}</div></div>`).join('')||'<div class="card pad muted">Пока записей нет.</div>';
   app.innerHTML=h;
-  $('#inc_new').onclick=incForm;
+  $('#inc_new').onclick=incForm;apWatch('inc',list,'[data-inc]','data-inc');
   app.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{S.inc.f=b.dataset.f;incView()});
   app.querySelectorAll('[data-inc]').forEach(b=>b.onclick=()=>incOpen(all.find(x=>x.id===b.dataset.inc)));
   $('#inc_csv')?.addEventListener('click',()=>downloadCSV('proisshestviya_'+iso(new Date())+'.csv',[['Дата','Время','Зона','Вид','Серьёзность','Что произошло','Что сделано','Кто пострадал / свидетели','Сообщил(а)','Статус','Решение']].concat(all.map(x=>[x.day,x.at_time||'',x.zone||'',INC_K[x.kind][1],INC_S[x.severity][0],x.descr,x.actions||'',x.people||'',pname(x.reported_by),INC_ST[x.status][0],x.resolution||'']))));
@@ -164,10 +185,11 @@ function incOpen(x){
     ${x.actions?`<div><b style="font-size:14px">Что сделано</b><div style="white-space:pre-wrap;margin-top:4px">${esc(x.actions)}</div></div>`:''}
     ${x.people?`<div><b style="font-size:14px">Кто пострадал / свидетели</b><div style="margin-top:4px">${esc(x.people)}</div></div>`:''}
     ${files.length?`<div class="fgrid">${files.map((y,i)=>`<div class="fi">${/^image\//.test(y.mime||'')&&urls[i]?`<a href="${urls[i]}" target="_blank" rel="noopener"><img src="${urls[i]}" loading="lazy" alt=""></a>`:`<a href="${urls[i]||'#'}" target="_blank" rel="noopener">📎<br>${esc((y.name||'файл').slice(-22))}</a>`}</div>`).join('')}</div>`:''}
-    ${mgr?`<label>Статус<select id="i_st">${Object.entries(INC_ST).map(([k,v])=>`<option value="${k}" ${k===st?'selected':''}>${v[0]}</option>`).join('')}</select></label>
+    ${mgr?`<label>Статус<select id="i_st">${apStOpts(INC_ST,st,['review','closed'])}</select></label>
       <label>Решение / комментарий руководителя<textarea id="i_rs">${esc(x.resolution||'')}</textarea></label>
       <button class="btn" id="i_sv">Сохранить</button><button class="btn ghost" id="i_dl" style="color:#9b2c2c;border-color:#9b2c2c">Удалить запись</button><div class="err" id="i_er"></div>`
       :`<div><b style="font-size:14px">Статус:</b> <span class="pill" style="background:${INC_ST[x.status][1]}">${INC_ST[x.status][0]}</span>${x.resolution?`<div style="margin-top:6px;white-space:pre-wrap">${esc(x.resolution)}</div>`:''}</div>`}`;
+    box.insertAdjacentHTML('beforeend','<div class="col" id="thr"></div>');apThread(box.querySelector('#thr'),'inc',x.id);apMark('inc',x);
     box.querySelector('#i_sv')?.addEventListener('click',async()=>{const r=await sb.from('incidents').update({status:box.querySelector('#i_st').value,resolution:box.querySelector('#i_rs').value.trim()||null}).eq('id',x.id);if(r.error)return box.querySelector('#i_er').textContent=r.error.message;S.inc.f=S.inc.f;document.querySelector('.ov #bk').click()});
     box.querySelector('#i_dl')?.addEventListener('click',async()=>{if(!confirm('Удалить запись о происшествии насовсем?'))return;if(files.length)await sb.storage.from('inc').remove(files.map(y=>y.path));await sb.from('incidents').delete().eq('id',x.id);document.querySelector('.ov #bk').click()});
   },()=>{if(onTab('inc'))incView()});

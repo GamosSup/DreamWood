@@ -52,7 +52,7 @@ async function rotView(){
 function myShift(rot){
   const res=[],rk=S.rname?nameKey(S.rname):null,full=norm(S.me.full_name||'');
   const match=n=>rk?nameKey(n)===rk:(full.length>=2&&simScore(n,S.me.full_name)>=6);
-  Object.entries(rot.teams||{}).forEach(([tk,secs])=>secs.forEach(s=>s.rows.forEach(r=>(r.people||[]).forEach(p=>{if(match(p.name))res.push({team:tk,sec:s.title,zone:r.zone,p,steps:r.steps})}))));
+  Object.entries(rot.teams||{}).forEach(([tk,secs])=>secs.forEach(s=>s.rows.forEach(r=>(r.people||[]).forEach(p=>{if(match(p.name))res.push({team:tk,sec:s.title,zone:r.zone,p,steps:r.steps,row:r})}))));
   return res;
 }
 function bindRot(rot){
@@ -247,4 +247,5 @@ function rotZoom(src){
   document.body.appendChild(ov);document.body.style.overflow='hidden';
 }
 
-function myShiftCard(mine,label){return mine.length?`<div class="card pad col" style="border:2px solid var(--ink)"><b>👤 ${label||'Твоя смена'}</b>${mine.map(x=>`<div><b>${esc(x.zone)}</b> <span class="muted">· ${esc(x.sec.replace(/^.*·\s*/,''))}${x.team==='W'?' · если дождь':''}</span>${x.p.brks?.length?`<div class="muted">Перерыв: ${x.p.brks.map(esc).join(' · ')}</div>`:''}${x.steps?.length?`<div class="muted">Замены: ${x.steps.map(s=>esc(s[0])+' '+esc(s[1])).join(' · ')}</div>`:''}</div>`).join('')}</div>`:''}
+function myShiftCard(mine,label){return mine.length?`<div class="card pad col" style="border:2px solid var(--ink)"><b>👤 ${label||'Твоя смена'}</b>${mine.map(x=>{const mates=(x.row?.people||[]).filter(q=>q!==x.p);
+  return `<div><b>${esc(x.zone)}</b> <span class="muted">· ${esc(x.sec.replace(/^.*·\s*/,''))}${x.team==='W'?' · если дождь':''}</span>${x.p.brks?.length?`<div class="muted">Перерыв: ${x.p.brks.map(esc).join(' · ')}</div>`:''}${x.steps?.length?`<div class="muted">Замены: ${x.steps.map(s=>esc(s[0])+' '+esc(s[1])).join(' · ')}</div>`:''}${mates.length?`<div style="margin-top:4px">👥 <b>С тобой:</b> ${mates.map(q=>esc(q.name)+(q.brks?.length?` <span class="muted">(${q.brks.map(esc).join(', ')})</span>`:'')).join(' · ')}</div>`:''}<a href="#" class="lnk" data-kbz="${esc(x.zone)}" style="display:inline-block;margin-top:4px">📖 Памятка по зоне</a></div>`}).join('')}</div>`:''}
