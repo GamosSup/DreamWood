@@ -79,7 +79,7 @@ function pendingView(){
 }
 nav.onclick=e=>{const b=e.target.closest('button');if(b)go(b.dataset.tab)};
 const VIEWS={sch:schView,afisha:afishaView,dg:dgView,staff:staffView,set:settingsView};
-const MORE_TABS=['news','afisha','req','kb','inc','contacts','rep','grid','staff','set'];
+const MORE_TABS=['news','afisha','req','kb','inc','contacts','grid','staff','set'];
 function go(t){if(!VIEWS[t])t='rot';S.tab=t;S.offline=0;document.body.dataset.tab=t;
   nav.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t||(b.dataset.tab==='more'&&MORE_TABS.includes(t))));window.scrollTo(0,0);app.scrollTop=0;
   Promise.resolve(VIEWS[t]()).then(refreshUnread)}

@@ -180,3 +180,9 @@ select.rl{width:auto;min-height:0;padding:2px 6px;font-size:13px;display:inline-
 @keyframes ckp{50%{box-shadow:0 0 0 4px rgba(230,204,143,.45)}}
 .gc{position:relative}.gc.ckd::after{content:'';position:absolute;top:2px;right:2px;width:7px;height:7px;border-radius:50%;background:#3E9B4F;box-shadow:0 0 0 1px #fff}
 .ckdot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#3E9B4F;margin-left:5px;vertical-align:middle}
+
+/* общий график + сводка */
+.gmon{display:flex;align-items:center;gap:10px}.gmon .btn{width:52px;flex:none;padding:0}
+.gmt{flex:1;text-align:center;cursor:pointer;background:var(--gold);border-radius:18px;padding:8px 6px}.gmt b{display:block;font-size:22px;line-height:1.2}.gmt small{display:block;font-size:12px;color:var(--muted)}
+.gsrch{display:flex;gap:8px}.gsrch input{flex:1;min-width:0}.gsrch .btn{width:auto;flex:none;padding:0 16px}
+.rt .nr{color:var(--muted);font-size:11px}
