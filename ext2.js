@@ -185,7 +185,7 @@ async function contactsView(){
 // ================= МЕНЮ «ЕЩЁ» (телефон) =================
 function moreView(){
   const mgr=isManager(),b=S.badges||{};
-  const items=[['news','📰','Новости','Что нового в парке'],['afisha','🎟️','Афиша','События и расписание'],['req','📨','Заявки','Отгул, ДО, отпуск, обмен сменами'],['kb','📚','База знаний','Регламенты и инструкции'],['inc','🚨','Происшествия',mgr?'Журнал происшествий':'Сообщить о происшествии'],['contacts','📞','Контакты','Телефоны команды'],
+  const items=[['news','📰','Новости','Что нового в парке'],['afisha','🎟️','Афиша','События и расписание'],['req','📨','Заявки','Отгул, ДО, отпуск, обмен сменами'],['kb','📚','База знаний','Регламенты и инструкции'],['fix','🛠','Поломки','Сообщить о поломке: описание, фото, видео'],['inc','🚨','Происшествия',mgr?'Журнал происшествий':'Сообщить о происшествии'],['contacts','📞','Контакты','Телефоны команды'],
     ...(canMng()&&VIEWS.grid?[['grid','📆','Общий график и сводка','Все сотрудники по дням, часы и переработки, Excel']]:[]),...(mgr?[['staff','👥','Команда','Заявки на регистрацию и список']]:[]),['set','⚙️','Настройки','Оформление и выход']];
   app.innerHTML=head('Ещё','Все разделы приложения')+items.map(([k,ic,n,d])=>`<div class="card pad" data-go="${k}" style="display:flex;gap:14px;align-items:center;cursor:pointer"><span style="font-size:28px">${ic}</span><span style="flex:1"><b style="font-size:16px">${n}</b><div class="muted">${d}</div></span>${b[k]?`<span class="pill" style="background:#C0392B;color:#fff;align-self:center">${b[k]}</span>`:''}</div>`).join('');
   app.querySelectorAll('[data-go]').forEach(c=>c.onclick=()=>go(c.dataset.go));

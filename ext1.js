@@ -13,9 +13,9 @@ function downloadCSV(name,rows){
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500);
 }
 // универсальная загрузка файла в бакет + таблицу вложений
-async function fileUpload(bucket,table,fk,id,file){
+async function fileUpload(bucket,table,fk,id,file,maxMb=10){
   const f=await dgxShrink(file);
-  if(f.size>10*1024*1024)return 'Файл «'+file.name+'» больше 10 МБ';
+  if(f.size>maxMb*1024*1024)return 'Файл «'+file.name+'» больше '+maxMb+' МБ';
   const ext=((f.name.match(/\.(\w{1,5})$/)||[])[1]||'bin').toLowerCase();
   const path=`${id}/${crypto.randomUUID()}.${ext}`;
   const up=await sb.storage.from(bucket).upload(path,f,{contentType:f.type||'application/octet-stream'});

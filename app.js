@@ -79,7 +79,7 @@ function pendingView(){
 }
 nav.onclick=e=>{const b=e.target.closest('button');if(b)go(b.dataset.tab)};
 const VIEWS={sch:schView,afisha:afishaView,dg:dgView,staff:staffView,set:settingsView};
-const MORE_TABS=['news','afisha','req','kb','inc','contacts','grid','staff','set'];
+const MORE_TABS=['news','afisha','req','kb','fix','inc','contacts','grid','staff','set'];
 function go(t){if(!VIEWS[t])t='rot';S.tab=t;S.offline=0;document.body.dataset.tab=t;
   nav.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t||(b.dataset.tab==='more'&&MORE_TABS.includes(t))));window.scrollTo(0,0);app.scrollTop=0;
   Promise.resolve(VIEWS[t]()).then(refreshUnread)}
@@ -96,13 +96,14 @@ async function refreshUnread(){
   S.pending=p.count||0;const sn=$('#staffN');if(sn){sn.hidden=!S.pending;sn.textContent=S.pending}
   try{const q=await sb.from('requests').select('id,status,peer_id').in('status',['peer','pending']);
     const rq=(q.data||[]).filter(x=>(x.status==='pending'&&canMng())||(x.status==='peer'&&x.peer_id===S.me.id)).length;
-    S.badges={req:rq,staff:S.pending};const rn=$('#reqN');if(rn){rn.hidden=!rq;rn.textContent=rq}
-    const mt=rq+S.pending,mn=$('#moreN');if(mn){mn.hidden=!mt;mn.textContent=mt}}catch(e){}
+    let fx=0;if(isManager()){const q2=await sb.from('repairs').select('id',{count:'exact',head:true}).eq('status','new');fx=q2.count||0}
+    S.badges={req:rq,staff:S.pending,fix:fx};const rn=$('#reqN');if(rn){rn.hidden=!rq;rn.textContent=rq}const fn=$('#fixN');if(fn){fn.hidden=!fx;fn.textContent=fx}
+    const mt=rq+S.pending+fx,mn=$('#moreN');if(mn){mn.hidden=!mt;mn.textContent=mt}}catch(e){}
 }
 const firstName=()=>(S.me?.full_name||'').trim().split(/\s+/)[0]||'друг';
 const bell=()=>`<button class="bell" aria-label="Уведомления" onclick="openBell()">🔔<i id="bellN" ${S.unread>0?'':'hidden'}>${S.unread>9?'9+':S.unread}</i></button>`;
 const head=(h,sub)=>`<div class="top"><div class="hi">Привет, ${esc(firstName())}! 👋</div>${bell()}</div>${S.offline?`<div class="banner" style="background:#E6CC8F;color:#3B2A35;font-size:14px">📴 Нет сети — показаны сохранённые данные (от ${new Date(S.offline).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'})}). Менять что-либо пока нельзя.</div>`:''}${sub?`<div class="muted">${sub}</div>`:''}<h1>${h}</h1>`;
-const NI={news:'📰',rotation:'🔄',afisha:'🎟️',signup:'🧑‍💼',task:'📋',request:'📨',incident:'🚨',shift:'💬',checkin:'☀️'};
+const NI={news:'📰',rotation:'🔄',afisha:'🎟️',signup:'🧑‍💼',task:'📋',request:'📨',incident:'🚨',shift:'💬',checkin:'☀️',repair:'🛠'};
 const ago=d=>{const m=Math.round((Date.now()-new Date(d))/6e4);return m<1?'только что':m<60?m+' мин назад':m<1440?Math.floor(m/60)+' ч назад':new Date(d).toLocaleDateString('ru',{day:'numeric',month:'short'})};
 async function openBell(){
   const [n,r,ckq]=await Promise.all([sb.from('notifications').select('*').order('created_at',{ascending:false}).limit(50),sb.from('notif_reads').select('notif_id').eq('user_id',S.me.id),sb.from('checkins').select('day,at').eq('user_id',S.me.id).order('day',{ascending:false}).limit(40)]);
