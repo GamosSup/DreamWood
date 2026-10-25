@@ -387,7 +387,7 @@ async function dgOpen(id,colId){
     ov.querySelector('#f_cma')?.addEventListener('click',async()=>{const v=$('#f_cm').value.trim();if(!v)return;const mentions=D.people.filter(p=>p.full_name&&v.includes('@'+p.full_name)).map(p=>p.id);const r=await sb.from('dg_comments').insert({task_id:id,body:v,mentions});if(r.error)ov.querySelector('#er').textContent=r.error.message;else reload()});
     ov.querySelector('#f_mn')?.addEventListener('change',e=>{const n=e.target.value;if(!n)return;const i=$('#f_cm');i.value+=(i.value&&!/\s$/.test(i.value)?' ':'')+'@'+n+' ';e.target.value='';i.focus()});
     ov.querySelector('#ar')?.addEventListener('click',async()=>{await sb.from('dg_tasks').update({archived:!t.archived}).eq('id',id);close()});
-    ov.querySelector('#dl')?.addEventListener('click',async()=>{if(!confirm('Удалить задачу?'))return;await sb.from('dg_tasks').delete().eq('id',id);close()});
+    ov.querySelector('#dl')?.addEventListener('click',async()=>{if(!confirm('Удалить задачу?'))return;await dgxDropFiles(id);await sb.from('dg_tasks').delete().eq('id',id);close()});
     ov.querySelector('#sv')?.addEventListener('click',async()=>{
       readForm();if(!t.title.trim())return ov.querySelector('#er').textContent='Введи название';
       const last=D.cols[D.cols.length-1]?.id;const pos=id&&t.column_id===D.tasks.find(x=>x.id===id).column_id?D.tasks.find(x=>x.id===id).pos:D.tasks.filter(x=>x.column_id===t.column_id).reduce((m,x)=>Math.max(m,+x.pos),0)+1;

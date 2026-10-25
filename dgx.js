@@ -44,6 +44,9 @@ async function dgxUpload(taskId,file){
   return null;
 }
 
+// удалить файлы задачи из хранилища (перед удалением самой задачи)
+async function dgxDropFiles(id){const f=(await sb.from('dg_files').select('path').eq('task_id',id)).data||[];if(f.length)await sb.storage.from('dg').remove(f.map(x=>x.path))}
+
 // вложения и история внутри карточки задачи
 async function dgxMount(ov,id,mgr){
   const fe=ov.querySelector('#dgfiles'),he=ov.querySelector('#dghist');if(!fe)return;
@@ -168,7 +171,7 @@ function dgxArchive(){
     const list=r.data||[];
     box.innerHTML=`<div class="muted">Выполненные задачи уходят сюда через 14 дней сами. Можно вернуть на доску или удалить насовсем.</div>${list.map(t=>`<div class="otr"><span><b>${esc(t.title)}</b><br><span class="muted">${ago(t.updated_at)}</span></span><span style="display:flex;gap:6px"><button class="btn ghost" data-ur="${t.id}" style="min-height:38px;padding:0 12px">Вернуть</button><button class="x" data-ud="${t.id}">×</button></span></div>`).join('')||'<div class="muted">В архиве пусто</div>'}`;
     box.querySelectorAll('[data-ur]').forEach(b=>b.onclick=async()=>{await sb.from('dg_tasks').update({archived:false}).eq('id',b.dataset.ur);paint()});
-    box.querySelectorAll('[data-ud]').forEach(b=>b.onclick=async()=>{if(!confirm('Удалить задачу насовсем?'))return;await sb.from('dg_tasks').delete().eq('id',b.dataset.ud);paint()});
+    box.querySelectorAll('[data-ud]').forEach(b=>b.onclick=async()=>{if(!confirm('Удалить задачу насовсем?'))return;await dgxDropFiles(b.dataset.ud);await sb.from('dg_tasks').delete().eq('id',b.dataset.ud);paint()});
   });
 }
 
