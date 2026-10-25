@@ -29,7 +29,7 @@ S.sh={day:null,kind:'open'};
 async function shiftView(){
   await ensurePeople();
   const today=iso(new Date()),day=S.sh.day||today;S.sh.day=day;
-  const [L,C]=await Promise.all([sb.from('shift_lists').select('*').eq('active',true).order('sort'),sb.from('shift_checks').select('*').eq('day',day)]);
+  const [L,C]=await Promise.all([cq('shl',()=>sb.from('shift_lists').select('*').eq('active',true).order('sort')),cq('shc'+day,()=>sb.from('shift_checks').select('*').eq('day',day))]);
   const mgr=isManager(),all=(L.data||[]).filter(l=>l.kind===S.sh.kind),checks=C.data||[];
   const doneOf=l=>l.items.filter(it=>checks.some(c=>c.list_id===l.id&&c.item===it));
   const isFull=l=>l.items.length>0&&doneOf(l).length===l.items.length;

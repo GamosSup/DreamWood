@@ -141,3 +141,8 @@ nav button.dsk{display:none}
   body[data-tab=shift] #app>*{grid-column:1/-1;max-width:none;margin:0}
   body[data-tab=shift] #app>details.shl{grid-column:auto}
 }
+
+/* ---------- Этап 3 ---------- */
+.sheet.wide{max-width:680px}
+@media (min-width:900px){.sheet.wide{max-width:1000px;width:92vw;max-height:92vh}}
+.sheet.wide .sb{padding-bottom:40px}

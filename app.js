@@ -14,12 +14,24 @@ const brkBg=t=>t.startsWith('Ос')?'#F3C29B':t.startsWith('О')?'#F5E2A8':'#E4E
 const TEAMS=[['R','Рейнджеры','#C9D4B0'],['K','Хранители','#B7CFC4'],['M','Метрополис','#E4B5A3'],['W','Если дождь','#7E98AE']];
 const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const isManager=()=>S.me?.role==='manager';
+// запрос с запасным вариантом: если сети нет — показываем последние сохранённые данные
+async function cq(key,fn){
+  const k='dw:'+(S.uid||'')+':'+key;
+  try{const r=await fn();
+    if(!r.error){try{localStorage.setItem(k,JSON.stringify({t:Date.now(),d:r.data}))}catch(e){}return r}
+    if(r.status>=400&&r.status<500)return r;
+  }catch(e){}
+  try{const c=JSON.parse(localStorage.getItem(k));if(c){S.offline=c.t;return {data:c.d,error:null,cached:true}}}catch(e){}
+  return {data:null,error:{message:'Нет сети'}};
+}
+const clearCache=()=>{try{Object.keys(localStorage).filter(k=>k.startsWith('dw:')).forEach(k=>localStorage.removeItem(k))}catch(e){}};
 
 async function boot(){
   if(cfg.SUPABASE_ANON_KEY.startsWith('ВСТАВЬ')){app.innerHTML='<div class="card pad">Нужно вставить anon key в config.js</div>';return}
   const {data:{session}}=await sb.auth.getSession();
   if(!session)return authView('in');
-  const {data}=await sb.from('profiles').select('*').eq('id',session.user.id).single();
+  S.uid=session.user.id;
+  const {data}=await cq('me',()=>sb.from('profiles').select('*').eq('id',session.user.id).single());
   S.me=data||{id:session.user.id,full_name:session.user.email,role:'employee',status:'pending'};
   S.viewUser=S.me.id;
   if(S.me.status!=='approved')return pendingView();
@@ -58,12 +70,12 @@ function pendingView(){
   <p class="muted">${rej?'Руководитель не подтвердил доступ. Если это ошибка, напиши ему напрямую.':`Привет, ${esc(firstName())}! Заявка отправлена руководителю. Как только он её подтвердит, откроются ротации, график и афиша.`}</p></div>
   <div class="card pad"><b>${esc(S.me.full_name||'')}</b><div class="muted">${esc(S.me.email||'')}</div></div>
   <button class="btn" id="chk">Проверить ещё раз</button><button class="btn ghost" id="out">Выйти</button>`;
-  $('#chk').onclick=boot;$('#out').onclick=()=>sb.auth.signOut().then(()=>{S.me=null;boot()});
+  $('#chk').onclick=boot;$('#out').onclick=()=>sb.auth.signOut().then(()=>{clearCache();S.me=null;boot()});
 }
 nav.onclick=e=>{const b=e.target.closest('button');if(b)go(b.dataset.tab)};
-const VIEWS={rot:rotView,sch:schView,afisha:afishaView,dg:dgView,staff:staffView,set:settingsView};
+const VIEWS={sch:schView,afisha:afishaView,dg:dgView,staff:staffView,set:settingsView};
 const MORE_TABS=['news','afisha','req','kb','inc','contacts','rep','staff','set'];
-function go(t){if(!VIEWS[t])t='rot';S.tab=t;document.body.dataset.tab=t;
+function go(t){if(!VIEWS[t])t='rot';S.tab=t;S.offline=0;document.body.dataset.tab=t;
   nav.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t||(b.dataset.tab==='more'&&MORE_TABS.includes(t))));window.scrollTo(0,0);app.scrollTop=0;
   Promise.resolve(VIEWS[t]()).then(refreshUnread)}
 async function refreshUnread(){
@@ -82,7 +94,7 @@ async function refreshUnread(){
 }
 const firstName=()=>(S.me?.full_name||'').trim().split(/\s+/)[0]||'друг';
 const bell=()=>`<button class="bell" aria-label="Уведомления" onclick="openBell()">🔔<i id="bellN" ${S.unread>0?'':'hidden'}>${S.unread>9?'9+':S.unread}</i></button>`;
-const head=(h,sub)=>`<div class="top"><div class="hi">Привет, ${esc(firstName())}! 👋</div>${bell()}</div>${sub?`<div class="muted">${sub}</div>`:''}<h1>${h}</h1>`;
+const head=(h,sub)=>`<div class="top"><div class="hi">Привет, ${esc(firstName())}! 👋</div>${bell()}</div>${S.offline?`<div class="banner" style="background:#E6CC8F;color:#3B2A35;font-size:14px">📴 Нет сети — показаны сохранённые данные (от ${new Date(S.offline).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'})}). Менять что-либо пока нельзя.</div>`:''}${sub?`<div class="muted">${sub}</div>`:''}<h1>${h}</h1>`;
 const NI={news:'📰',rotation:'🔄',afisha:'🎟️',signup:'🧑‍💼',task:'📋',request:'📨',incident:'🚨'};
 const ago=d=>{const m=Math.round((Date.now()-new Date(d))/6e4);return m<1?'только что':m<60?m+' мин назад':m<1440?Math.floor(m/60)+' ч назад':new Date(d).toLocaleDateString('ru',{day:'numeric',month:'short'})};
 async function openBell(){
@@ -101,7 +113,7 @@ async function openBell(){
 // ---------- Ротации ----------
 const hh=x=>{const m=x.split(':');return +m[0]+(+m[1])/60};
 const dayLabel=d=>new Date(d+'T12:00:00').toLocaleDateString('ru',{weekday:'short',day:'numeric',month:'short'});
-function parseRange(t){const m=String(t).match(/(\d{1,2}:\d{2})\s*[–-]\s*(\d{1,2}:\d{2})/);return m?[hh(m[1]),hh(m[2])]:[10,20]}
+function parseRange(t){const m=String(t).match(/(\d{1,2}:\d{2})\s*[–-]\s*(\d{1,2}:\d{2})/);return m?[hh(m[1]),hh(m[2])]:[10,S.dayEnd||18]}
 function personTrack(p,r,c,a,b){
   const span=b-a;let h=`<div style="display:flex;flex-direction:column;gap:4px"><div style="font-weight:700;font-size:14px">${esc(p.icon)} ${esc(p.name)}${p.senior?'<span class="sr">Старший</span>':''}</div>
   <div class="track" style="--c:${c}"><div class="work"></div>`;
@@ -123,41 +135,13 @@ function zoneCard(zone,blocks,c){
     }
     h+=`</div>`});
   return h+`</div>`}
-async function rotView(){
-  const todayIso=iso(new Date()),from=iso(new Date(Date.now()-7*864e5));
-  const {data:list}=await sb.from('rotations').select('day').gte('day',from).order('day');
-  const days=[...new Set([...(list||[]).map(x=>x.day),todayIso])].sort();
-  if(!S.day||!days.includes(S.day))S.day=days.includes(todayIso)?todayIso:days[days.length-1];
-  const {data}=await sb.from('rotations').select('*').eq('day',S.day).maybeSingle();
-  const rot=data?.data;
-  let h=head('Ротации','Кто где стоит и когда перерыв');
-  h+=`<div class="tabs">${days.map(d=>`<button data-d="${d}" class="${d===S.day?'on':''}" style="background:var(--tab)">${d===todayIso?'Сегодня':dayLabel(d)}${d===todayIso?'<br><small>'+dayLabel(d)+'</small>':''}</button>`).join('')}</div>`;
-  if(!rot){h+=`<div class="card pad"><b>Ротации на ${dayLabel(S.day)} пока нет</b><div class="muted">Как только её загрузят, она появится здесь.</div></div>`;app.innerHTML=h;return bindRot()}
-  if(rot.banner)h+=`<div class="banner">🎃 ${esc(rot.banner)}</div>`;
-  if(rot.image)h+=`<a href="${esc(rot.image)}" target="_blank" rel="noopener" class="card" style="display:block;overflow:hidden;padding:0"><img src="${esc(rot.image)}" alt="Ротация картинкой" loading="lazy" style="display:block;width:100%;height:auto"><div class="muted" style="padding:6px 12px;font-size:12px">🖼 Ротация картинкой — нажми, чтобы открыть крупно</div></a>`;
-  h+=`<div class="tabs">${TEAMS.map(([k,n,c])=>`<button data-t="${k}" class="${S.team===k?'on':''}" style="background:${c}">${n}</button>`).join('')}</div>`;
-  const secs=rot.teams?.[S.team]||[];
-  const notes=secs.filter(s=>s.note).map(s=>`<div class="n" style="background:${s.noteBg||'#E8B4B8'};padding:8px 12px;border-radius:12px;font-weight:700;font-size:13px">${esc(s.note)}</div>`).join('');
-  h+=notes;
-  const order=[],byZone={};
-  secs.forEach(s=>{const range=parseRange(s.title);s.rows.forEach(r=>{if(!byZone[r.zone]){byZone[r.zone]=[];order.push(r.zone)}
-    byZone[r.zone].push({range,title:s.title==='Весь день'?'Весь день · 10:00–20:00':s.title.replace(/^.*·\s*/,''),people:r.people,steps:r.steps})})});
-  order.forEach(z=>{const c=S.team==='W'?'#7E98AE':(ZC[z]||'#D3BFD0');h+=zoneCard(z,byZone[z],c)});
-  if(rot.legend)h+=`<div class="card pad muted">${rot.legend.map(esc).join('<br>')}</div>`;
-  app.innerHTML=h;bindRot();
-}
-function bindRot(){
-  app.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{S.day=b.dataset.d;rotView()});
-  app.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{S.team=b.dataset.t;rotView()});
-}
-
 // ---------- График ----------
 const KINDS={off:['ВЫХ','#E8DCCB','Выходной'],otgul:['ОТ','#E4B5A3','Отгул'],do:['ДО','#F5E2A8','ДО'],sick:['Б','#BCC8D6','Больничный'],vac:['ОП','#C9D4B0','Отпуск']};
 async function schView(){
   if(isManager()&&!S.people.length){const {data}=await sb.from('profiles').select('id,full_name').eq('status','approved').order('full_name');S.people=data||[]}
   const m=S.month,y=m.getFullYear(),mo=m.getMonth(),first=iso(new Date(y,mo,1)),last=iso(new Date(y,mo+1,0));
-  const {data}=await sb.from('marks').select('*').eq('user_id',S.viewUser).gte('day',first).lte('day',last);
-  const otr=await sb.from('overtime').select('*').eq('user_id',S.viewUser).gte('day',first).lte('day',last).order('day').order('start_time');
+  const {data}=await cq('marks:'+S.viewUser+first,()=>sb.from('marks').select('*').eq('user_id',S.viewUser).gte('day',first).lte('day',last));
+  const otr=await cq('ot:'+S.viewUser+first,()=>sb.from('overtime').select('*').eq('user_id',S.viewUser).gte('day',first).lte('day',last).order('day').order('start_time'));
   const otRows=otr.data||[],otSum=otRows.reduce((a,r)=>a+Number(r.hours),0),fh=x=>String(Math.round(x*100)/100).replace('.',',');
   S.marks={};(data||[]).forEach(r=>S.marks[r.day]=r);
   const n=new Date(y,mo+1,0).getDate(),lead=(new Date(y,mo,1).getDay()+6)%7;
@@ -262,12 +246,12 @@ const pname=id=>(S.dg.people||[]).find(p=>p.id===id)?.full_name||'—';
 const dgFmt=d=>d?new Date(d+'T12:00:00').toLocaleDateString('ru',{day:'numeric',month:'short'}):'';
 const dgOver=t=>t.deadline&&!t.done&&t.deadline<iso(new Date());
 async function dgLoad(){
-  const [b,p]=await Promise.all([sb.from('dg_boards').select('*').order('created_at'),sb.from('profiles').select('id,full_name,tab_no').eq('status','approved').order('full_name')]);
+  const [b,p]=await Promise.all([cq('dgb',()=>sb.from('dg_boards').select('*').order('created_at')),cq('dgp',()=>sb.from('profiles').select('id,full_name,tab_no').eq('status','approved').order('full_name'))]);
   S.dg.boards=b.data||[];S.dg.people=p.data||[];
   if(!S.dg.board||!S.dg.boards.find(x=>x.id===S.dg.board))S.dg.board=S.dg.boards[0]?.id;
   S.dg.cols=[];S.dg.tasks=[];S.dg.cl={};S.dg.cm={};
   if(!S.dg.board)return;
-  const [c,t]=await Promise.all([sb.from('dg_columns').select('*').eq('board_id',S.dg.board).order('pos'),sb.from('dg_tasks').select('*').eq('board_id',S.dg.board).eq('archived',false).order('pos')]);
+  const [c,t]=await Promise.all([cq('dgc'+S.dg.board,()=>sb.from('dg_columns').select('*').eq('board_id',S.dg.board).order('pos')),cq('dgt'+S.dg.board,()=>sb.from('dg_tasks').select('*').eq('board_id',S.dg.board).eq('archived',false).order('pos'))]);
   S.dg.cols=c.data||[];S.dg.tasks=t.data||[];
   const ids=S.dg.tasks.map(x=>x.id);if(!ids.length)return;
   const [cl,cm,fl]=await Promise.all([sb.from('dg_checklist').select('task_id,done').in('task_id',ids),sb.from('dg_comments').select('task_id').in('task_id',ids),sb.from('dg_files').select('task_id').in('task_id',ids)]);S.dg.fl={};(fl.data||[]).forEach(x=>S.dg.fl[x.task_id]=(S.dg.fl[x.task_id]||0)+1);
@@ -408,7 +392,7 @@ async function settingsView(){
   h+=`<button class="btn ghost" id="out">Выйти из аккаунта</button>`;
   app.innerHTML=h;
   app.querySelectorAll('[data-th]').forEach(b=>b.onclick=()=>{applyTheme(b.dataset.th);settingsView()});
-  $('#out').onclick=()=>sb.auth.signOut().then(()=>{S.me=null;S.unread=0;boot()});
+  $('#out').onclick=()=>sb.auth.signOut().then(()=>{clearCache();S.me=null;S.unread=0;boot()});
 }
 sb.auth.onAuthStateChange(()=>{});
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');

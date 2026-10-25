@@ -4,11 +4,11 @@ const DGX_DAYS=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
 const dgxCache=new Map();
 
 // универсальное окно
-function dgxSheet(title,render,onClose){
+function dgxSheet(title,render,onClose,cls){
   const ov=document.createElement('div');ov.className='ov';
   const close=(refresh=true)=>{ov.remove();document.body.style.overflow='';if(refresh){if(onClose)onClose();else if(S.tab==='dg')dgView()}};
   const paint=async()=>{
-    ov.innerHTML=`<div class="sheet"><div class="sh"><button class="x" id="bk" aria-label="Назад">←</button><b>${title}</b><span></span></div><div class="sb col" id="sbd"></div></div>`;
+    ov.innerHTML=`<div class="sheet ${cls||''}"><div class="sh"><button class="x" id="bk" aria-label="Назад">←</button><b>${title}</b><span></span></div><div class="sb col" id="sbd"></div></div>`;
     ov.querySelector('#bk').onclick=()=>close();
     await render(ov.querySelector('#sbd'),paint,close);
   };
