@@ -86,7 +86,7 @@ function rotNew(){
 
 // ---------- проверки ротации ----------
 function rotCheck(D,roster){
-  const out=[],add=(lvl,msg)=>out.push({lvl,msg});
+  const out=[],seenMsg=new Set(),add=(lvl,msg)=>{if(seenMsg.has(msg))return;seenMsg.add(msg);out.push({lvl,msg})};
   const brkRe=/^(Ос|О|Т|Бриф)\s*(\d{1,2}):(\d{2})\s*[–-]\s*(\d{1,2}):(\d{2})/;
   const parseB=s=>{const m=String(s).match(brkRe);return m?{code:m[1],s:+m[2]+m[3]/60,e:+m[4]+m[5]/60,raw:s}:null};
   const ov=(a,b)=>a.s<b.e-.01&&b.s<a.e-.01;
@@ -99,6 +99,7 @@ function rotCheck(D,roster){
   };
   Object.entries(D.teams||{}).forEach(([tk,secs])=>{
     if(tk==='W')return;
+    const strict=tk!=='M'; // у Метрополиса свой порядок перерывов
     const alphaNames=new Set();
     secs.forEach((s,si)=>{
       const sr=rtRange(s.title)||[10,end],where=`${TN[tk]||tk} · ${s.title||'раздел '+(si+1)}`;
@@ -119,7 +120,7 @@ function rotCheck(D,roster){
         ppl.forEach(p=>{
           const nm=p.name||'(без имени)',k=nameKey(p.name||'');
           if(!p.name)add('err',`${where} · ${zone}: человек без имени`);
-          else{ if(seen.has(k)&&!isA)add('err',`${where}: ${nm} стоит сразу в двух зонах (${seen.get(k)} и ${zone})`);seen.set(k,zone);
+          else{ if(seen.has(k)&&!isA)add(strict?'err':'warn',`${where}: ${nm} стоит сразу в двух зонах (${seen.get(k)} и ${zone})`);seen.set(k,zone);
             if(rk&&!rk.has(k))add('warn',`${nm} нет в списке сотрудников — проверь написание`)}
           const bs=(p.brks||[]).map(parseB).filter(Boolean);
           bs.forEach((b,i)=>{
@@ -128,14 +129,14 @@ function rotCheck(D,roster){
             if(b.e-b.s>1.01||b.e-b.s<.24)add('warn',`${where} · ${nm}: странная длительность перерыва ${fmtH(b.s)}–${fmtH(b.e)}`);
             bs.slice(i+1).forEach(c=>{if(c.code!=='Бриф'&&c.code!=='Т'&&ov(b,c))add('err',`${where} · ${nm}: перерывы пересекаются (${fmtH(b.s)}–${fmtH(b.e)} и ${fmtH(c.s)}–${fmtH(c.e)})`)});
             if(b.code==='О')obr.push({zone,s:b.s,e:b.e,name:nm,where});
-            if(/веревоч/i.test(zone)&&b.code==='О')add('warn',`${where} · ${nm}: у Веревочного лагеря обед самостоятельный — должен быть «Ос», а не «О»`);
+            if(strict&&/веревоч/i.test(zone)&&b.code==='О')add('warn',`${where} · ${nm}: у Веревочного лагеря обед самостоятельный — должен быть «Ос», а не «О»`);
             iv.push({...b,who:nm});
           });
           const lunches=bs.filter(b=>b.code==='О'||b.code==='Ос');
-          if(!isA&&(sr[1]-sr[0])>=3.5&&p.name&&!lunches.length&&!(p.brks||[]).length)add('warn',`${where} · ${nm} (${zone}): не указан перерыв`);
+          if(strict&&!isA&&(sr[1]-sr[0])>=3.5&&p.name&&!lunches.length&&!(p.brks||[]).length)add('warn',`${where} · ${nm} (${zone}): не указан перерыв`);
         });
         // зона без людей: все на самостоятельном обеде одновременно
-        if(!isA&&ppl.length){
+        if(strict&&!isA&&ppl.length){
           const pts=new Set();iv.filter(b=>b.code==='Ос').forEach(b=>{pts.add(b.s);pts.add(b.e)});
           [...pts].sort((a,b)=>a-b).forEach((t,i,arr)=>{const nx=arr[i+1];if(nx===undefined)return;const mid=(t+nx)/2;
             const away=new Set(iv.filter(b=>b.code==='Ос'&&b.s<=mid&&b.e>=mid).map(b=>b.who));
@@ -149,7 +150,7 @@ function rotCheck(D,roster){
   });
   // сверка О ↔ замены Альфы
   obr.forEach(o=>{if(!alpha.some(a=>ov(a,o)&&labelMatch(a.label,o.zone)))add('err',`${o.name} («${o.zone}», ${fmtH(o.s)}–${fmtH(o.e)}) — стоит «О», но Альфа в это время эту зону не меняет`)});
-  alpha.forEach(a=>{if(!obr.some(o=>ov(a,o)&&labelMatch(a.label,o.zone)))add('warn',`Альфа ${fmtH(a.s)}–${fmtH(a.e)} меняет «${a.label}», но у зоны в это время нет «О»`)});
+  alpha.forEach(a=>{if(a.e-a.s<=1.01&&!/веревоч/i.test(a.label)&&!obr.some(o=>ov(a,o)&&labelMatch(a.label,o.zone)))add('warn',`Альфа ${fmtH(a.s)}–${fmtH(a.e)} меняет «${a.label}», но у зоны в это время нет «О»`)});
   return out;
 }
 
