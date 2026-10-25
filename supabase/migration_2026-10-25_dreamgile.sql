@@ -67,7 +67,7 @@ begin
   olda:=case when tg_op='UPDATE' then old.assignees else '{}'::uuid[] end;
   foreach u in array new.assignees loop
     if not (u=any(olda)) and u is distinct from auth.uid() then
-      insert into notifications(kind,title,body,link,to_user) values('task','Новая задача: '||new.title,coalesce(nullif(new.descr,''),'Тебя назначили исполнителем.')||case when new.deadline is not null then E'\nСрок: '||mon_ru(new.deadline) else '' end,'dg',u);
+      insert into notifications(kind,title,body,link,to_user) values('task','Новая задача: '||new.title,coalesce(nullif(new.descr,''),'Тебя назначили исполнителем.')||case when new.deadline is not null then ' Срок: '||mon_ru(new.deadline) else '' end,'dg',u);
     end if;
   end loop;
   return new;
