@@ -131,13 +131,17 @@ async function kbView(){
   h+=`<input id="kb_q" type="search" placeholder="🔍 Поиск по базе" value="${esc(S.kb.q)}">`;
   h+=`<div class="tabs"><button data-c="all" class="${S.kb.cat==='all'?'on':''}" style="background:var(--tab)">Все</button>${cats.map(c=>`<button data-c="${esc(c)}" class="${S.kb.cat===c?'on':''}" style="background:var(--tab)">${esc(c)}</button>`).join('')}</div>`;
   if(mgr)h+='<button class="btn" id="kb_new">➕ Новая страница</button>';
-  h+=`<div id="kb_list" class="kbl">${list.map(p=>kbCard(p)).join('')||'<div class="card pad muted">Ничего не найдено.</div>'}</div>`;
+  h+=`<div id="kb_list" class="kbl">${kbGroups(list,!!q)||'<div class="card pad muted">Ничего не найдено.</div>'}</div>`;
   app.innerHTML=h;
-  $('#kb_q').oninput=e=>{S.kb.q=e.target.value;const qq=S.kb.q.trim().toLowerCase();const l2=all.filter(p=>(S.kb.cat==='all'||p.category===S.kb.cat)&&(!qq||(p.title+' '+p.body+' '+p.category).toLowerCase().includes(qq)));$('#kb_list').innerHTML=l2.map(kbCard).join('')||'<div class="card pad muted">Ничего не найдено.</div>';kbBind(all)};
+  $('#kb_q').oninput=e=>{S.kb.q=e.target.value;const qq=S.kb.q.trim().toLowerCase();const l2=all.filter(p=>(S.kb.cat==='all'||p.category===S.kb.cat)&&(!qq||(p.title+' '+p.body+' '+p.category).toLowerCase().includes(qq)));$('#kb_list').innerHTML=kbGroups(l2,!!qq)||'<div class="card pad muted">Ничего не найдено.</div>';bindAreas($('#kb_list'));kbBind(all)};
   app.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{S.kb.cat=b.dataset.c;kbView()});
   $('#kb_new')?.addEventListener('click',()=>kbEdit());
-  kbBind(all);
+  bindAreas(app);kbBind(all);
 }
+const kbGroups=(list,open)=>{
+  const att=list.filter(p=>p.category==='Аттракционы'),oth=list.filter(p=>p.category!=='Аттракционы');
+  return oth.map(kbCard).join('')+byArea(att,p=>p.title).map(({a,items})=>`<details class="area" data-ar="kb${a.k}" ${open||S.areaOpen['kb'+a.k]?'open':''}>${areaHead(a,items.length+' '+(items.length===1?'страница':'стр.'))}<div class="ab" style="background:${a.d}">${items.map(kbCard).join('')}</div></details>`).join('');
+};
 const kbCard=p=>`<div class="card pad col" data-kb="${p.id}" style="cursor:pointer"><div style="display:flex;justify-content:space-between;gap:8px"><b>${p.pinned?'📌 ':''}${esc(p.title)}</b><span class="pill" style="background:var(--tab)">${esc(p.category)}</span></div><div class="muted" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(p.body.replace(/[#*\[\]]/g,'').slice(0,160))}</div></div>`;
 function kbBind(all){app.querySelectorAll('[data-kb]').forEach(b=>b.onclick=()=>kbOpen(all.find(x=>x.id==b.dataset.kb)))}
 function kbOpen(p){

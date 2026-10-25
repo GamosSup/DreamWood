@@ -8,7 +8,22 @@ function applyTheme(t){document.documentElement.dataset.theme=t;try{localStorage
   const m=document.querySelector('meta[name=theme-color]');if(m)m.content=getComputedStyle(document.documentElement).getPropertyValue('--ink').trim()||'#3B2A35'}
 applyTheme(getTheme());
 const S={unread:0,tab:'today',sub:{ap:'req',park:'news',team:'contacts'},me:null,team:'R',day:null,month:new Date(),viewUser:null,sel:null,people:[],marks:{},ev:null,evFilter:'all'};
-const ZC={'Данделион':'#E4B5A3','Карусель':'#D3BFD0','Джипы':'#B7CFC4','Шахта':'#BCC8D6','Кон-Тики':'#E6CC8F','Плющ':'#C9D4B0','Дерево приключений':'#C9D4B0','Бабл хаус':'#F3C29B','Студия волшебных образов':'#D3BFD0','Квесты/Роботы':'#BFD3D3','Лес Чудес':'#B7CFC4','Альфа 1':'#D3BFD0','Альфа 2':'#D3BFD0','Старший специалист':'#E8C1B5','Супервайзер':'#E8C1B5','Веревочный лагерь':'#C9D4B0','Золото':'#E6CC8F','Гольф':'#B7CFC4','Альфа':'#D3BFD0','Боулинг':'#BCC8D6','Кино':'#E4B5A3','VR-арена':'#BFD3D3','Няня 1':'#D9C3AE','Няня 2':'#D9C3AE','Детский клуб':'#E8C1B5'};
+const ZC={'Данделион':'#E4B5A3','Карусель':'#D3BFD0','Джипы':'#B7CFC4','Шахта':'#BCC8D6','Кон-Тики':'#E6CC8F','Плющ':'#C9D4B0','Дерево приключений':'#C9D4B0','Бабл хаус':'#F3C29B','Студия волшебных образов':'#D3BFD0','Квесты/Роботы':'#BFD3D3','Лес Чудес':'#B7CFC4','Альфа 1':'#D3BFD0','Альфа 2':'#D3BFD0','Старший специалист':'#E8C1B5','Супервайзер':'#E8C1B5','Веревочный лагерь':'#C9D4B0','Золото':'#E6CC8F','Гольф':'#B7CFC4','Альфа':'#D3BFD0','Боулинг':'#BCC8D6','Кино':'#E4B5A3','VR-арена':'#BFD3D3','Няня 1':'#D9C3AE','Няня 2':'#D9C3AE','Детский клуб':'#E8C1B5','Аквазона Кит':'#A9D2EC','Визги-брызги':'#A9D2EC','Купол':'#F0D98A','Бильярд':'#CDB9E3'};
+
+// Ареалы парка: цвет, стикер и какие зоны входят (по ключевым словам в названии)
+const AREAS=[
+ {k:'forest',n:'Лес',img:'leaf',c:'#C9D4B0',d:'#E6EDD6',re:/веревоч|верёвоч|гольф|золот|лучн/i},
+ {k:'water',n:'Вода',img:'drop',c:'#A9D2EC',d:'#DCEDF8',re:/(^|\s)кит($|\s)|аквазон|визг/i},
+ {k:'mount',n:'Горы',img:'mountain',c:'#D9B999',d:'#EEDFCF',re:/шахт|карусел|джип/i},
+ {k:'air',n:'Воздух',img:'wind',c:'#F0D98A',d:'#F8EFC9',re:/кон-тик|плющ|данделион|купол|сухие горки|квест|робот|бьюти|волшебных образов/i},
+ {k:'metro',n:'Метрополис',img:'city',c:'#CDB9E3',d:'#E7DDF3',re:/vr|боулинг|детск|бильярд|кино|зонты метрополис|няня/i},
+ {k:'other',n:'Прочее',img:'star',c:'#E3D9CB',d:'#F1EBE2',re:/./}
+];
+const areaOf=z=>AREAS.find(a=>a.re.test(z||''))||AREAS[AREAS.length-1];
+function byArea(items,zoneOf){const g=AREAS.map(a=>({a,items:[]}));items.forEach(x=>{const a=areaOf(zoneOf(x));g.find(y=>y.a===a).items.push(x)});return g.filter(y=>y.items.length)}
+S.areaOpen=S.areaOpen||{};
+const areaHead=(a,right)=>`<summary class="ah" style="background:${a.c}"><span class="ahn"><img src="stickers/${a.img}.svg" alt="" width="30" height="30"> ${a.n}</span><span class="pill" style="background:#FFFDF9;align-self:center">${right}</span></summary>`;
+function bindAreas(root){(root||document).querySelectorAll('details.area').forEach(d=>d.addEventListener('toggle',()=>{S.areaOpen[d.dataset.ar]=d.open}))}
 const STEPC={'Шахта':'#BCC8D6','Джипы':'#B7CFC4','Карусель':'#D3BFD0','Плющ':'#C9D4B0','Данделион':'#E4B5A3','Кон-Тики':'#E6CC8F','Ротация':'#E3E3E3','Пс':'#F3C29B','Боулинг':'#BCC8D6','Ос':'#F3C29B','Гольф':'#B7CFC4','Золото':'#E6CC8F','Метро':'#CFC6BC','Веревочный лагерь / инд. задачи':'#C9D4B0','Веревочный лагерь':'#C9D4B0'};
 const brkBg=t=>t.startsWith('Ос')||t.startsWith('Пс')?'#F3C29B':t.startsWith('О')?'#F5E2A8':'#CFE0EE';
 const TEAMS=[['R','Рейнджеры','#C9D4B0'],['K','Хранители','#B7CFC4'],['M','Метрополис','#E4B5A3'],['W','Если дождь','#7E98AE']];

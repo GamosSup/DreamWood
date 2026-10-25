@@ -39,12 +39,12 @@ async function rotView(){
   const order=[],byZone={};
   secs.forEach(s=>{const range=parseRange(s.title);s.rows.forEach(r=>{if(!byZone[r.zone]){byZone[r.zone]=[];order.push(r.zone)}
     byZone[r.zone].push({range,title:s.title==='Весь день'?'Весь день · 10:00–'+fmtH(S.dayEnd):s.title.replace(/^.*·\s*/,''),people:r.people,steps:r.steps})})});
-  order.forEach(z=>{const c=S.team==='W'?'#7E98AE':(ZC[z]||'#D3BFD0');h+=zoneCard(z,byZone[z],c)});
+  h+=byArea(order,z=>z).map(({a,items})=>`<details class="area" data-ar="r${a.k}" ${S.areaOpen['r'+a.k]===false?'':'open'}>${areaHead(a,items.length+' '+(items.length===1?'зона':'зоны'))}<div class="ab" style="background:${a.d}">${items.map(z=>zoneCard(z,byZone[z],S.team==='W'?'#7E98AE':a.c)).join('')}</div></details>`).join('');
   if(rot.legend&&secs.length)h+=`<div class="card pad muted">${rot.legend.map(esc).join('<br>')}</div>`;
   // личная пометка
   const nt=await sb.from('rot_notes').select('note').eq('day',S.day).maybeSingle();
   h+=`<div class="card pad col"><b>📝 Моя пометка к этому дню</b><div class="muted">Видишь только ты.</div><textarea id="rn_t" placeholder="Например: взять рацию, поменяться с Таней обедом…">${esc(nt.data?.note||'')}</textarea><div class="muted" id="rn_s"></div></div>`;
-  app.innerHTML=h;bindRot(rot);
+  app.innerHTML=h;bindRot(rot);bindAreas(app);
   $('#rimg')?.addEventListener('click',()=>rotZoom(rimg));
   let tm;const sv=async()=>{const r=await sb.from('rot_notes').upsert({day:S.day,note:$('#rn_t').value});$('#rn_s').textContent=r.error?'Не сохранилось: '+r.error.message:'Сохранено ✓'};
   $('#rn_t').oninput=()=>{$('#rn_s').textContent='…';clearTimeout(tm);tm=setTimeout(sv,900)};$('#rn_t').onblur=()=>{clearTimeout(tm);sv()};

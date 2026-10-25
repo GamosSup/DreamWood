@@ -203,3 +203,12 @@ h1,#app>.muted,.top+.muted{text-shadow:0 0 5px var(--bg),0 0 9px var(--bg),0 0 1
 #app>label,#app>.two label,#app>.err,#app>.muted,#app>div>.muted{text-shadow:0 0 5px var(--bg),0 0 9px var(--bg),0 0 12px var(--bg)}
 .cal{background:var(--card);padding:8px;border-radius:18px}
 [data-kbz]{color:var(--ink);font-weight:700;font-size:14px}
+
+details.area{margin:10px 0;border-radius:18px;overflow:hidden;border:1px solid rgba(0,0,0,.06)}
+details.area>summary.ah{list-style:none;display:flex;justify-content:space-between;gap:8px;align-items:center;padding:10px 14px;cursor:pointer;font-family:Alegreya,Georgia,serif;font-weight:800;font-size:19px}
+details.area>summary.ah::-webkit-details-marker{display:none}
+.ahn{display:flex;align-items:center;gap:8px}
+details.area>summary.ah::after{content:'▾';margin-left:6px;transition:transform .2s}
+details.area[open]>summary.ah::after{transform:rotate(180deg)}
+details.area>.ab{padding:8px;display:flex;flex-direction:column;gap:8px}
+details.area .card{margin:0}
