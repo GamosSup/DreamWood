@@ -20,3 +20,13 @@ begin
 end $$;
 revoke all on function public.send_shift_reminder() from public, anon, authenticated;
 select cron.schedule('dw-shiftlist','0 7 * * *','select public.send_shift_reminder()');
+
+-- время напоминания настраивает админ (по Москве)
+insert into public.app_settings(key,value) values('shiftlist_time','{"h":10,"m":0}') on conflict(key) do nothing;
+create or replace function public.set_shiftlist_time(h int, m int) returns void language plpgsql security definer set search_path=public,cron as $$
+begin
+  if not is_admin() then raise exception 'Только админ меняет время напоминания'; end if;
+  if h<0 or h>23 or m<0 or m>59 then raise exception 'Неверное время'; end if;
+  insert into app_settings(key,value) values('shiftlist_time',jsonb_build_object('h',h,'m',m)) on conflict(key) do update set value=excluded.value, updated_at=now();
+  perform cron.schedule('dw-shiftlist', m||' '||((h-3+24)%24)||' * * *', 'select public.send_shift_reminder()');
+end $$;
