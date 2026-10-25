@@ -78,3 +78,7 @@ nav span{font-size:11px}
 .lb{width:34px;height:34px;border-radius:50%;border:2px solid var(--line);font-weight:800;padding:0}.lb.on{outline:3px solid var(--ink)}
 .as{min-height:40px;padding:0 12px;border-radius:20px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);font-weight:700;font-size:13px}.as.on{background:var(--ink);color:var(--card)}
 .cmt{padding:8px 0;border-top:1px solid var(--line);font-size:14px}
+
+.tk{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.tk.lift{opacity:.35}
+.tk.ghost{position:fixed;z-index:200;margin:0;pointer-events:none;box-shadow:0 14px 30px rgba(59,42,53,.35);transform:rotate(2deg) scale(1.03);opacity:.96}

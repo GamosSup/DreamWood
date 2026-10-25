@@ -68,6 +68,9 @@ async function refreshUnread(){
   const [n,r,p]=await Promise.all([sb.from('notifications').select('id'),sb.from('notif_reads').select('notif_id').eq('user_id',S.me.id),isManager()?sb.from('profiles').select('id',{count:'exact',head:true}).eq('status','pending'):Promise.resolve({count:0})]);
   if(!n.error&&!r.error){const seen=new Set((r.data||[]).map(x=>x.notif_id));S.unread=(n.data||[]).filter(x=>!seen.has(x.id)).length;
     const el=$('#bellN');if(el){el.hidden=!S.unread;el.textContent=S.unread>9?'9+':S.unread}}
+  try{const q=await sb.from('dg_tasks').select('id,title,deadline,assignees').eq('done',false).not('deadline','is',null);
+    const lim=iso(new Date(Date.now()+864e5));S.due=(q.data||[]).filter(t=>(t.assignees||[]).includes(S.me.id)&&t.deadline<=lim).sort((a,b)=>a.deadline<b.deadline?-1:1);
+    const el=$('#bellN'),tot=(S.unread||0)+S.due.length;if(el){el.hidden=!tot;el.textContent=tot>9?'9+':tot}}catch(e){S.due=[]}
   S.pending=p.count||0;const sn=$('#staffN');if(sn){sn.hidden=!S.pending;sn.textContent=S.pending}
 }
 const firstName=()=>(S.me?.full_name||'').trim().split(/\s+/)[0]||'друг';
@@ -78,14 +81,14 @@ const ago=d=>{const m=Math.round((Date.now()-new Date(d))/6e4);return m<1?'то�
 async function openBell(){
   const [n,r]=await Promise.all([sb.from('notifications').select('*').order('created_at',{ascending:false}).limit(50),sb.from('notif_reads').select('notif_id').eq('user_id',S.me.id)]);
   const seen=new Set((r.data||[]).map(x=>x.notif_id)),list=n.data||[];
-  const ov=document.createElement('div');ov.className='ov';ov.innerHTML=`<div class="sheet"><div class="sh"><button class="x" id="bk" aria-label="Назад">←</button><b>Уведомления</b><span></span></div><div class="sb">${list.map(x=>{const lg=(x.body||'').length>160;return `<div class="nt ${seen.has(x.id)?'':'new'}" data-id="${x.id}"><div class="ni">${NI[x.kind]||'🔔'}</div><div class="nb"><b>${esc(x.title)}</b>${seen.has(x.id)?'':'<span class="newb">новое</span>'}<div class="nbody ${lg?'cl':''}">${esc(x.body||'')}</div><div class="muted" style="margin-top:4px">${ago(x.created_at)}${lg?' · <a href="#" class="more">читать полностью</a>':''}${x.link&&x.link!=='news'?` · <a href="#" class="lnk" data-l="${esc(x.link)}">открыть</a>`:''}</div></div></div>`}).join('')||'<div class="muted" style="padding:20px">Пока ничего нового</div>'}</div></div>`;
+  const ov=document.createElement('div');ov.className='ov';ov.innerHTML=`<div class="sheet"><div class="sh"><button class="x" id="bk" aria-label="Назад">←</button><b>Уведомления</b><span></span></div><div class="sb">${(S.due||[]).map(t=>{const od=t.deadline<iso(new Date()),td=t.deadline===iso(new Date());return `<div class="nt new" style="border-left:6px solid ${od?'#E08A7A':'#E6CC8F'}"><div class="ni">⏰</div><div class="nb"><b>${od?'Просрочена':td?'Срок сегодня':'Срок завтра'}: ${esc(t.title)}</b><div class="muted" style="margin-top:4px">📅 ${dgFmt(t.deadline)} · <a href="#" class="lnk" data-l="dg">открыть доску</a></div></div></div>`}).join('')}${list.map(x=>{const lg=(x.body||'').length>160;return `<div class="nt ${seen.has(x.id)?'':'new'}" data-id="${x.id}"><div class="ni">${NI[x.kind]||'🔔'}</div><div class="nb"><b>${esc(x.title)}</b>${seen.has(x.id)?'':'<span class="newb">новое</span>'}<div class="nbody ${lg?'cl':''}">${esc(x.body||'')}</div><div class="muted" style="margin-top:4px">${ago(x.created_at)}${lg?' · <a href="#" class="more">читать полностью</a>':''}${x.link&&x.link!=='news'?` · <a href="#" class="lnk" data-l="${esc(x.link)}">открыть</a>`:''}</div></div></div>`}).join('')||'<div class="muted" style="padding:20px">Пока ничего нового</div>'}</div></div>`;
   document.body.appendChild(ov);document.body.style.overflow='hidden';
   const close=()=>{ov.remove();document.body.style.overflow=''};
   ov.onclick=e=>{if(e.target===ov)close()};ov.querySelector('#bk').onclick=close;
   ov.querySelectorAll('.more').forEach(a=>a.onclick=e=>{e.preventDefault();a.closest('.nb').querySelector('.nbody').classList.remove('cl');a.remove()});
   ov.querySelectorAll('.lnk').forEach(a=>a.onclick=e=>{e.preventDefault();const l=a.dataset.l;close();if(l.startsWith('rot:')){S.day=l.slice(4);go('rot')}else go(l)});
   const fresh=list.filter(x=>!seen.has(x.id)).map(x=>({user_id:S.me.id,notif_id:x.id}));
-  if(fresh.length){await sb.from('notif_reads').upsert(fresh);S.unread=0;const bn=$('#bellN');if(bn)bn.hidden=true}
+  if(fresh.length){await sb.from('notif_reads').upsert(fresh);S.unread=0;const bn=$('#bellN');if(bn){const tot=(S.due||[]).length;bn.hidden=!tot;bn.textContent=tot>9?'9+':tot}}
 }
 
 // ---------- Ротации ----------
@@ -271,6 +274,7 @@ async function dgView(){
   if(!D.board){app.innerHTML=h+`<div class="card pad">Досок пока нет.${isManager()?'<br><button class="btn" id="nb" style="margin-top:10px">Создать доску</button>':''}</div>`;$('#nb')?.addEventListener('click',dgNewBoard);return}
   h+=`<div class="two"><label style="flex:1"><select id="bsel">${D.boards.map(b=>`<option value="${b.id}" ${b.id===D.board?'selected':''}>${esc(b.title)}</option>`).join('')}</select></label>${isManager()?'<button class="btn ghost" id="nb" style="min-height:48px">+ Доска</button>':''}</div>`;
   h+=`<div class="tabs"><button data-f="all" class="${D.mine?'':'on'}" style="background:#E3EAD2">${isManager()?'Все задачи':'Мои задачи'}</button>${isManager()?`<button data-f="mine" class="${D.mine?'on':''}" style="background:#E3EAD2">Только мои</button>`:''}${isManager()?'<button id="ac" style="background:#E3EAD2">+ Колонка</button>':''}</div>`;
+  h+=`<div class="two"><label style="flex:1"><input id="dq" type="search" placeholder="🔍 Поиск по задачам и людям" value="${esc(D.q||'')}"></label><button class="btn ghost" id="dod" style="min-height:48px;${D.od?'background:#E08A7A;border-color:#E08A7A':''}">⏰ Просрочено</button></div>`;
   const last=D.cols[D.cols.length-1]?.id;
   const vis=D.tasks.filter(t=>!D.mine||t.assignees.includes(S.me.id));
   h+=`<div class="dgcols">${D.cols.map(c=>{const ts=vis.filter(t=>t.column_id===c.id);return `<div class="dgcol" data-col="${c.id}"><div class="dgch" style="background:${c.color||'#BCC8D6'}"><b>${esc(c.title)}</b><span class="cnt">${ts.length}</span>${isManager()?`<button class="x" data-cm="${c.id}" style="width:30px;height:30px;font-size:14px">⋯</button>`:''}</div><div class="dgtasks">${ts.map(t=>dgCard(t)).join('')||'<div class="muted" style="padding:8px">Пусто</div>'}</div>${isManager()?`<button class="btn ghost" data-add="${c.id}" style="min-height:40px;margin:0 8px 8px">+ Задача</button>`:''}</div>`}).join('')}</div>`;
@@ -280,14 +284,47 @@ async function dgView(){
   $('#ac')?.addEventListener('click',async()=>{const n=prompt('Название колонки');if(!n)return;const pos=(D.cols.reduce((m,c)=>Math.max(m,+c.pos),0))+1;const r=await sb.from('dg_columns').insert({board_id:D.board,title:n.trim(),pos});if(r.error)alert(r.error.message);dgView()});
   app.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{D.mine=b.dataset.f==='mine';dgView()});
   app.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>dgOpen(null,b.dataset.add));
-  app.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>dgOpen(b.dataset.open));
+  app.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{if(Date.now()-(window.__dgNoClick||0)<600)return;dgOpen(b.dataset.open)});
   app.querySelectorAll('[data-cm]').forEach(b=>b.onclick=e=>{e.stopPropagation();dgColMenu(b.dataset.cm)});
-  app.querySelectorAll('.tk').forEach(el=>{el.ondragstart=e=>{e.dataTransfer.setData('text/plain',el.dataset.open)}});
+  const dgFilter=()=>{const q=($('#dq').value||'').trim().toLowerCase();D.q=q;app.querySelectorAll('.tk').forEach(el=>{el.style.display=(!q||el.dataset.q.includes(q))&&(!D.od||el.dataset.od==='1')?'':'none'});app.querySelectorAll('.dgcol').forEach(c=>{c.querySelector('.cnt').textContent=[...c.querySelectorAll('.tk')].filter(x=>x.style.display!=='none').length})};
+  $('#dq').oninput=dgFilter;$('#dod').onclick=()=>{D.od=!D.od;dgView()};if(D.q||D.od)dgFilter();
+  if(matchMedia('(pointer:fine)').matches)app.querySelectorAll('.tk').forEach(el=>{el.draggable=true;el.ondragstart=e=>{e.dataTransfer.setData('text/plain',el.dataset.open)}});
+  dgTouch();
   app.querySelectorAll('.dgcol').forEach(el=>{el.ondragover=e=>{e.preventDefault();el.classList.add('over')};el.ondragleave=()=>el.classList.remove('over');el.ondrop=e=>{e.preventDefault();el.classList.remove('over');dgMove(e.dataTransfer.getData('text/plain'),el.dataset.col)}});
+}
+
+// перенос задач пальцем: долгое нажатие на карточку (0,4 с) → тянем в нужную колонку
+function dgTouch(){
+  const wrap=app.querySelector('.dgcols');if(!wrap)return;
+  let st=null;
+  const colAt=(x,y)=>{const e=document.elementFromPoint(x,y);return e&&e.closest('.dgcol')};
+  const clear=()=>{app.querySelectorAll('.dgcol.over').forEach(c=>c.classList.remove('over'))};
+  const end=()=>{if(!st)return;clearTimeout(st.timer);if(st.ghost)st.ghost.remove();if(st.el)st.el.classList.remove('lift');clear();cancelAnimationFrame(st.raf);st=null};
+  const scrollLoop=()=>{if(!st||!st.on)return;const r=wrap.getBoundingClientRect();if(st.x<r.left+50)wrap.scrollLeft-=12;else if(st.x>r.right-50)wrap.scrollLeft+=12;
+    const sc=app;const ar=sc.getBoundingClientRect();if(st.y<ar.top+60)sc.scrollTop-=10;else if(st.y>ar.bottom-60)sc.scrollTop+=10;
+    clear();const c=colAt(st.x,st.y);if(c)c.classList.add('over');st.raf=requestAnimationFrame(scrollLoop)};
+  app.querySelectorAll('.tk').forEach(el=>{
+    el.addEventListener('touchstart',e=>{
+      if(e.touches.length!==1)return;const t=e.touches[0];
+      st={el,x:t.clientX,y:t.clientY,sx:t.clientX,sy:t.clientY,on:false};
+      st.timer=setTimeout(()=>{if(!st)return;st.on=true;if(navigator.vibrate)navigator.vibrate(25);
+        const g=el.cloneNode(true);g.className='tk ghost';g.style.width=el.offsetWidth+'px';g.style.left=(st.x-el.offsetWidth/2)+'px';g.style.top=(st.y-30)+'px';document.body.appendChild(g);st.ghost=g;el.classList.add('lift');st.raf=requestAnimationFrame(scrollLoop)},380);
+    },{passive:true});
+    el.addEventListener('touchmove',e=>{
+      if(!st)return;const t=e.touches[0];st.x=t.clientX;st.y=t.clientY;
+      if(!st.on){if(Math.abs(st.x-st.sx)>8||Math.abs(st.y-st.sy)>8){clearTimeout(st.timer);st=null}return}
+      e.preventDefault();st.ghost.style.left=(st.x-st.ghost.offsetWidth/2)+'px';st.ghost.style.top=(st.y-30)+'px';
+    },{passive:false});
+    const fin=async e=>{
+      if(!st)return;const s=st;
+      if(s.on){e.preventDefault();const c=colAt(s.x,s.y);const id=s.el.dataset.open;end();if(c)await dgMove(id,c.dataset.col);else dgView();window.__dgNoClick=Date.now()}else end()};
+    el.addEventListener('touchend',fin,{passive:false});el.addEventListener('touchcancel',()=>end(),{passive:true});
+    el.addEventListener('contextmenu',e=>{if(st&&st.on)e.preventDefault()});
+  });
 }
 function dgCard(t){
   const cl=S.dg.cl[t.id],cm=S.dg.cm[t.id];
-  return `<div class="tk" draggable="true" data-open="${t.id}" style="border-left:6px solid ${t.label||'transparent'}"><div class="tt">${t.done?'✅ ':''}${esc(t.title)}</div><div class="tm">${t.priority!=='normal'?`<span class="pill" style="background:${PRI[t.priority][1]}">${PRI[t.priority][0]}</span>`:''}${t.deadline?`<span class="pill" style="background:${dgOver(t)?'#E08A7A':'#F1E8DA'}">📅 ${dgFmt(t.deadline)}</span>`:''}${cl?`<span class="pill" style="background:#F1E8DA">☑ ${cl[0]}/${cl[1]}</span>`:''}${cm?`<span class="pill" style="background:#F1E8DA">💬 ${cm}</span>`:''}</div>${t.assignees.length?`<div class="av">${t.assignees.slice(0,4).map(a=>`<i title="${esc(pname(a))}">${esc(ini(pname(a)))}</i>`).join('')}${t.assignees.length>4?`<i>+${t.assignees.length-4}</i>`:''}</div>`:''}</div>`}
+  return `<div class="tk" data-open="${t.id}" data-q="${esc((t.title+' '+(t.descr||'')+' '+t.assignees.map(pname).join(' ')).toLowerCase())}" data-od="${dgOver(t)?1:0}" style="border-left:6px solid ${t.label||'transparent'}"><div class="tt">${t.done?'✅ ':''}${esc(t.title)}</div><div class="tm">${t.priority!=='normal'?`<span class="pill" style="background:${PRI[t.priority][1]}">${PRI[t.priority][0]}</span>`:''}${t.deadline?`<span class="pill" style="background:${dgOver(t)?'#E08A7A':'#F1E8DA'}">📅 ${dgFmt(t.deadline)}</span>`:''}${cl?`<span class="pill" style="background:#F1E8DA">☑ ${cl[0]}/${cl[1]}</span>`:''}${cm?`<span class="pill" style="background:#F1E8DA">💬 ${cm}</span>`:''}</div>${t.assignees.length?`<div class="av">${t.assignees.slice(0,4).map(a=>`<i title="${esc(pname(a))}">${esc(ini(pname(a)))}</i>`).join('')}${t.assignees.length>4?`<i>+${t.assignees.length-4}</i>`:''}</div>`:''}</div>`}
 async function dgMove(id,colId){
   const D=S.dg,t=D.tasks.find(x=>x.id===id);if(!t||t.column_id===colId)return;
   const pos=D.tasks.filter(x=>x.column_id===colId).reduce((m,x)=>Math.max(m,+x.pos),0)+1;
