@@ -79,6 +79,7 @@ const GM_ACH=[
  {c:'egg',g:'fun',t:2,ic:'🎈',n:'Нашёл секрет',d:'Подсказка: Дримми любит, когда его логотип трогают много раз подряд',b:25,claim:1,title:'Нашёл секрет'},
  {c:'dark',g:'fun',t:1,ic:'🌙',n:'Тёмная сторона',d:'Включи тёмную тему в настройках',b:10,claim:1},
  // выдаёт руководитель: стандартные обучения (остальное — допуски на аттракционы, события, особые значки)
+ {c:'evt:parad',g:'skill',t:4,ic:'🎃',n:'Парад кошмаров',d:'Ты вступил в Парад кошмаров: событие Дримвуда, когда мы все стали дримвудовыми',b:150,man:1,title:'Участник Парада кошмаров'},
  {c:'trn:electro',g:'skill',t:4,ic:'⚡',n:'Электробезопасность',d:'Пройдено обучение, значок выдаёт руководитель',b:200,man:1,title:'Электробезопасность'},
  {c:'trn:verkholaz',g:'skill',t:4,ic:'🧗',n:'Верхолаз',d:'Пройдено обучение, значок выдаёт руководитель',b:200,man:1,title:'Верхолаз'},
  {c:'trn:rescue',g:'skill',t:4,ic:'🛟',n:'Спасатель-матрос',d:'Пройдено обучение, значок выдаёт руководитель',b:200,man:1,title:'Спасатель-матрос'},
@@ -128,7 +129,7 @@ async function gmLoad(force){
       const old=S.gm?JSON.stringify(S.gm.rows.map(x=>[x.id,x.lvl_text,x.cos,gmLv(x.xp).n])):'';
       const g=gmIndex(r.data||[]);S.gm=g;
       try{localStorage.setItem('dw:gm:'+S.me.id,JSON.stringify({rows:g.rows}))}catch(e){}
-      gmLevelUp();setTimeout(gmPetPopup,1800);
+      gmLevelUp();setTimeout(gmPopups,1800);
       if(old&&old!==JSON.stringify(g.rows.map(x=>[x.id,x.lvl_text,x.cos,gmLv(x.xp).n]))&&window.qcRerender)qcRerender();
     }catch(e){}finally{S.gmP=null}
     return S.gm})();
@@ -407,7 +408,7 @@ function gmPetTab(box){
     const cfg=petCfg(me);
     if(!cfg){
       box.innerHTML=`<div class="card pad col" style="align-items:center;text-align:center"><b style="font-size:18px">Выбери себе питомца 🐾</b><div class="muted">У каждого в команде будет свой зверёк. Выбери того, кто нравится больше. Потом его можно будет одеть и раскрасить как угодно: цвет, глаза, улыбку, причёску, шапки, очки и многое другое.</div>${gmPetChooser()}</div>`;
-      box.querySelectorAll('[data-sp]').forEach(b=>b.onclick=async()=>{if(await gmPetSave({...PET_DEF,sp:b.dataset.sp})){gmSay(`Отличный выбор, ${esc(gmFirst())}! Теперь вы вместе. Одень зверька как тебе нравится, а новые вещи будешь получать за достижения.`,{ms:6500});dwParty();draw()}});
+      box.querySelectorAll('[data-sp]').forEach(b=>b.onclick=async()=>{if(await gmPetSave({...PET_DEF,sp:b.dataset.sp})){gmSay(`Отличный выбор, ${esc(gmFirst())}! Теперь вы вместе. Одень зверька как тебе нравится, а новые вещи будешь получать за достижения.`,{ms:6500});dwParty();gmParadeClaim();draw()}});
       return;
     }
     const keep=window.scrollY,base={...cfg,ha:'',gl:'',nk:'',ch:'',bk:'',hd:'',hr:''};
@@ -427,17 +428,80 @@ function gmPetTab(box){
 }
 function gmReqName(req){if(!req)return '';if(req.endsWith('*'))return req==='adm*'?'любой допуск':'любое мероприятие';const a=GM_BY[req];return a?a.n:req}
 
-// ---------- награда: «Вы разблокировали питомца» (до выбора, не больше 3 раз) ----------
+// ---------- событие «Парад кошмаров»: приветственное окно (один раз всем; без питомца ещё до 3 раз) ----------
+const GM_EVT='parade1';
 function gmPetPopup(tries=0){
-  const me=gmMe();if(!me||!S.me||typeof petCfg!=='function'||petCfg(me)||S.gmPetShown)return;
-  const key='dw-pet:'+S.me.id;let n=0;try{n=+localStorage.getItem(key)||0}catch(e){}
-  if(n>=3)return;
-  if(document.querySelector('.ov,#tour,.alov,.ibox')||S.tab==='game'&&S.gmTab==='pet'){if(tries<8)setTimeout(()=>gmPetPopup(tries+1),3000);return}
-  S.gmPetShown=1;try{localStorage.setItem(key,String(n+1))}catch(e){}
-  dgxSheet('🎉 Новая награда',(box,paint,close)=>{
-    box.innerHTML=`<div class="drmpop"><div class="drmt">Вы разблокировали питомца!</div><div class="muted" style="text-align:center">Выбери себе зверька, который нравится больше всех. Потом его можно одеть и раскрасить: цвет, глаза, улыбка, причёска, шапки, очки и многое другое. Новые вещи приходят за достижения и события парка.</div>${gmPetChooser(0,92)}<button class="btn ghost" id="dp_x">Выберу позже</button></div>`;
-    box.querySelectorAll('[data-sp]').forEach(b=>b.onclick=async()=>{if(await gmPetSave({...PET_DEF,sp:b.dataset.sp})){close(false);dwParty();gmSay(`Отличный выбор, ${esc(gmFirst())}! Теперь вы вместе. Загляни в «Мой профиль», там его можно одеть.`,{ms:6500})}});
-    $('#dp_x').onclick=()=>close(false);
+  const me=gmMe();if(!me||!S.me||typeof petCfg!=='function'||S.gmPetShown)return;
+  const cfg0=petCfg(me),key='dw-pet:'+S.me.id,ek='dw-evt:'+GM_EVT+':'+S.me.id;let n=0,seen=null;
+  try{n=+localStorage.getItem(key)||0;seen=localStorage.getItem(ek)}catch(e){}
+  if(seen&&(cfg0||n>=3))return;
+  if(document.querySelector('.ov,#tour,.alov,.ibox')){if(tries<8)setTimeout(()=>gmPetPopup(tries+1),3000);return}
+  S.gmPetShown=1;try{localStorage.setItem(key,String(n+1));localStorage.setItem(ek,'1')}catch(e){}
+  dgxSheet('🎃 Событие',(box,paint,close)=>{
+    const has=!!cfg0;
+    box.innerHTML=`<div class="evt"><div class="evb">🦇 🎃 🦇</div><div class="evk">Событие в парке</div><div class="evh">Парад кошмаров</div><div class="evs">Теперь мы — дримвудовые!</div>
+      <div class="evp">${has?'Парад начался, и твой зверёк уже в строю. Загляни в профиль: там можно сменить наряд, причёску, цвет и взгляд.':'В парке начался парад: вся команда превращается в дримвудовых зверят. Выбери себе питомца, того, кто нравится больше всех. Потом его можно одеть и раскрасить как угодно.'}</div>
+      ${has?`<div style="display:flex;justify-content:center">${gmPet(me,150,{cfg:cfg0,bg:''})}</div><button class="btn" id="ev_go">🐾 К моему питомцу</button>`:gmPetChooser(0,92)}
+      <div class="evp" style="font-size:12px;opacity:.8">Новые вещи и рамки приходят за достижения и события парка.</div>
+      <button class="btn ghost evx" id="ev_x">${has?'Круто!':'Выберу позже'}</button></div>`;
+    box.querySelectorAll('[data-sp]').forEach(b=>b.onclick=async()=>{if(await gmPetSave({...PET_DEF,sp:b.dataset.sp})){close(false);dwParty();gmSay(`Отличный выбор, ${esc(gmFirst())}! Теперь ты на параде вместе со зверьком. Загляни в «Мой профиль», там его можно одеть.`,{ms:6500})}});
+    const go1=$('#ev_go');if(go1)go1.onclick=()=>{close(false);S.gmTab='pet';go('game')};
+    $('#ev_x').onclick=()=>close(false);
     setTimeout(dwParty,350);
   },()=>{},'drmsheet');
+}
+
+// ---------- ивент «Парад кошмаров» ----------
+const GM_PARADE_END=new Date('2026-11-30T23:59:00+03:00');
+const gmParadeOn=()=>Date.now()<GM_PARADE_END.getTime();
+function gmParadeClaim(){if(gmParadeOn())gmClaim('evt:parad')}
+const GM_PCOS=[
+ {sp:'fox',ha:'h_witch',mo:'m_k',hd:'d_wand',bk:'b_cape'},
+ {sp:'bear',ha:'h_pumpkin',mo:'m_g',ex:'x_o'},
+ {sp:'bunny',ha:'h_horns',mo:'m_t',bk:'b_bat',ex:'x_w'},
+ {sp:'dragon',bk:'b_bat',ha:'h_crown',gl:'g_sun',mo:'m_g'}];
+const GM_PTAG={fox:'хитрый и шустрый',bear:'добряк и силач',bunny:'ловкая и быстрая',dragon:'огнедышащий, но добрый'};
+function gmPopups(){if(gmParadeOn())gmParadePopup();else gmPetPopup()}
+function gmParadePopup(tries=0){
+  const me=gmMe();if(!me||!S.me||typeof petCfg!=='function'||S.gmPetShown)return;
+  const key='dw-parad:'+S.me.id;let n=0;try{n=+localStorage.getItem(key)||0}catch(e){}
+  const has=!!petCfg(me),claimed=(me.ach||[]).some(a=>a.c==='evt:parad');
+  if(has&&claimed)return;
+  if(n>=3)return;
+  if(document.querySelector('.ov,#tour,.alov,.ibox,.evtw')||S.tab==='game'&&S.gmTab==='pet'&&!has){if(tries<8)setTimeout(()=>gmParadePopup(tries+1),3000);return}
+  S.gmPetShown=1;try{localStorage.setItem(key,String(n+1))}catch(e){}
+  const ev=document.createElement('div');ev.className='evtw';
+  const flo=Array.from({length:16},(_,k)=>`<i style="left:${(k*29+7)%100}%;animation-delay:${(k%8)*.7}s;animation-duration:${6+(k%5)*1.3}s">${['🎃','👻','🦇','🕸️','🍬','🕯️','⭐'][k%7]}</i>`).join('');
+  const parade=GM_PCOS.map((c,k)=>`<div class="evtp" style="animation-delay:${k*.35}s">${gmPet({},84,{cfg:{...PET_DEF,...c,bc:petBcOf(c.sp)},vb:[0,-70,320,500],bg:''})}</div>`).join('');
+  const close=()=>{ev.classList.add('out');setTimeout(()=>ev.remove(),300);document.body.style.overflow=''};
+  let pick='';
+  const phase1=()=>{
+    ev.innerHTML=`<div class="evtf">${flo}</div><div class="evtc">
+      <div class="evtk">СОБЫТИЕ ДРИМВУДА</div>
+      <h1 class="evtt">Парад кошмаров</h1><div class="evts">Теперь мы — дримвудовые 🎃</div>
+      <div class="evtpar">${parade}</div>
+      <div class="evtsay"><img src="stickers/mascot-hi.webp" alt="" width="64" height="64"><div class="dsb">Эй, ${esc(gmFirst())}! В Дримвуде начался Парад кошмаров, и у каждого из нас теперь есть <b>свой питомец</b>. Выбери того, с кем зашагаешь в параде!</div></div>
+      <div class="petch evtch">${PET_SP.map(([k,nm])=>`<button class="petc" data-sp="${k}"><span class="petcv">${gmPet({},84,{cfg:{...PET_DEF,sp:k,bc:petBcOf(k)},vb:GM_PETCROP,bg:''})}</span><b>${nm}</b><span class="evtg">${GM_PTAG[k]}</span></button>`).join('')}</div>
+      <button class="btn evtgo" id="ev_go" disabled>Выбери питомца</button>
+      <button class="tskip" id="ev_x">Выберу позже</button></div>`;
+    ev.querySelectorAll('[data-sp]').forEach(b=>b.onclick=()=>{pick=b.dataset.sp;ev.querySelectorAll('[data-sp]').forEach(x=>x.classList.toggle('on',x===b));const g=ev.querySelector('#ev_go');g.disabled=false;g.textContent='Вступить в парад 🎃';setTimeout(()=>g.scrollIntoView({block:'nearest',behavior:'smooth'}),50)});
+    ev.querySelector('#ev_x').onclick=close;
+    ev.querySelector('#ev_go').onclick=async e=>{
+      if(!pick)return;e.target.disabled=true;
+      const cur=petCfg(gmMe());const ok=await gmPetSave({...(cur||PET_DEF),sp:pick,bc:cur&&cur.bc!==petBcOf(cur.sp)?cur.bc:petBcOf(pick)});
+      if(!ok){e.target.disabled=false;return}
+      gmParadeClaim();dwParty();phase2();
+    };
+  };
+  const phase2=()=>{
+    const me2=gmMe(),c=petCfg(me2)||{...PET_DEF,sp:pick,bc:petBcOf(pick)};
+    ev.querySelector('.evtc').innerHTML=`<div class="evtk">ТЫ В ПАРАДЕ!</div><h1 class="evtt" style="font-size:30px">Добро пожаловать, дримвудовец</h1>
+      <div class="evtbig">${gmPet({},180,{cfg:{...c,ha:'h_witch'},vb:[0,-70,320,500],bg:''})}</div>
+      <div class="evtsay"><img src="stickers/mascot-hi.webp" alt="" width="64" height="64"><div class="dsb">Ура, ${esc(gmFirst())}! Теперь вы с питомцем в команде. За вступление тебе <b>значок «Парад кошмаров» и +150 очков</b>. А ещё открылись праздничные костюмы: шляпа ведьмы, рожки, тыква и крылья летучей мыши!</div></div>
+      <button class="btn evtgo" id="ev_dress">Одеть питомца 🎃</button><button class="tskip" id="ev_x2">Позже</button>`;
+    ev.querySelector('#ev_dress').onclick=()=>{close();S.gmTab='pet';go('game')};
+    ev.querySelector('#ev_x2').onclick=close;
+  };
+  phase1();document.body.appendChild(ev);document.body.style.overflow='hidden';
+  requestAnimationFrame(()=>ev.classList.add('on'));
 }

@@ -530,3 +530,38 @@ html[data-dark="1"] .gnm.n_shine{background-image:linear-gradient(100deg,#E0B84A
 .dsay img{flex:none;filter:drop-shadow(0 4px 8px #0003);animation:drmbob 2.4s ease-in-out infinite}
 .dsb{position:relative;flex:1;padding:11px 14px;border-radius:18px 18px 18px 4px;background:var(--card);color:var(--ink);border:2px solid var(--ink);font-weight:600;font-size:14px;line-height:1.35;box-shadow:0 8px 24px #0003}
 @media(prefers-reduced-motion:reduce){.dsay img{animation:none}}
+/* v61: событие «Парад кошмаров» */
+.evt{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;padding:18px 14px 16px;border-radius:22px;color:#FFF3E0;background:radial-gradient(circle at 20% 0%,#7B3FA0 0,transparent 55%),radial-gradient(circle at 90% 100%,#E8590C 0,transparent 55%),#2A1536;box-shadow:inset 0 0 0 2px #ffffff22}
+.evb{font-size:26px;letter-spacing:6px}
+.evk{font-size:11px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#FFB347}
+.evh{font-family:var(--serif,Georgia,serif);font-size:30px;font-weight:800;line-height:1.05;color:#FF9F43;text-shadow:0 2px 0 #00000055}
+.evs{font-size:18px;font-weight:800;color:#fff;background:linear-gradient(90deg,#E8590C,#D6336C);padding:6px 14px;border-radius:999px}
+.evp{font-size:14px;line-height:1.4;color:#FFE9CF}
+.evt .petch{margin-top:2px}.evt .petc{background:#FFF3E0;border-color:#FFB34788;color:#2A1536}
+.evt .btn{width:100%}.evt .evx{background:transparent;color:#FFE9CF;border-color:#ffffff44}
+/* v61: ивент «Парад кошмаров» */
+.evtw{position:fixed;inset:0;z-index:9500;overflow-y:auto;overflow-x:hidden;background:radial-gradient(ellipse at 50% 0,#6B2FA0 0,#2B1450 45%,#12091F 100%);color:#fff;opacity:0;transition:opacity .35s;-webkit-overflow-scrolling:touch}
+.evtw.on{opacity:1}.evtw.out{opacity:0}
+.evtf{position:fixed;inset:0;pointer-events:none;overflow:hidden}
+.evtf i{position:absolute;bottom:-40px;font-style:normal;font-size:26px;opacity:.75;animation:evfloat linear infinite}
+@keyframes evfloat{0%{transform:translateY(0) rotate(0);opacity:0}10%{opacity:.8}100%{transform:translateY(-115vh) rotate(40deg);opacity:0}}
+.evtc{position:relative;z-index:2;max-width:460px;margin:0 auto;padding:max(22px,env(safe-area-inset-top)) 18px max(26px,env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center}
+.evtk{font-size:12px;font-weight:800;letter-spacing:.22em;color:#FFB347}
+.evtt{margin:0;font-family:Alegreya,Georgia,serif;font-size:44px;line-height:1;font-weight:800;color:#FFE9B8;text-shadow:0 0 18px #FF8A1F,0 0 40px #C026D3,0 3px 0 #5B2200}
+.evts{font-size:18px;font-weight:800;color:#fff}
+.evtpar{display:flex;justify-content:center;gap:2px;margin:4px -8px 0}
+.evtp{flex:none;animation:evhop 1.8s ease-in-out infinite}.evtp .drm{background:transparent}
+@keyframes evhop{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-12px) rotate(3deg)}}
+.evtsay{display:flex;align-items:flex-end;gap:8px;text-align:left;width:100%}
+.evtsay img{flex:none;animation:drmbob 2.4s ease-in-out infinite}
+.evtsay .dsb{color:var(--ink);background:#FFF8EF;border-color:#FFB347;font-size:14px}
+.evtch{width:100%;margin-top:2px}
+.evtw .petc{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.28);color:#fff}
+.evtw .petc.on{background:rgba(255,179,71,.28);border-color:#FFB347;box-shadow:0 0 22px #FF8A1F66}
+.evtw .petc .drm{background:transparent}.evtg{font-size:11px;font-weight:600;opacity:.8;line-height:1.2}
+.evtgo{width:100%;background:linear-gradient(90deg,#FF8A1F,#E5226F)!important;color:#fff!important;border:0!important;font-size:17px;box-shadow:0 8px 24px #E5226F66}
+.evtgo:disabled{opacity:.5;box-shadow:none}
+.evtw .tskip{color:#ffffffb0;background:none;border:0;font-size:13px;text-decoration:underline;padding:6px}
+.evtbig{animation:drmbob 2.4s ease-in-out infinite}.evtbig .drm{background:transparent}
+@media(prefers-reduced-motion:reduce){.evtp,.evtbig,.evtsay img,.evtf i{animation:none}}
+#tour .tpet{animation:tfloat 3s ease-in-out infinite}#tour .tpet .drm{border-radius:24px}
