@@ -15,12 +15,12 @@ end $$;
 grant execute on function public.set_my_cos(jsonb) to authenticated;
 
 -- старое уведомление про Дримми убираем и отправляем новое про питомца
-delete from public.notif_reads where notif_id in(select id from public.notifications where kind='ach' and title like '%появились достижения%');
-delete from public.notifications where kind='ach' and title like '%появились достижения%';
+delete from public.notif_reads where notif_id in(select id from public.notifications where kind='ach' and title like '%появились достижения%' and title not like '%питомц%');
+delete from public.notifications where kind='ach' and title like '%появились достижения%' and title not like '%питомц%';
 insert into public.notifications(kind,title,body,link)
 select 'ach','🐾 В приложении появились достижения и питомцы','Копи опыт, получай уровни и значки. А ещё каждый может выбрать себе зверька: лисёнка, мишку, зайку или дракончика. Выбери того, кто нравится, и одевай его в «Ещё» → «Мой профиль».','game'
 where not exists(select 1 from public.notifications where kind='ach' and link='game' and title like '%и питомцы%');
 
-select (select count(*) from public.notifications where kind='ach' and title like '%появились достижения%') as старых_осталось,
+select (select count(*) from public.notifications where kind='ach' and title like '%появились достижения%' and title not like '%питомц%') as старых_осталось,
        (select count(*) from public.notifications where kind='ach' and title like '%и питомцы%') as новых,
        pg_get_functiondef('public.set_my_cos(jsonb)'::regprocedure) like '%''pet''%' as питомец_разрешён;
