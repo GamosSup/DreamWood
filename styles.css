@@ -271,3 +271,19 @@ body.hasal{padding-top:46px}
 #authform.swap{animation:authSwap .22s ease-out}
 @keyframes authSwap{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 #authform{display:flex;flex-direction:column;gap:14px}
+
+/* v37: обучение при первом входе */
+.tour{position:fixed;inset:0;z-index:70;background:rgba(40,28,36,.62);display:flex;align-items:center;justify-content:center;padding:16px;animation:tfade .2s ease-out}
+@keyframes tfade{from{opacity:0}to{opacity:1}}
+.tcard{position:relative;background:var(--bg,#FFF8EF);width:100%;max-width:440px;max-height:92vh;overflow:auto;border-radius:26px;padding:22px 20px 18px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;box-shadow:0 18px 50px rgba(0,0,0,.3);animation:tin .28s cubic-bezier(.3,1.4,.5,1)}
+.tcard.back{animation-name:tinb}
+@keyframes tin{from{opacity:0;transform:translateX(26px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes tinb{from{opacity:0;transform:translateX(-26px) scale(.97)}to{opacity:1;transform:none}}
+.tcard h2{margin:2px 0 0;font-family:Alegreya,Georgia,serif;font-size:24px;line-height:1.15}
+.tcard p{margin:0;font-size:15.5px;line-height:1.45;color:var(--ink)}
+.timg{object-fit:contain;filter:drop-shadow(0 4px 6px rgba(60,40,50,.18));animation:tfloat 3s ease-in-out infinite}
+@keyframes tfloat{50%{transform:translateY(-5px) rotate(2deg)}}
+.tskip{align-self:flex-end;background:none;border:0;color:var(--muted,#7a6a70);font-weight:700;font-size:14px;padding:4px 6px;cursor:pointer}
+.tdots{display:flex;gap:6px;margin:4px 0}.tdots i{width:7px;height:7px;border-radius:50%;background:rgba(0,0,0,.15);transition:.2s}.tdots i.on{width:20px;border-radius:5px;background:var(--ink,#3B2A35)}
+.tcard .two{width:100%}.tcard #t_nb{width:100%;display:flex;flex-direction:column;gap:6px}
+.tcard .two{display:flex;gap:10px}.tcard .two .btn{flex:1}.tcard .two [hidden]{display:none}

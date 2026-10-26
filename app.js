@@ -93,7 +93,7 @@ const clearCache=()=>{try{Object.keys(localStorage).filter(k=>k.startsWith('dw:'
 function startApp(){
   nav.hidden=false;nav.querySelectorAll('[data-mgr]').forEach(b=>b.hidden=!isManager());nav.querySelectorAll('[data-lead]').forEach(b=>b.hidden=!canMng());go(S.tab);
   const g=new URLSearchParams(location.search).get('go');if(g){history.replaceState(null,'',location.pathname);openLink(g)}
-  window.pushRefresh&&pushRefresh();
+  window.pushRefresh&&pushRefresh();window.tourMaybe&&tourMaybe();
 }
 // последняя сохранённая сессия: читаем прямо из памяти телефона, не дожидаясь сети
 function storedUid(){
@@ -664,9 +664,11 @@ async function settingsView(){
   h+=`<div class="card pad col"><b>🔔 Что присылать на телефон</b><div class="muted">Колокольчик внутри приложения работает всегда. Утреннюю отметку «Ты сегодня на смене?» и срочные поломки отключить нельзя.</div>${[['req','📨 Заявки, поломки и ответы по ним'],['news','📰 Новости и афиша'],['rot','🔄 Ротации'],['task','📋 Задачи и комментарии в смене']].map(([k,n])=>`<label class="chk"><input type="checkbox" data-pp="${k}" ${pon(k)?'checked':''}><span>${n}</span></label>`).join('')}</div>`;
   if(adm)h+=`<div class="card pad col"><b>⚙️ Настройки приложения (только админ)</b><div class="muted">Во сколько утром приходит «Ты сегодня на смене?» (по Москве).</div><div class="prow"><input id="st_ct" type="time" class="pn" value="${String(ct.h).padStart(2,'0')}:${String(ct.m).padStart(2,'0')}"><button class="btn" id="st_cts">Сохранить</button></div><div class="err" id="st_cte"></div><div class="muted" style="margin-top:6px">Во сколько приходит напоминание «Заполни чек-лист открытия» (по Москве).</div><div class="prow"><input id="st_lt" type="time" class="pn" value="${String(window._slt.h).padStart(2,'0')}:${String(window._slt.m).padStart(2,'0')}"><button class="btn" id="st_lts">Сохранить</button></div><div class="err" id="st_lte"></div></div>`;
   h+='<div id="pushbox"></div>';
+  h+=`<button class="btn ghost" id="st_tour">🎓 Показать обучение заново</button>`;
   h+=`<button class="btn ghost" id="out">Выйти из аккаунта</button>`;
   app.innerHTML=h;
   window.pushMount&&pushMount();
+  $('#st_tour')&&($('#st_tour').onclick=()=>window.tourStart&&tourStart());
   const avRun=async f=>{const er=$('#st_ave');er.style.color='';er.textContent='Загружаю…';try{await avSet(f);settingsView()}catch(e){er.textContent='Не получилось: '+(e.message||e)+(/avatar|bucket|not found|function/i.test(e.message||'')?' (в базе ещё не включены фото профиля)':'')}};
   $('#st_av').onchange=e=>{const f=e.target.files[0];if(f)avRun(f)};
   $('#st_avd')&&($('#st_avd').onclick=()=>{if(confirm('Убрать фото профиля?'))avRun(null)});
