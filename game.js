@@ -113,7 +113,7 @@ function gmIndex(rows){
 }
 function gmBoot(){ // мгновенно показываем то, что запомнили в прошлый раз
   if(S.gm||!S.me)return;
-  try{const j=JSON.parse(localStorage.getItem('dw:gm:'+S.me.id)||'null');if(j&&j.rows)S.gm=gmIndex(j.rows)}catch(e){}
+  try{const j=JSON.parse(localStorage.getItem('dw:gm:'+S.me.id)||'null');if(j&&j.rows){S.gm=gmIndex(j.rows);S.gm.at=0}}catch(e){}
 }
 async function gmLoad(force){
   if(!S.me)return S.gm;

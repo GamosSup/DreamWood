@@ -56,7 +56,7 @@ async function todayView(){
    if(oi.length&&od<oi.length){const nxt=oi.filter(x=>!x.done).slice(0,2);h+=`<div class="card pad col" data-go="newbie" style="cursor:pointer;border:2px solid var(--sage)"><b>🌱 Первая неделя · ${od} из ${oi.length}</b>${todoBar(od,oi.length,1)}${nxt.map(x=>`<div class="muted">⬜ ${esc(x.title)}</div>`).join('')}</div>`}
    const tt=th.data||[];
    if(tt.length)h+=`<div class="card pad col" data-go="thanks" style="cursor:pointer;background:linear-gradient(120deg,#FBE9B7,#F8D3C0);border:0;color:#3B2A35"><b>💛 Тебе сказали спасибо</b>${tt.slice(0,2).map(x=>`<div>${x.sticker} <b>${esc(nameOf(x.from_user))}:</b> ${esc(x.body)}</div>`).join('')}</div>`}
-  if(window.gmLoad){gmLoad();gmSync()}
+  if(window.gmLoad){gmLoad();gmSync();if(window.gmPopups&&!S.gmPopQ){S.gmPopQ=1;setTimeout(()=>{S.gmPopQ=0;gmPopups()},2500)}}
   h+=gameCard();
   h+=dayNotesCard();
   // мои заявки и итоги месяца
