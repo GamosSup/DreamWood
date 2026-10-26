@@ -16,3 +16,11 @@ where not exists(select 1 from public.shift_lists where kind in('alpha_k','alpha
 -- Алексюк Игорь — Владелец (права руководителя)
 update public.roster set pre_role='manager', pre_position='Владелец' where full_name='Алексюк Игорь';
 update public.profiles set position='Владелец' where id in(select profile_id from public.roster where full_name='Алексюк Игорь' and profile_id is not null);
+
+-- Альфа хранителей: фрамуги (открыть при открытии, закрыть при закрытии)
+insert into public.shift_lists(title,kind,zone,items,sort)
+select v.t,'alpha_k',null,v.i,v.s from (values
+ ('Фрамуги · открытие',array['Открыть фрамуги'],105),
+ ('Фрамуги · закрытие',array['Закрыть фрамуги'],106)
+) as v(t,i,s)
+where not exists(select 1 from public.shift_lists where kind='alpha_k' and title=v.t);
