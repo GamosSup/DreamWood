@@ -1,4 +1,4 @@
-# Дримвуд на своём сервере: сайт + прокси к базе (Supabase) + остальное (файлы, пуши, шрифты) через Cloudflare-версию
+# Дримвуд на своём сервере: сайт + прокси к базе (Supabase) + облако (Google Drive) + шрифты
 {$DOMAIN} {
 	encode zstd gzip
 	root * /srv/dreamwood
@@ -15,10 +15,15 @@
 		}
 	}
 
-	# файлы/пуши через Cloudflare-версию с этого сервера недоступны (Cloudflare режется): пока отдаём 501, приложение само переходит на запасной путь
+	# облако (Google Drive): те же функции, что в Cloudflare-версии, запущены на этом сервере (deploy/server.js).
+	# Пока ключи Google не внесены, сервер отвечает 501 и приложение использует запасной путь.
 	handle /api/* {
-		header Content-Type "application/json; charset=utf-8"
-		respond `{"error":"not_configured"}` 501
+		reverse_proxy 127.0.0.1:8787 {
+			flush_interval -1
+			transport http {
+				response_header_timeout 15m
+			}
+		}
 	}
 
 	# скрипт supabase-js и шрифты лежат на самом сервере (скачиваются при установке)
