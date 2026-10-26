@@ -1,7 +1,9 @@
 const $=s=>document.querySelector(s),app=$('#app'),nav=$('#nav');
 const cfg=window.APP_CONFIG;
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const sb=supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
+// Все запросы идут через свой домен (/sb), чтобы сайт открывался, даже если supabase.co заблокирован; при сбое сети — запасной прямой путь
+const SB_PROXY=location.origin+'/sb';
+const sb=supabase.createClient(/^https?:$/.test(location.protocol)&&!/\.(test|localhost)$|^localhost$|^127\./.test(location.hostname)?SB_PROXY:cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY,{auth:{storageKey:'sb-bvlwpfmtcdgfsomvwqrp-auth-token'},global:{fetch:(u,o)=>fetch(u,o).catch(e=>{const s=String(u&&u.url||u);if(s.startsWith(SB_PROXY))return fetch(cfg.SUPABASE_URL+s.slice(SB_PROXY.length),o);throw e})}});
 const THEMES={autumn:['🍂','Осень'],winter:['❄️','Зима'],spring:['🌸','Весна'],summer:['☀️','Лето']};
 const getTheme=()=>{try{return localStorage.getItem('dw-theme')||'autumn-warm'}catch(e){return 'autumn-warm'}};
 function applyTheme(t){document.documentElement.dataset.theme=t;try{localStorage.setItem('dw-theme',t)}catch(e){}
