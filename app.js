@@ -206,7 +206,7 @@ VIEWS.team=()=>{if(!isAdmin())S.sub.team='contacts';return VIEWS[S.sub.team]()};
 function subBar(g,cur){const L={ap:[['req','📨','Заявки'],['fix','🛠','Поломки'],['inc','🚨','Происшествия'],['wo','🗑','Списание']],park:[['news','📰','Новости'],['afisha','🎟️','Афиша']],team:[['contacts','📞','Контакты'],...(isAdmin()?[['staff','👥','Сотрудники']]:[])]}[g];if(!L||L.length<2)return '';const b=S.badges||{};
   return `<div class="seg subbar">${L.map(([k,ic,n])=>`<button data-sub="${k}" class="${k===cur?'on':''}">${ic} ${n}${b[k]&&k!==cur?` <i class="sbn">${b[k]}</i>`:''}</button>`).join('')}</div>`}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-sub]');if(b&&S.me)go(b.dataset.sub)});
-const MORE_TABS=['shift','park','kb','team','grid','feedback','todo','set','newbie','thanks'];
+const MORE_TABS=['shift','park','kb','team','grid','feedback','todo','set','newbie','thanks','game'];
 const SUBG={req:'ap',fix:'ap',inc:'ap',wo:'ap',news:'park',afisha:'park',contacts:'team',staff:'team'};
 const onTab=k=>SUBG[k]?(S.tab===SUBG[k]&&S.sub[SUBG[k]]===k):S.tab===k;
 function go(t){if(SUBG[t]){S.sub[SUBG[t]]=t;t=SUBG[t]}if(!VIEWS[t]||(t==='dg'&&!isManager()))t='today';S.tab=t;S.offline=0;S.swapPending=1;document.body.dataset.tab=S.sub[t]||t;
@@ -281,7 +281,8 @@ const bell=()=>`<button class="bell" aria-label="Уведомления" onclick
 // Фото профиля
 const avUrl=p=>p?sb.storage.from('avatars').getPublicUrl(p).data.publicUrl:'';
 const av=(p,sz=40)=>{const u=avUrl(p&&p.avatar_url);const nm=(p&&p.full_name||'?').trim();const ini=nm.split(/\s+/).slice(0,2).map(w=>w[0]||'').join('').toUpperCase()||'?';
-  return u?`<img class="av" src="${esc(u)}" alt="" width="${sz}" height="${sz}" loading="lazy" style="width:${sz}px;height:${sz}px">`:`<span class="av ini" style="width:${sz}px;height:${sz}px;font-size:${Math.round(sz*.4)}px">${esc(ini)}</span>`};
+  const el=u?`<img class="av" src="${esc(u)}" alt="" width="${sz}" height="${sz}" loading="lazy" style="width:${sz}px;height:${sz}px">`:`<span class="av ini" style="width:${sz}px;height:${sz}px;font-size:${Math.round(sz*.4)}px">${esc(ini)}</span>`;
+  return typeof gmFrame==='function'?gmFrame(p,el):el};
 function avResize(file,n=256){return new Promise((ok,no)=>{const im=new Image(),u=URL.createObjectURL(file);im.onload=()=>{const s=Math.min(im.width,im.height),c=document.createElement('canvas');c.width=c.height=n;c.getContext('2d').drawImage(im,(im.width-s)/2,(im.height-s)/2,s,s,0,0,n,n);URL.revokeObjectURL(u);c.toBlob(b=>b?ok(b):no(new Error('Не получилось обработать фото')),'image/jpeg',.85)};im.onerror=()=>no(new Error('Не удалось открыть картинку'));im.src=u})}
 async function avSet(file){
   const old=S.me.avatar_url,path=S.me.id+'/'+Date.now()+'.jpg';
@@ -292,7 +293,7 @@ async function avSet(file){
   S.me.avatar_url=blob?path:null;
 }
 const head=(h,sub)=>`<div class="top"><div class="brand"><img class="lg" src="stickers/logo.webp" alt="Дримвуд"><div class="hi">Привет, ${esc(firstName())}! 👋</div></div><div class="topr"><button class="avb" aria-label="Мой профиль" onclick="go('set')">${av(S.me,40)}</button>${bell()}</div></div>${S.offline?`<div class="banner" style="background:#E6CC8F;color:#3B2A35;font-size:14px">📴 Нет сети — показаны сохранённые данные (от ${new Date(S.offline).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'})}). Менять что-либо пока нельзя.</div>`:''}${sub?`<div class="muted">${sub}</div>`:''}<h1>${h}</h1>`;
-const NI={mentor:'🌱',thanks:'💛',news:'📰',rotation:'🔄',afisha:'🎟️',signup:'🧑‍💼',task:'📋',request:'📨',incident:'🚨',shift:'💬',checkin:'☀️',repair:'🛠',feedback:'💡'};
+const NI={ach:'🏅',mentor:'🌱',thanks:'💛',news:'📰',rotation:'🔄',afisha:'🎟️',signup:'🧑‍💼',task:'📋',request:'📨',incident:'🚨',shift:'💬',checkin:'☀️',repair:'🛠',feedback:'💡'};
 const ago=d=>{const m=Math.round((Date.now()-new Date(d))/6e4);return m<1?'только что':m<60?m+' мин назад':m<1440?Math.floor(m/60)+' ч назад':new Date(d).toLocaleDateString('ru',{day:'numeric',month:'short'})};
 async function openBell(){
   const [n,r,ckq]=await Promise.all([sb.from('notifications').select('*').order('created_at',{ascending:false}).limit(50),sb.from('notif_reads').select('notif_id').eq('user_id',S.me.id),sb.from('checkins').select('day,at').eq('user_id',S.me.id).order('day',{ascending:false}).limit(40)]);
@@ -320,7 +321,7 @@ const hh=x=>{const m=x.split(':');return +m[0]+(+m[1])/60};
 const dayLabel=d=>new Date(d+'T12:00:00').toLocaleDateString('ru',{weekday:'short',day:'numeric',month:'short'});
 function parseRange(t){const m=String(t).match(/(\d{1,2}:\d{2})\s*[–-]\s*(\d{1,2}:\d{2})/);return m?[hh(m[1]),hh(m[2])]:[10,S.dayEnd||18]}
 function personTrack(p,r,c,a,b){
-  const span=b-a;let h=`<div style="display:flex;flex-direction:column;gap:4px"><div style="font-weight:700;font-size:14px">${esc(p.icon)} ${esc(p.name)}${p.senior?'<span class="sr">Старший</span>':''}${p.tag?`<span class="sr" style="background:#E8DCCB;color:#3B2A35">${esc(p.tag)}</span>`:''}</div>
+  const span=b-a;let h=`<div style="display:flex;flex-direction:column;gap:4px"><div style="font-weight:700;font-size:14px">${esc(p.icon)} ${typeof gmRowByName==='function'?gmRotName(p):esc(p.name)}${p.senior?'<span class="sr">Старший</span>':''}${p.tag?`<span class="sr" style="background:#E8DCCB;color:#3B2A35">${esc(p.tag)}</span>`:''}</div>
   <div class="track" style="--c:${c}"><div class="work"></div>`;
   const marks=[];
   (p.brks||[]).forEach(t=>{const m=t.match(/^(Ос|Пс|О|П)\s+(\d+:\d+)[–-](\d+:\d+)/);if(!m)return;const s0=hh(m[2]),e0=hh(m[3]);if(e0<=a||s0>=b)return;
@@ -691,6 +692,7 @@ async function settingsView(){
   let ct=null;if(adm){const r=await sb.from('app_settings').select('value').eq('key','checkin_time').maybeSingle();ct=r.data?.value||{h:9,m:30};const r2=await sb.from('app_settings').select('value').eq('key','shiftlist_time').maybeSingle();window._slt=r2.data?.value||{h:10,m:0}}
   let h=head('Настройки','Профиль и оформление');
   h+=`<div class="card pad"><b style="font-size:18px">${esc(S.me.full_name||'')}</b><div class="muted">${roleLbl(S.me)}${S.me.position&&S.me.position!==ROLE_RU[S.me.role]&&S.me.position!=='Владелец'?' · '+esc(S.me.position):''}${S.me.tab_no?` · табельный № ${esc(S.me.tab_no)}`:' · табельный номер пока не назначен'}</div></div>`;
+  h+=`<button class="card pad gmlink" data-go="game" style="display:flex;gap:10px;align-items:center;width:100%;text-align:left;cursor:pointer">${typeof gmLvChip==='function'&&gmMe()?gmLvChip(gmMe(),true):'🏅'}<span style="flex:1"><b>Мой профиль и достижения</b><br><span class="muted">Уровень, значки, рамка и цвет имени</span></span>›</button>`;
   h+=`<div class="card pad col"><b>📸 Фото профиля</b><div class="muted">Его увидят коллеги в контактах и в шапке. Подойдёт любое фото, оно само обрежется в круг.</div><div class="prow" style="align-items:center">${av(S.me,64)}<label class="btn ghost" style="display:flex;align-items:center;justify-content:center;min-height:44px;cursor:pointer;margin:0;flex:1">Выбрать фото<input id="st_av" type="file" accept="image/*" hidden></label>${S.me.avatar_url?'<button class="btn ghost" id="st_avd" style="flex:none">Убрать</button>':''}</div><div class="err" id="st_ave"></div></div>`;
   h+=`<div class="card pad"><b>Оформление</b><div class="muted">Четыре сезона, у каждого тёплый и холодный вариант</div>${Object.entries(THEMES).map(([k,[ic,n]])=>`<div class="trow"><span>${ic} ${n}</span>${[['warm','Тёплый'],['cold','Холодный']].map(([v,t])=>`<button class="tbtn ${cur===k+'-'+v?'on':''}" data-th="${k}-${v}"><i class="sw" data-theme="${k}-${v}"></i>${t}</button>`).join('')}</div>`).join('')}</div>`;
   h+=`<div class="card pad col"><b>🌙 Тёмная тема</b><div class="muted">Для вечерних смен и экономии заряда. Работает вместе с любым сезоном выше.</div><div class="seg" id="st_dk">${[['0','☀️ Светлая'],['1','🌙 Тёмная'],['auto','📱 Как на телефоне']].map(([v,n])=>`<button data-dk="${v}" class="${getDark()===v?'on':''}" style="font-size:13px">${n}</button>`).join('')}</div></div>`;
@@ -702,6 +704,7 @@ async function settingsView(){
   h+=`<button class="btn ghost" id="st_tour">🎮 Пройти обучение-игру ещё раз</button>`;
   h+=`<button class="btn ghost" id="out">Выйти из аккаунта</button>`;
   app.innerHTML=h;
+  app.querySelectorAll('[data-go]').forEach(c=>c.onclick=()=>go(c.dataset.go));
   window.pushMount&&pushMount();
   $('#st_tour')&&($('#st_tour').onclick=()=>window.tourStart&&tourStart());
   const avRun=async f=>{const er=$('#st_ave');er.style.color='';er.textContent='Загружаю…';try{await avSet(f);settingsView()}catch(e){er.textContent='Не получилось: '+(e.message||e)+(/avatar|bucket|not found|function/i.test(e.message||'')?' (в базе ещё не включены фото профиля)':'')}};
@@ -713,7 +716,7 @@ async function settingsView(){
   app.querySelectorAll('[data-pp]').forEach(c=>c.onchange=async()=>{const p={};app.querySelectorAll('[data-pp]').forEach(x=>p[x.dataset.pp]=x.checked);const r=await sb.rpc('set_my_push_prefs',{p});if(r.error){alert(r.error.message);c.checked=!c.checked;return}S.me.push_prefs=p});
   $('#st_lts')&&($('#st_lts').onclick=async e=>{const [h,m]=($('#st_lt').value||'10:00').split(':').map(Number);e.target.disabled=true;const r=await sb.rpc('set_shiftlist_time',{h,m});e.target.disabled=false;const er=$('#st_lte');er.style.color=r.error?'':'var(--ink)';er.textContent=r.error?r.error.message:'Сохранено: напоминание приходит в '+String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+' ✅'});
   $('#st_cts')&&($('#st_cts').onclick=async e=>{const [h,m]=($('#st_ct').value||'09:30').split(':').map(Number);e.target.disabled=true;const r=await sb.rpc('set_checkin_time',{h,m});e.target.disabled=false;const er=$('#st_cte');er.style.color=r.error?'':'var(--ink)';er.textContent=r.error?r.error.message:'Сохранено: теперь отметка приходит в '+String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+' ✅'});
-  app.querySelectorAll('[data-dk]').forEach(b=>b.onclick=()=>{const root=document.documentElement;root.classList.add('themeswap');try{localStorage.setItem('dw-dark',b.dataset.dk)}catch(e){}applyDark();
+  app.querySelectorAll('[data-dk]').forEach(b=>b.onclick=()=>{const root=document.documentElement;root.classList.add('themeswap');try{localStorage.setItem('dw-dark',b.dataset.dk)}catch(e){}applyDark();if(b.dataset.dk==='1'&&window.gmClaim)gmClaim('dark');
     app.querySelectorAll('[data-dk]').forEach(x=>x.classList.toggle('on',x===b));clearTimeout(window.__tsw);window.__tsw=setTimeout(()=>root.classList.remove('themeswap'),450)});
   app.querySelectorAll('[data-th]').forEach(b=>b.onclick=()=>{
     // тема меняется на месте: без перерисовки страницы и без прыжка наверх, с мягким перетеканием цветов

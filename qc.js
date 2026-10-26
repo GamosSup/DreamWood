@@ -19,6 +19,7 @@
     localStorage.setItem(skey(),JSON.stringify({t:Date.now(),m}))}catch(e){}},2500)};
   const gv={all:0};
   const clr=tb=>{gv.all++;if(tb)gv[tb]=(gv[tb]||0)+1;[...mem.keys()].forEach(k=>{if(!tb||k.startsWith(tb+'|'))mem.delete(k)});save()};
+  window.qcRerender=()=>rerender();
   window.qcClear=()=>{mem.clear();try{localStorage.removeItem(skey())}catch(e){}};
   const clone=r=>{try{return structuredClone(r)}catch(e){return JSON.parse(JSON.stringify(r))}};
   // экран обновляется сам, когда фоновая загрузка принесла другие данные
@@ -68,7 +69,7 @@
   }
   sb.from=tb=>recorder(tb);
   // rpc-запросы чаще всего меняют данные: сбрасываем кэш, кроме безобидных чтений
-  const RPC_READ=new Set(['my_roster_name','metro_for_day','mark_seen']);
+  const RPC_READ=new Set(['my_roster_name','metro_for_day','mark_seen','game_all','ach_sync','ach_stats','ach_claim']);
   sb.rpc=(n,a,o)=>{const p=origRpc(n,a,o);if(!RPC_READ.has(n))Promise.resolve(p).then(()=>clr(),()=>{});return p};
   sb.__qc=1;
 })();

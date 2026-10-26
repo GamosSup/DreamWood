@@ -1,0 +1,358 @@
+// Геймификация: опыт и 50 уровней, достижения, косметика профиля (рамка, цвет имени, фон, значок, титул)
+// Опыт считается на сервере из реальных данных (xp_of). Здесь только показ, выбор косметики и выдача значков руководителем.
+
+// ---------- уровни ----------
+// порог опыта для каждого из 50 уровней (первый элемент: уровень 1 = 0 очков). Около 2500 очков = 15 уровень = месяц работы «на все сто»
+const GM_LV=[0,100,210,330,460,600,750,900,1060,1250,1450,1660,1910,2200,2500,2900,3300,3850,4400,5000,5650,6350,7150,8050,8950,10000,11100,12300,13600,15000,16500,18050,19750,21600,23500,25500,27700,30000,32400,35000,37700,40700,43700,47000,50400,54000,57800,61700,65800,70000];
+const GM_RANKS=[
+  {n:'Новичок',full:'Новичок',c:'#6FB36B'},
+  {n:'Помощник',full:'Помощник маршрута «Семейный»',c:'#4A9BD9'},
+  {n:'Мастер',full:'Мастер',c:'#E0A92A'},
+  {n:'Герой',full:'Герой',c:'#8E5FE0'},
+  {n:'Легенда',full:'Легенда тематического парка',c:'#E8553D'}];
+const gmRankIdx=n=>Math.min(4,Math.floor((n-1)/10));
+function gmLv(xp){
+  xp=Math.max(0,+xp||0);let n=1;for(let i=0;i<GM_LV.length;i++)if(xp>=GM_LV[i])n=i+1;
+  const lo=GM_LV[n-1],hi=GM_LV[n];
+  return {n,r:gmRankIdx(n),xp,lo,hi:hi==null?null:hi,left:hi==null?0:hi-xp,pct:hi==null?100:Math.round((xp-lo)/(hi-lo)*100)};
+}
+// значок звания: у каждого звания свой силуэт и цвет
+const GM_SHAPE=[
+  '<path d="M8 23C8 14 14 9 24 9c0 9-5 14-13 14M8 24l7-8" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>',
+  '<path d="M11 26V6l12 5-12 5" fill="#fff" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/>',
+  '<path d="M16 6l3 6.5 7 .8-5.2 4.8 1.5 7L16 21.5 9.7 25.1l1.5-7L6 13.3l7-.8z" fill="#fff"/>',
+  '<path d="M18 5L9 18h6l-2 9 10-14h-6z" fill="#fff"/>',
+  '<path d="M16 4c1 5 7 7 7 14a7 7 0 01-14 0c0-3 2-5 3-7 1 2 2 3 3 3 0-3-1-6 1-10z" fill="#fff"/>'];
+const GM_BASE=[
+  '<circle cx="16" cy="16" r="15" fill="#6FB36B"/>',
+  '<path d="M16 1.5l12 7v15l-12 7-12-7v-15z" fill="#4A9BD9"/>',
+  '<path d="M16 1.5l12 7v15l-12 7-12-7v-15z" fill="#E0A92A"/>',
+  '<path d="M16 1.5l13 4v10c0 8-6 13-13 15-7-2-13-7-13-15v-10z" fill="#8E5FE0"/>',
+  '<path d="M16 1.5l13 4v10c0 8-6 13-13 15-7-2-13-7-13-15v-10z" fill="url(#gmfl)"/>'];
+const gmRankSvg=(r,sz=22)=>`<svg viewBox="0 0 32 32" width="${sz}" height="${sz}" aria-hidden="true">${r===4?'<defs><linearGradient id="gmfl" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF9A4D"/><stop offset="1" stop-color="#E0245E"/></linearGradient></defs>':''}${GM_BASE[r]}${GM_SHAPE[r]}</svg>`;
+// «Невозможный»: подпись вместо числа
+const gmLvChip=(row,big)=>{
+  if(!row)return '';
+  if(row.lvl_text)return `<span class="lvx${big?' big':''}" title="Уровень: ${esc(row.lvl_text)}">${esc(row.lvl_text)}</span>`;
+  const L=gmLv(row.xp);
+  return `<span class="lvb${big?' big':''}" style="--rc:${GM_RANKS[L.r].c}" title="${esc(GM_RANKS[L.r].full)} · уровень ${L.n}">${gmRankSvg(L.r,big?30:20)}<b>${L.n}</b></span>`;
+};
+
+// ---------- алмазный меч (оригинальный рисунок) ----------
+const GM_SWORD=`<svg viewBox="0 0 64 64" width="100%" height="100%" aria-hidden="true"><defs><linearGradient id="gmsw" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F0FFFD"/><stop offset=".45" stop-color="#5EEAD4"/><stop offset="1" stop-color="#0E8FA8"/></linearGradient></defs>
+<g transform="rotate(45 32 32)"><path d="M32 2L39 12V41L32 47L25 41V12Z" fill="url(#gmsw)" stroke="#0B6F85" stroke-width="1.6" stroke-linejoin="round"/><path d="M32 2L39 12V41L32 47Z" fill="#0B6F85" fill-opacity=".22"/><path d="M32 6V43" stroke="#fff" stroke-opacity=".75" stroke-width="1.6" stroke-linecap="round"/>
+<path d="M17 47Q32 40 47 47L44.5 52Q32 47 19.5 52Z" fill="#3B4066" stroke="#1F2342" stroke-width="1.4" stroke-linejoin="round"/><rect x="29.2" y="50" width="5.6" height="9" rx="2.4" fill="#7A4A8C" stroke="#3E2450" stroke-width="1.2"/><circle cx="32" cy="61" r="3" fill="#5EEAD4" stroke="#0B6F85" stroke-width="1.2"/></g>
+<path class="gmsp" d="M13 14l1.6 3.6L18 19l-3.4 1.4L13 24l-1.6-3.6L8 19l3.4-1.4z" fill="#fff"/><path class="gmsp b" d="M52 40l1.1 2.5 2.4 1-2.4 1L52 47l-1.1-2.5-2.4-1 2.4-1z" fill="#CFFAF3"/></svg>`;
+const gmIc=(ic,sz=28)=>ic==='sword'?`<span class="gmsw" style="width:${sz}px;height:${sz}px">${GM_SWORD}</span>`:`<span style="font-size:${Math.round(sz*.82)}px;line-height:1">${ic}</span>`;
+
+// ---------- достижения ----------
+const GM_GR=[['work','✅','Работа'],['days','☀️','Смены'],['hab','🔁','Привычки и дела'],['team','💛','Команда'],['park','🎡','Помощь парку'],['know','📚','Знания'],['fun','🎲','Весёлое'],['skill','🎟️','Допуски, обучения, события']];
+const GM_TIER=['','Простое','Обычное','Заметное','Трудное','Редкое'];
+const GM_TC=['','#9FB68C','#6AA9E0','#E3B53F','#A57BE8','#F26B4E'];
+// k и goal дублируют правила на сервере (ach_sync): по ним рисуются полоски прогресса
+const GM_ACH=[
+ {c:'chk1',g:'work',t:1,ic:'✅',n:'Первая отметка',d:'Отметь первый пункт в чек-листе смены',b:20,k:'chk',goal:1,title:'Новичок смены'},
+ {c:'chk100',g:'work',t:2,ic:'📋',n:'Сотня отметок',d:'100 пунктов чек-листов отмечено',b:60,k:'chk',goal:100,title:'Аккуратист'},
+ {c:'chk500',g:'work',t:3,ic:'🗒️',n:'Пятьсот отметок',d:'500 пунктов чек-листов',b:150,k:'chk',goal:500,title:'Хозяин чек-листов'},
+ {c:'chk1000',g:'work',t:4,ic:'🏅',n:'Тысяча отметок',d:'1000 пунктов чек-листов',b:300,k:'chk',goal:1000,title:'Порядок во всём'},
+ {c:'chk3000',g:'work',t:5,ic:'👑',n:'Три тысячи отметок',d:'3000 пунктов чек-листов: это настоящая преданность делу',b:600,k:'chk',goal:3000,title:'Хранитель порядка'},
+ {c:'day1',g:'days',t:1,ic:'☀️',n:'Первый выход',d:'Подтверди выход на смену первый раз',b:20,k:'days',goal:1},
+ {c:'day20',g:'days',t:2,ic:'📅',n:'Двадцать смен',d:'20 подтверждённых выходов',b:60,k:'days',goal:20,title:'Надёжный'},
+ {c:'day100',g:'days',t:3,ic:'🗓️',n:'Сто смен',d:'100 подтверждённых выходов',b:150,k:'days',goal:100,title:'Опора смены'},
+ {c:'day300',g:'days',t:5,ic:'🏔️',n:'Триста смен',d:'300 подтверждённых выходов',b:400,k:'days',goal:300,title:'Ветеран парка'},
+ {c:'hab1',g:'hab',t:1,ic:'🌱',n:'Первая привычка',d:'Отметь привычку в блокноте',b:15,k:'hab',goal:1},
+ {c:'hab7',g:'hab',t:2,ic:'🔥',n:'Неделя подряд',d:'Привычки 7 дней подряд',b:50,k:'hstreak',goal:7,title:'На огне'},
+ {c:'hab30',g:'hab',t:3,ic:'🌟',n:'Месяц подряд',d:'Привычки 30 дней подряд',b:150,k:'hstreak',goal:30,title:'Железная воля'},
+ {c:'hab100',g:'hab',t:5,ic:'💎',n:'Сто дней подряд',d:'Привычки 100 дней подряд. Это очень редко',b:500,k:'hstreak',goal:100,title:'Несгибаемый'},
+ {c:'todo25',g:'hab',t:2,ic:'📝',n:'Двадцать пять дел',d:'25 дел в блокноте закрыто',b:40,k:'todo',goal:25,title:'Организатор'},
+ {c:'todo250',g:'hab',t:4,ic:'🗂️',n:'Двести пятьдесят дел',d:'250 закрытых дел в блокноте',b:200,k:'todo',goal:250,title:'Мастер порядка'},
+ {c:'thx1',g:'team',t:1,ic:'💌',n:'Первое спасибо',d:'Скажи спасибо коллеге',b:15,k:'tsent',goal:1},
+ {c:'thx10',g:'team',t:2,ic:'💛',n:'Щедрая душа',d:'Скажи спасибо коллегам 10 раз',b:50,k:'tsent',goal:10,title:'Щедрая душа'},
+ {c:'got10',g:'team',t:3,ic:'🤝',n:'Любимчик команды',d:'Получи 10 благодарностей от коллег',b:100,k:'tgot',goal:10,title:'Любимчик команды'},
+ {c:'got50',g:'team',t:4,ic:'💖',n:'Сердце парка',d:'Получи 50 благодарностей',b:300,k:'tgot',goal:50,title:'Сердце парка'},
+ {c:'ot1',g:'park',t:1,ic:'🆘',n:'На подхвате',d:'Первая доработка или переработка',b:20,k:'otn',goal:1,title:'На подхвате'},
+ {c:'ot10',g:'park',t:2,ic:'⏱️',n:'Десять часов сверху',d:'10 часов доработок и переработок в сумме',b:60,k:'oth',goal:10},
+ {c:'ot40',g:'park',t:3,ic:'🎪',n:'Герой мероприятий',d:'40 часов доработок и переработок',b:150,k:'oth',goal:40,title:'Герой мероприятий'},
+ {c:'ot100',g:'park',t:4,ic:'🛡️',n:'Опора парка',d:'100 часов доработок и переработок',b:400,k:'oth',goal:100,title:'Опора парка'},
+ {c:'week1',g:'know',t:2,ic:'🎓',n:'Первая неделя пройдена',d:'Выполнен весь чек-лист новичка',b:60,k:'week',goal:1},
+ {c:'ment1',g:'know',t:3,ic:'🧭',n:'Наставник',d:'Твой подопечный прошёл первую неделю',b:120,k:'ment',goal:1,title:'Наставник'},
+ {c:'egg',g:'fun',t:2,ic:'🎈',n:'Нашёл секрет',d:'Подсказка: Дримми любит, когда его логотип трогают много раз подряд',b:25,claim:1,title:'Нашёл секрет'},
+ {c:'dark',g:'fun',t:1,ic:'🌙',n:'Тёмная сторона',d:'Включи тёмную тему в настройках',b:10,claim:1},
+ // выдаёт руководитель: стандартные обучения (остальное — допуски на аттракционы, события, особые значки)
+ {c:'trn:electro',g:'skill',t:4,ic:'⚡',n:'Электробезопасность',d:'Пройдено обучение, значок выдаёт руководитель',b:200,man:1,title:'Электробезопасность'},
+ {c:'trn:verkholaz',g:'skill',t:4,ic:'🧗',n:'Верхолаз',d:'Пройдено обучение, значок выдаёт руководитель',b:200,man:1,title:'Верхолаз'},
+ {c:'trn:rescue',g:'skill',t:4,ic:'🛟',n:'Спасатель-матрос',d:'Пройдено обучение, значок выдаёт руководитель',b:200,man:1,title:'Спасатель-матрос'},
+ {c:'trn:cash',g:'skill',t:3,ic:'💳',n:'Кассовая дисциплина',d:'Пройдено обучение, значок выдаёт руководитель',b:150,man:1,title:'Кассовая дисциплина'},
+ {c:'spec:admin_server',g:'skill',t:5,ic:'sword',n:'Админ на сервере',d:'Особый значок. Выдаёт админ, ничего лишнего не просит',b:500,man:1,secret:1,title:'Админ на сервере'}
+];
+const GM_BY=Object.fromEntries(GM_ACH.map(a=>[a.c,a]));
+// выданные вручную коды без записи в каталоге: допуски, события, особые
+function gmDef(a){ // a: {c,l} из выданных
+  const d=GM_BY[a.c];if(d)return {...d,n:d.n};
+  const k=a.c.split(':')[0],lbl=a.l||a.c.split(':')[1]||a.c;
+  if(k==='adm')return {c:a.c,g:'skill',t:3,ic:'🎟️',n:lbl,d:'Допуск к аттракциону',title:lbl};
+  if(k==='trn')return {c:a.c,g:'skill',t:4,ic:'🎓',n:lbl,d:'Пройденное обучение',title:lbl};
+  if(k==='evt')return {c:a.c,g:'skill',t:4,ic:'🎉',n:lbl,d:'Участие в мероприятии парка',title:lbl};
+  return {c:a.c,g:'skill',t:5,ic:'⭐',n:lbl,d:'Особый значок',title:lbl};
+}
+
+// ---------- косметика ----------
+// req: код достижения; 'adm*' — любой допуск; 'evt*' — любое мероприятие
+const GM_FRAMES=[['','Без рамки',null],['f_leaf','Росток','chk1'],['f_sky','Небо','day20'],['f_sun','Солнце','hab7'],['f_rose','Роза','thx10'],['f_gold','Золото','chk500'],['f_pass','Допуск','adm*'],['f_spark','Искры','chk1000'],['f_aurora','Северное сияние','got50'],['f_fire','Огненный ореол','chk3000'],['f_diamond','Алмазная','spec:admin_server']];
+const GM_NAMES=[['','Обычный',null],['n_green','Зелёный','hab1'],['n_blue','Синий','thx1'],['n_amber','Янтарный','day20'],['n_rose','Розовый','got10'],['n_grad','Градиент','chk500'],['n_shine','Блеск','chk1000'],['n_rainbow','Радужный','spec:admin_server']];
+const GM_BGS=[['','Без фона',null],['bg_forest','Осенний лес','week1'],['bg_water','Вода','ot1'],['bg_mount','Горы','day100'],['bg_sky','Небо с облаками','todo25'],['bg_dome','Купол','ment1'],['bg_night','Звёздная ночь','got50'],['bg_event','Праздничный','evt*']];
+const GM_COSL={frame:['Рамка вокруг фото',GM_FRAMES],name:['Цвет имени',GM_NAMES],bg:['Фон за фото',GM_BGS]};
+
+// ---------- данные ----------
+const gmKey=n=>norm(n).slice().sort().join(' ');
+function gmIndex(rows){
+  const by={},byName=new Map();
+  (rows||[]).forEach(r=>{by[r.id]=r;[r.rot_name,r.full_name].forEach(n=>{if(!n)return;const k=gmKey(n);if(k&&!byName.has(k))byName.set(k,r)})});
+  return {rows:rows||[],by,byName,at:Date.now()};
+}
+function gmBoot(){ // мгновенно показываем то, что запомнили в прошлый раз
+  if(S.gm||!S.me)return;
+  try{const j=JSON.parse(localStorage.getItem('dw:gm:'+S.me.id)||'null');if(j&&j.rows)S.gm=gmIndex(j.rows)}catch(e){}
+}
+async function gmLoad(force){
+  if(!S.me)return S.gm;
+  gmBoot();
+  if(!force){if(S.gm&&Date.now()-S.gm.at<45000)return S.gm;if(S.gmErr&&Date.now()-(S.gmTry||0)<120000)return S.gm}
+  if(S.gmP)return S.gmP;
+  S.gmTry=Date.now();
+  S.gmP=(async()=>{
+    try{
+      const r=await sb.rpc('game_all');
+      if(r.error){S.gmErr=r.error.message;return S.gm}
+      S.gmErr=null;
+      const old=S.gm?JSON.stringify(S.gm.rows.map(x=>[x.id,x.lvl_text,x.cos,gmLv(x.xp).n])):'';
+      const g=gmIndex(r.data||[]);S.gm=g;
+      try{localStorage.setItem('dw:gm:'+S.me.id,JSON.stringify({rows:g.rows}))}catch(e){}
+      gmLevelUp();
+      if(old&&old!==JSON.stringify(g.rows.map(x=>[x.id,x.lvl_text,x.cos,gmLv(x.xp).n]))&&window.qcRerender)qcRerender();
+    }catch(e){}finally{S.gmP=null}
+    return S.gm})();
+  return S.gmP;
+}
+const gmMe=()=>{gmBoot();return S.gm&&S.me?S.gm.by[S.me.id]||null:null};
+const gmHas=(row,req)=>{
+  if(!req)return true;const codes=(row?.ach||[]).map(a=>a.c);
+  return req.endsWith('*')?codes.some(c=>c.startsWith(req.slice(0,-1)+':')):codes.includes(req);
+};
+// косметика человека, очищенная от того, чего у него нет (например, значок отозвали)
+function gmCos(row){
+  const c=row?.cos||{},o={};
+  [['frame',GM_FRAMES],['name',GM_NAMES],['bg',GM_BGS]].forEach(([k,L])=>{const it=L.find(x=>x[0]===c[k]);if(it&&it[0]&&gmHas(row,it[2]))o[k]=it[0]});
+  if(c.badge&&(row.ach||[]).some(a=>a.c===c.badge))o.badge=c.badge;
+  if(c.title&&(row.ach||[]).some(a=>a.c===c.title))o.title=c.title;
+  return o;
+}
+const gmBadgeIc=(row,code)=>{const a=(row.ach||[]).find(x=>x.c===code);return a?gmDef(a).ic:''};
+const gmTitleTx=(row,code)=>{const a=(row.ach||[]).find(x=>x.c===code);if(!a)return '';const d=gmDef(a);return d.title||d.n};
+const gmRowOf=p=>{gmBoot();if(!S.gm){gmLoad();return null}return p&&p.id?S.gm.by[p.id]||null:null};
+const gmRowByName=n=>{gmBoot();if(!S.gm){gmLoad();return null}return n?S.gm.byName.get(gmKey(n))||null:null};
+// аватар с рамкой и фоном (вызывается из av())
+function gmFrame(p,el){
+  const row=gmRowOf(p);if(!row)return el;
+  const c=gmCos(row);if(!c.frame&&!c.bg)return el;
+  return `<span class="avw${c.frame?' fr '+c.frame:''}${c.bg?' bgx '+c.bg:''}">${el}</span>`;
+}
+// имя в ротации: у кого выбрана рамка или фон, перед именем появляется мини-фото
+function gmRotName(p){
+  const row=gmRowByName(p.name);if(!row)return esc(p.name);
+  const c=gmCos(row);
+  return `${c.frame||c.bg?av(row,22)+'<span class="avgap"></span>':''}${gmName(p.name,row)}`;
+}
+// имя: цвет, значок рядом, уровень
+function gmName(text,row,opt={}){
+  const t=esc(text);if(!row)return t;
+  const c=gmCos(row),ic=c.badge?gmBadgeIc(row,c.badge):'';
+  return `<span class="gnm${c.name?' '+c.name:''}">${t}</span>${ic?` <span class="gbd">${ic==='sword'?gmIc('sword',16):ic}</span>`:''}${opt.lv===false?'':` ${gmLvChip(row)}`}`;
+}
+const gmTitleHtml=row=>{if(!row)return '';const c=gmCos(row);return c.title?`<div class="gmtl">${esc(gmTitleTx(row,c.title))}</div>`:''};
+
+// ---------- события: новый уровень, новые достижения ----------
+function gmLevelUp(){
+  const me=gmMe();if(!me||me.lvl_text)return;
+  const n=gmLv(me.xp).n,key='dw-lv:'+S.me.id;let last=0;
+  try{last=+localStorage.getItem(key)||0;localStorage.setItem(key,String(n))}catch(e){}
+  if(last&&n>last){setTimeout(()=>{dwParty();toast(`🎉 Новый уровень: ${n}${gmRankIdx(n)>gmRankIdx(last)?' · '+GM_RANKS[gmRankIdx(n)].full:''}`,4200)},500)}
+}
+async function gmSync(gap=300000){
+  if(!S.me||Date.now()-(S.gmSyncAt||0)<gap)return;
+  S.gmSyncAt=Date.now();
+  try{
+    const r=await sb.rpc('ach_sync');if(r.error||!Array.isArray(r.data))return;
+    if(r.data.length){
+      r.data.slice(0,3).forEach((x,i)=>setTimeout(()=>{const d=GM_BY[x.c];toast(`🏅 Достижение: ${d?d.n:x.c} · +${x.b} очков`,3800)},i*1500));
+      dwParty();await gmLoad(true);if(window.qcRerender)qcRerender();
+    }
+  }catch(e){}
+}
+function gmClaim(code){
+  S.gmClaimed=S.gmClaimed||{};if(S.gmClaimed[code]||!S.me)return;S.gmClaimed[code]=1;
+  const have=(gmMe()?.ach||[]).some(a=>a.c===code);if(have)return;
+  sb.rpc('ach_claim',{p_code:code}).then(r=>{if(r.data===true){const d=GM_BY[code];toast(`🏅 Достижение: ${d?d.n:code} · +${d?d.b:0} очков`,3800);gmLoad(true)}},()=>{});
+}
+
+// ---------- карточка на «Сегодня» ----------
+function gameCard(){
+  const row=gmMe();if(!row)return '';
+  const L=gmLv(row.xp),cos=gmCos(row),have=(row.ach||[]).length;
+  return `<div class="card pad col gmc" data-go="game" style="cursor:pointer">
+    <div class="gmcr">${gmLvChip(row,true)}<div style="flex:1;min-width:0"><b>${row.lvl_text?esc(row.lvl_text):esc(GM_RANKS[L.r].full)}</b>${row.lvl_text?'':`<div class="muted">Уровень ${L.n}${L.hi?` · до следующего ${L.left} оч.`:' · максимум'}</div>`}</div><span class="muted" style="white-space:nowrap">🏅 ${have}</span></div>
+    ${row.lvl_text?'':`<div class="pgb"><div class="pg" style="width:${L.pct}%"></div></div>`}</div>`;
+}
+
+// ---------- экран «Мой профиль» ----------
+const gmTab=()=>S.gmTab||'ach';
+function gmHero(row){
+  const L=gmLv(row.xp),cos=gmCos(row);
+  return `<div class="card gmh"><div class="gmhr"><div>${av(S.me,84)}</div><div style="flex:1;min-width:0">
+    <div class="gmn">${gmName(S.me.full_name||'',row,{lv:false})}</div>${gmTitleHtml(row)}
+    <div style="margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">${gmLvChip(row,true)}${row.lvl_text?'':`<span><b>${esc(GM_RANKS[L.r].full)}</b><br><span class="muted">Уровень ${L.n} из 50</span></span>`}</div></div></div>
+    ${row.lvl_text?`<div class="muted" style="margin-top:8px">Всего очков: <b>${row.xp}</b></div>`:`<div class="pgb" style="margin-top:12px"><div class="pg" style="width:${L.pct}%"></div></div><div class="muted" style="margin-top:6px">${row.xp} очков${L.hi?` · до уровня ${L.n+1} осталось <b>${L.left}</b>`:' · максимальный уровень, ты легенда'}</div>`}</div>`;
+}
+async function gameView(){
+  S.offline=0;
+  await gmLoad(true);gmSync(30000);
+  const me=gmMe();
+  let h=head('Мой профиль','Опыт, уровень, достижения и твой образ');
+  if(!me){
+    h+=`<div class="card pad col"><b>Раздел почти готов 🙂</b><div class="muted">${S.gmErr&&!/does not exist|function|schema/i.test(S.gmErr)?esc(S.gmErr):'В базе ещё не включены уровни и достижения. Админ должен один раз запустить обновление базы, и всё заработает.'}</div></div>`;
+    app.innerHTML=h;return;
+  }
+  h+=gmHero(me);
+  const tabs=[['ach','🏅 Достижения'],['look','🎨 Мой образ'],['lv','📈 Уровни'],...(isManager()?[['mng','🎖 Выдать']]:[])];
+  h+=`<div class="tabs gmtabs">${tabs.map(([k,n])=>`<button data-gt="${k}" class="${gmTab()===k?'on':''}" style="background:var(--tab)">${n}</button>`).join('')}</div><div id="gm_body"></div>`;
+  app.innerHTML=h;
+  app.querySelectorAll('[data-gt]').forEach(b=>b.onclick=()=>{S.gmTab=b.dataset.gt;app.querySelectorAll('[data-gt]').forEach(x=>x.classList.toggle('on',x===b));gmPaint()});
+  gmPaint();
+}
+async function gmPaint(){
+  const box=$('#gm_body');if(!box)return;const t=gmTab();
+  if(t==='ach')await gmAchTab(box);else if(t==='look')gmLookTab(box);else if(t==='lv')gmLvTab(box);else gmMngTab(box);
+}
+
+// --- достижения ---
+async function gmAchTab(box){
+  const me=gmMe(),got=new Map((me.ach||[]).map(a=>[a.c,a]));
+  let st={};try{const r=await sb.rpc('ach_stats');st=r.data||{}}catch(e){}
+  const rew=c=>{const r=[];GM_FRAMES.concat(GM_NAMES,GM_BGS).forEach(x=>{if(x[2]===c)r.push(x)});return r.map(x=>(GM_FRAMES.includes(x)?'рамка':GM_NAMES.includes(x)?'цвет имени':'фон')+' «'+x[1]+'»').join(', ')};
+  // каталог + выданные вручную, которых нет в каталоге
+  const all=GM_ACH.filter(a=>!(a.secret&&!got.has(a.c))).map(a=>({...a}));
+  (me.ach||[]).forEach(a=>{if(!GM_BY[a.c])all.push(gmDef(a))});
+  const total=all.filter(a=>!a.man||got.has(a.c)).length,have=all.filter(a=>got.has(a.c)).length;
+  let h=`<div class="muted" style="margin:2px 2px 10px">Получено <b>${have}</b> из ${total}. За каждое достижение — бонус к очкам, а многие открывают рамки, цвета имени и фоны.</div>`;
+  h+=GM_GR.map(([g,ic,nm])=>{
+    const L=all.filter(a=>a.g===g).sort((a,b)=>a.t-b.t||(got.has(b.c)?1:0)-(got.has(a.c)?1:0));if(!L.length)return '';
+    const hv=L.filter(a=>got.has(a.c)).length;
+    return `<details class="area gmg" ${hv||g!=='skill'?'open':''}><summary class="ah" style="background:var(--tab)"><span class="ahn">${ic} ${nm}</span><span class="pill" style="background:#FFFDF9;align-self:center">${hv} / ${L.length}</span></summary><div class="gma">${L.map(a=>{
+      const o=got.get(a.c),cur=a.k?Math.min(+st[a.k]||0,a.goal):0,r=rew(a.c);
+      return `<div class="gat t${a.t}${o?' on':''}" style="--tc:${GM_TC[a.t]}"><div class="gai">${gmIc(a.ic,30)}</div><div class="gab"><b>${esc(a.n)}</b><div class="muted">${esc(a.d)}</div>
+        ${o?`<div class="gad">✓ ${new Date(o.t).toLocaleDateString('ru',{day:'numeric',month:'short',year:'numeric'})}${a.b?` · +${a.b} оч.`:''}</div>`:a.k&&!a.claim?`<div class="pgb sm"><div class="pg" style="width:${Math.round(cur/a.goal*100)}%"></div></div><div class="gad">${cur>=1e4?cur:Math.floor(cur*10)/10} из ${a.goal}${a.b?` · +${a.b} оч.`:''}</div>`:`<div class="gad">${a.man?'выдаёт руководитель':'секрет'}${a.b?` · +${a.b} оч.`:''}</div>`}
+        ${r?`<div class="gar">🎁 ${esc(r)}</div>`:''}<div class="gat-t">${GM_TIER[a.t]}</div></div></div>`}).join('')}</div></details>`}).join('');
+  box.innerHTML=h;
+}
+
+// --- мой образ ---
+function gmLookTab(box){
+  const me=gmMe();let cur={...(me.cos||{})};
+  const save=async(patch)=>{
+    cur={...cur,...patch};Object.keys(cur).forEach(k=>{if(!cur[k])delete cur[k]});
+    const r=await sb.rpc('set_my_cos',{p:cur});
+    if(r.error){toast('Не сохранилось: '+r.error.message,3500);return}
+    me.cos={...cur};try{localStorage.setItem('dw:gm:'+S.me.id,JSON.stringify({rows:S.gm.rows}))}catch(e){}
+    toast('Сохранено ✨',1400);paint();$('.gmh')&&($('.gmh').outerHTML=gmHero(me));
+  };
+  const reqName=req=>{if(!req)return '';if(req.endsWith('*'))return req==='adm*'?'любой допуск':'любое мероприятие';const a=GM_BY[req];return a?a.n:req};
+  const earned=(me.ach||[]).map(a=>gmDef(a));
+  const opt=(k,it)=>{
+    const [v,n,req]=it,ok=gmHas(me,req),on=(cur[k]||'')===v;
+    const pv=k==='frame'?`<span class="avw${v?' fr '+v:''}" style="margin:6px"><span class="av ini" style="width:30px;height:30px;font-size:12px">${esc((S.me.full_name||'?')[0])}</span></span>`
+      :k==='name'?`<span class="gnm ${v}" style="font-size:15px">Имя</span>`
+      :`<span class="bgsw ${v}"></span>`;
+    return `<button class="gop${on?' on':''}${ok?'':' lk'}" data-k="${k}" data-v="${v}" ${ok?'':'disabled'}><span class="gopv">${pv}</span><span class="gopn">${esc(n)}</span>${ok?'':`<span class="gopl">🔒 ${esc(reqName(req))}</span>`}</button>`;
+  };
+  const paint=()=>{
+    box.innerHTML=`<div class="muted" style="margin:2px 2px 10px">Выбери, как тебя видят коллеги: в контактах, ротации, благодарностях. Это просто красота, никаких прав и бонусов.</div>`+
+    Object.entries(GM_COSL).map(([k,[ttl,L]])=>`<div class="card pad col"><b>${ttl}</b><div class="gops">${L.map(it=>opt(k,it)).join('')}</div></div>`).join('')+
+    `<div class="card pad col"><b>Значок рядом с именем</b><div class="muted">Один любимый из заработанных.</div><div class="gops"><button class="gop${cur.badge?'':' on'}" data-k="badge" data-v=""><span class="gopv">—</span><span class="gopn">Без значка</span></button>${earned.map(d=>`<button class="gop${cur.badge===d.c?' on':''}" data-k="badge" data-v="${esc(d.c)}"><span class="gopv">${gmIc(d.ic,26)}</span><span class="gopn">${esc(d.n)}</span></button>`).join('')}</div></div>
+    <div class="card pad col"><b>Титул под именем</b><div class="muted">Короткая подпись из заработанного.</div><div class="gops"><button class="gop${cur.title?'':' on'}" data-k="title" data-v=""><span class="gopv">—</span><span class="gopn">Без титула</span></button>${earned.filter(d=>d.title).map(d=>`<button class="gop${cur.title===d.c?' on':''}" data-k="title" data-v="${esc(d.c)}"><span class="gopn" style="font-weight:800">${esc(d.title)}</span></button>`).join('')}</div></div>`;
+    box.querySelectorAll('.gop:not([disabled])').forEach(b=>b.onclick=()=>save({[b.dataset.k]:b.dataset.v}));
+  };
+  paint();
+}
+
+// --- уровни ---
+function gmLvTab(box){
+  const me=gmMe(),L=gmLv(me.xp);
+  let h=`<div class="card pad col"><b>Как копится опыт</b><div class="muted">Опыт копится навсегда. Он считается из того, что ты реально делаешь, поэтому повторное нажатие ничего не накручивает.</div>
+   <div class="gmrate">${[['✅','Пункт в чек-листе смены','5'],['☀️','Подтверждённый выход на смену','10'],['⏱️','Доработка: полчаса','10'],['🔥','Переработка: полчаса','5'],['🔁','Привычка выполнена','2'],['💌','Сказал спасибо','3'],['💛','Тебе сказали спасибо','10'],['🌱','Пункт «Первой недели»','5'],['🏅','Каждое достижение','бонус']].map(([i,t,v])=>`<div class="otr"><span>${i} ${t}</span><b>${v}${/^\d/.test(v)?' оч.':''}</b></div>`).join('')}</div>
+   <div class="muted">Доработки и переработки вместе дают не больше 100 очков в неделю: чтобы приложение не подталкивало работать лишнее. Некоторые источники ограничены в день.</div></div>`;
+  h+=GM_RANKS.map((r,i)=>{
+    const from=i*10+1,to=i*10+10,here=L.n>=from&&L.n<=to;
+    return `<details class="area gmg" ${here?'open':''}><summary class="ah" style="background:${r.c}22;border-left:5px solid ${r.c}"><span class="ahn">${gmRankSvg(i,26)} ${esc(r.full)}</span><span class="pill" style="background:#FFFDF9;align-self:center">${from}–${to}</span></summary><div class="gmlv">${Array.from({length:10},(_,j)=>{const n=from+j,x=GM_LV[n-1];return `<div class="${n===L.n?'cur':n<L.n?'done':''}"><b>${n}</b><span>${x} оч.</span></div>`}).join('')}</div></details>`}).join('');
+  box.innerHTML=h;
+}
+
+// --- выдача значков (руководитель) ---
+async function gmMngTab(box){
+  const rows=(S.gm.rows||[]).slice().sort((a,b)=>(a.full_name||'').localeCompare(b.full_name||'','ru'));
+  const adm=isAdmin();
+  const st=S.gmM=S.gmM||{type:'adm',who:''};
+  let zones=S.gmZones;
+  if(!zones){zones=[];try{const r=await sb.from('rotations').select('data').order('day',{ascending:false}).limit(1).maybeSingle();const z=new Set();Object.values(r.data?.data?.teams||{}).forEach(secs=>secs.forEach(s=>(s.rows||[]).forEach(x=>x.zone&&z.add(x.zone))));zones=[...z].sort((a,b)=>a.localeCompare(b,'ru'))}catch(e){}S.gmZones=zones}
+  const TYPES=[['adm','🎟️ Допуск'],['trn','🎓 Обучение'],['evt','🎉 Событие'],...(adm?[['spec','⭐ Особый']]:[])];
+  const personOpts=rows.map(r=>`<option value="${esc(r.full_name||'')}"></option>`).join('');
+  box.innerHTML=`<div class="card pad col"><b>🎖 Выдать значок</b><div class="muted">Допуски на аттракционы, пройденные обучения и участие в событиях. Человеку придёт уведомление и бонус к очкам.</div>
+   <input id="gm_p" list="gm_pl" placeholder="Кому: начни вводить имя" value="${esc(st.who)}" autocomplete="off"><datalist id="gm_pl">${personOpts}</datalist>
+   <div class="seg">${TYPES.map(([k,n])=>`<button data-gty="${k}" class="${st.type===k?'on':''}">${n}</button>`).join('')}</div>
+   <div id="gm_f"></div><div class="err" id="gm_e"></div><button class="btn" id="gm_go">Выдать</button></div>
+   <div id="gm_given"></div>
+   ${adm?`<div class="card pad col"><b>Подпись вместо уровня (админ)</b><div class="muted">Например, «Невозможный». Пусто — вернуть обычный уровень.</div><input id="gm_lp" list="gm_pl" placeholder="Кому"><input id="gm_lt" maxlength="24" placeholder="Подпись"><button class="btn ghost" id="gm_ls">Сохранить подпись</button><div class="err" id="gm_le"></div></div>`:''}`;
+  const who=()=>{const v=$('#gm_p').value.trim().toLowerCase();return rows.find(r=>(r.full_name||'').toLowerCase()===v)};
+  const slug=s=>String(s).toLowerCase().replace(/ё/g,'е').replace(/[^a-zа-я0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,50);
+  const form=()=>{
+    const f=$('#gm_f'),t=st.type;
+    f.innerHTML=t==='adm'?`<input id="gm_t" list="gm_zl" placeholder="К какому аттракциону допущен" autocomplete="off"><datalist id="gm_zl">${zones.map(z=>`<option value="${esc(z)}"></option>`).join('')}</datalist>`
+     :t==='trn'?`<select id="gm_t">${GM_ACH.filter(a=>a.c.startsWith('trn:')).map(a=>`<option value="${a.c}">${esc(a.n)}</option>`).join('')}<option value="">Другое обучение…</option></select><input id="gm_o" placeholder="Название обучения" hidden>`
+     :t==='evt'?`<input id="gm_t" placeholder="Название события, например «Хэллоуин 2026»" autocomplete="off">`
+     :`<input id="gm_t" placeholder="Название значка" autocomplete="off">`;
+    const s=$('#gm_t');if(t==='trn'){s.onchange=()=>{$('#gm_o').hidden=!!s.value}}
+  };
+  const given=()=>{
+    const r=who(),g=$('#gm_given');if(!r){g.innerHTML='';return}
+    const man=(r.ach||[]).filter(a=>/^(adm|trn|evt|spec):/.test(a.c));
+    g.innerHTML=`<div class="card pad col"><b>Уже выдано: ${esc(shortName(r.full_name))}</b>${man.length?man.map(a=>{const d=gmDef(a);return `<div class="otr"><span>${gmIc(d.ic,20)} ${esc(d.n)}</span><button class="btn ghost" style="min-height:34px;padding:0 12px" data-rv="${esc(a.c)}">Забрать</button></div>`}).join(''):'<div class="muted">Пока ничего.</div>'}</div>`;
+    g.querySelectorAll('[data-rv]').forEach(b=>b.onclick=async()=>{if(!confirm('Забрать значок «'+b.closest('.otr').textContent.replace('Забрать','').trim()+'»?'))return;const x=await sb.rpc('ach_revoke',{p_user:r.id,p_code:b.dataset.rv});if(x.error)return alert(x.error.message);await gmLoad(true);gmMngTab(box)});
+  };
+  form();given();
+  box.querySelectorAll('[data-gty]').forEach(b=>b.onclick=()=>{st.type=b.dataset.gty;st.who=$('#gm_p').value;box.querySelectorAll('[data-gty]').forEach(x=>x.classList.toggle('on',x===b));form()});
+  $('#gm_p').oninput=()=>{st.who=$('#gm_p').value;given()};
+  $('#gm_go').onclick=async e=>{
+    const er=$('#gm_e');er.style.color='';er.textContent='';
+    const r=who();if(!r)return er.textContent='Выбери человека из списка';
+    const t=st.type;let code,label,bonus;
+    if(t==='trn'){const v=$('#gm_t').value;if(v){const a=GM_BY[v];code=v;label=a.n;bonus=a.b}else{const o=$('#gm_o').value.trim();if(!o)return er.textContent='Впиши название обучения';code='trn:'+slug(o);label=o;bonus=200}}
+    else{const v=$('#gm_t').value.trim();if(!v)return er.textContent='Впиши название';
+      if(t==='adm'){code='adm:'+slug(v);label='Допущен: '+v;bonus=100}else if(t==='evt'){code='evt:'+slug(v);label=v;bonus=150}else{code='spec:'+slug(v);label=v;bonus=500}}
+    if(!slug(label.replace(/^Допущен:\s*/,'')))return er.textContent='Название должно содержать буквы или цифры';
+    e.target.disabled=true;
+    const x=await sb.rpc('ach_grant',{p_user:r.id,p_code:code,p_label:label,p_bonus:bonus});
+    e.target.disabled=false;
+    if(x.error)return er.textContent='Не получилось: '+x.error.message;
+    er.style.color='var(--ink)';er.textContent='Выдано: '+label+' → '+shortName(r.full_name)+' ✅';dwParty();
+    await gmLoad(true);given();
+  };
+  if(adm)$('#gm_ls').onclick=async e=>{
+    const er=$('#gm_le');er.style.color='';const v=$('#gm_lp').value.trim().toLowerCase(),r=rows.find(x=>(x.full_name||'').toLowerCase()===v);
+    if(!r)return er.textContent='Выбери человека из списка';
+    e.target.disabled=true;const x=await sb.rpc('set_lvl_text',{p_user:r.id,p_text:$('#gm_lt').value});e.target.disabled=false;
+    if(x.error)return er.textContent='Не получилось: '+x.error.message;
+    er.style.color='var(--ink)';er.textContent='Готово ✅';await gmLoad(true);if(r.id===S.me.id)gameView();
+  };
+}
+
+VIEWS.game=gameView;
+gmBoot();

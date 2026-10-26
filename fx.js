@@ -109,7 +109,7 @@ const dayJoke=(skip)=>{const d=new Date(),n=Math.floor((Date.UTC(d.getFullYear()
     clearTimeout(t);n++;t=setTimeout(()=>n=0,2200);
     if(n>=5){n=0;
       const m=document.createElement('img');m.src='stickers/mascot-balloon.webp';m.className='dwjump';m.alt='';document.body.appendChild(m);setTimeout(()=>m.remove(),1800);
-      dwParty();toast(dwPick(L),3200)}
+      dwParty();toast(dwPick(L),3200);window.gmClaim&&gmClaim('egg')}
   });
 })();
 
