@@ -140,9 +140,18 @@ const normPhone=v=>{let d=String(v||'').replace(/\D/g,'');if(d.length===11&&d[0]
 const phEmail=d=>d+'@dreamwood.pages.dev';
 function authView(mode,err,ok){
   nav.hidden=true;const reg=mode==='up';
-  app.innerHTML=`<div style="margin-top:24px"><div class="authhd"><img class="alogo" src="stickers/logo.webp" alt="Дримвуд — парк чудес и приключений"><img class="amas" src="stickers/mascot-hi.webp" alt=""></div><h1>Чудеса начинаются здесь</h1><p class="muted">Приложение команды парка: ротации, график, афиша и новости.</p></div>
-  <div class="seg"><button id="tin" class="${reg?'':'on'}">Вход</button><button id="tup" class="${reg?'on':''}">Регистрация</button></div>
-  ${reg?`<div class="two"><label>Имя<input id="fn" autocomplete="given-name" placeholder="Игорь"></label><label>Фамилия<input id="ln" autocomplete="family-name" placeholder="Шубчик"></label></div>
+  // оболочка (логотип, заголовок и переключатель «Вход / Регистрация») рисуется один раз; при переключении меняется только форма — страница не перезагружается
+  if(!$('#authform')){
+    app.innerHTML=`<div style="margin-top:24px"><div class="authhd"><img class="alogo" src="stickers/logo.webp" alt="Дримвуд — парк чудес и приключений"><img class="amas" src="stickers/mascot-hi.webp" alt=""></div><h1>Чудеса начинаются здесь</h1><p class="muted">Приложение команды парка: ротации, график, афиша и новости.</p></div>
+    <div class="seg"><button id="tin">Вход</button><button id="tup">Регистрация</button></div>
+    <div id="authform"></div>`;
+    $('#tin').onclick=()=>authView('in');$('#tup').onclick=()=>authView('up');
+  }
+  const was=$('#authform').dataset.mode,keep={};
+  ['ph','fn','ln','em'].forEach(i=>{const el=document.getElementById(i);if(el)keep[i]=el.value});
+  $('#tin').classList.toggle('on',!reg);$('#tup').classList.toggle('on',reg);
+  const box=$('#authform');box.dataset.mode=mode;
+  box.innerHTML=`${reg?`<div class="two"><label>Имя<input id="fn" autocomplete="given-name" placeholder="Игорь"></label><label>Фамилия<input id="ln" autocomplete="family-name" placeholder="Шубчик"></label></div>
   `:''}
   <label>${reg?'Телефон (это твой логин)':'Телефон'}<input id="ph" type="tel" autocomplete="${reg?'tel':'username'}" placeholder="+7 978 123-45-67"></label>
   ${reg?'<label>Почта (необязательно)<input id="em" type="email" autocomplete="email" placeholder="name@company.ru"></label>':''}
@@ -151,7 +160,9 @@ function authView(mode,err,ok){
   <button class="btn" id="go">${reg?'Отправить заявку':'Войти в приключение'}</button>
   <div class="muted" style="text-align:center">Не открывается или не входит? <a href="/diag">Проверить связь</a>${(cfg.ORIGINS||[]).filter(o=>o!==location.origin).map(o=>` · <a href="${o}">запасной адрес</a>`).join('')}</div>
   ${reg?'<div class="muted">Номер телефона — твой логин, почта не обязательна и нужна только для связи: мы ничего на неё не отправляем. Руководитель подтвердит доступ. Пароль знаешь только ты.</div>':'<div class="muted">Нет аккаунта? Открой «Регистрацию»: руководитель подтвердит заявку. Забыл пароль — напиши руководителю, он задаст новый.</div>'}`;
-  $('#tin').onclick=()=>authView('in');$('#tup').onclick=()=>authView('up');
+  // введённое не пропадает при переключении и при ошибке (кроме пароля)
+  Object.entries(keep).forEach(([i,v])=>{const el=document.getElementById(i);if(el)el.value=v});
+  if(was&&was!==mode){box.classList.remove('swap');void box.offsetWidth;box.classList.add('swap')}
   $('#go').onclick=async()=>{
     const password=$('#pw').value,ph=normPhone($('#ph').value),email=$('#em')?.value.trim()||'';
     if(!ph)return authView(reg?'up':'in','Введи номер телефона полностью, например +7 978 123-45-67');
