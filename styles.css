@@ -316,3 +316,11 @@ html.themeswap,html.themeswap *{transition:background-color .35s ease,color .35s
 /* v40: отметка переработки в календаре */
 .day .otm{font-style:normal;font-size:9px;font-weight:800;background:var(--pink);border-radius:6px;padding:0 4px;margin-top:1px;line-height:1.3}
 .gc .otb{position:absolute;left:0;bottom:0;font-size:8px;line-height:1;padding:1px 2px;border-radius:0 4px 0 0;background:var(--pink);color:var(--ink);font-weight:800}
+
+/* v41: Мой календарь */
+.day.tdy{border-color:var(--ink)}.day{position:relative}
+.pldw{display:flex;gap:2px;margin-top:1px}.pld{display:inline-block;width:6px;height:6px;border-radius:50%}.pld.dn{opacity:.3}
+.plr{display:flex;gap:10px;align-items:flex-start;padding:6px 0;border-top:1px solid var(--line)}.plr input{margin-top:4px}
+.plr .plb{flex:1;cursor:pointer}.plr.dn .plb b{text-decoration:line-through;color:var(--muted)}.plr.plo .plb b{color:#C0392B}
+.plk{display:inline-block;width:4px;height:12px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.plr input[type=checkbox]{width:22px;min-height:22px;height:22px;padding:0;flex:none;margin-top:2px;accent-color:#6E8B4E}
