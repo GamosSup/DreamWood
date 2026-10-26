@@ -43,7 +43,7 @@ function start(){
     <div class="thud"><span class="tstar">⭐ <b id="t_st">0</b></span><span class="tbar"><i id="t_bar"></i></span></div><div class="tbub" hidden></div>`;
   document.body.appendChild(ov);
   const dim=ov.querySelector('.tdim'),ring=ov.querySelector('.tring'),fin=ov.querySelector('.tfinger'),bub=ov.querySelector('.tbub');
-  const close=()=>{mark();cancelAnimationFrame(rafId);if(off)document.removeEventListener('click',off,true);ov.remove();try{if(window.go&&S.tab==='today')go('today')}catch(e){}};
+  const close=()=>{mark();cancelAnimationFrame(rafId);if(off)document.removeEventListener('click',off,true);ov.remove();try{if(window.go&&S.tab==='today')go('today')}catch(e){}setTimeout(()=>{S.gmPetShown=0;window.gmPopups&&gmPopups()},900)};
   // подсветка: тёмный слой с «дыркой» вокруг нужной кнопки (клики проходят только через дырку)
   let last='';
   function frame(){
@@ -108,6 +108,6 @@ function start(){
   rafId=requestAnimationFrame(frame);
   show(0);
 }
-window.tourStart=start;
+window.tourStart=start;window.tourSeen=seen;
 window.tourMaybe=()=>{if(!S.me||S.me.status!=='approved'||seen())return;setTimeout(()=>{if(S.me&&!seen()&&!document.getElementById('alov')&&!document.getElementById('tour'))start()},1200)};
 })();

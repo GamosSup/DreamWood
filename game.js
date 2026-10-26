@@ -197,10 +197,10 @@ async function gmSync(gap=300000){
     }
   }catch(e){}
 }
-function gmClaim(code){
+function gmClaim(code,silent){
   S.gmClaimed=S.gmClaimed||{};if(S.gmClaimed[code]||!S.me)return;S.gmClaimed[code]=1;
   const have=(gmMe()?.ach||[]).some(a=>a.c===code);if(have)return;
-  sb.rpc('ach_claim',{p_code:code}).then(r=>{if(r.data===true){gmSayAch([{c:code,b:(GM_BY[code]||{}).b||0}]);dwParty();gmLoad(true)}},()=>{});
+  sb.rpc('ach_claim',{p_code:code}).then(r=>{if(r.data===true){if(!silent){gmSayAch([{c:code,b:(GM_BY[code]||{}).b||0}]);dwParty()}gmLoad(true)}},()=>{});
 }
 
 // ---------- карточка на «Сегодня» ----------
@@ -462,42 +462,50 @@ const GM_PCOS=[
  {sp:'dragon',bk:'b_bat',ha:'h_crown',gl:'g_sun',mo:'m_g'}];
 const GM_PTAG={fox:'хитрый и шустрый',bear:'добряк и силач',bunny:'ловкая и быстрая',dragon:'огнедышащий, но добрый'};
 function gmPopups(){if(gmParadeOn())gmParadePopup();else gmPetPopup()}
+// приветственное окно ивента: у всех при первом заходе после обновления (новички видят его сразу после обучения)
 function gmParadePopup(tries=0){
   const me=gmMe();if(!me||!S.me||typeof petCfg!=='function'||S.gmPetShown)return;
-  const key='dw-parad:'+S.me.id;let n=0;try{n=+localStorage.getItem(key)||0}catch(e){}
-  const has=!!petCfg(me),claimed=(me.ach||[]).some(a=>a.c==='evt:parad');
-  if(has&&claimed)return;
-  if(n>=3)return;
-  if(document.querySelector('.ov,#tour,.alov,.ibox,.evtw')||S.tab==='game'&&S.gmTab==='pet'&&!has){if(tries<8)setTimeout(()=>gmParadePopup(tries+1),3000);return}
+  if(typeof tourSeen==='function'&&!tourSeen())return; // сначала обучение, после него окно вызовется само
+  if(document.getElementById('tour')||document.querySelector('.evtw'))return;
+  const key='dw-parad2:'+S.me.id;let n=0;try{n=+localStorage.getItem(key)||0}catch(e){}
+  const has=!!petCfg(me);
+  if(n>=(has?1:3))return; // с питомцем показываем один раз, без питомца напоминаем до трёх раз
+  if(document.querySelector('.ov,.alov,.ibox')){if(tries<10)setTimeout(()=>gmParadePopup(tries+1),2500);return}
   S.gmPetShown=1;try{localStorage.setItem(key,String(n+1))}catch(e){}
+  gmClaim('evt:parad',true); // набор выдаётся сразу
   const ev=document.createElement('div');ev.className='evtw';
   const flo=Array.from({length:16},(_,k)=>`<i style="left:${(k*29+7)%100}%;animation-delay:${(k%8)*.7}s;animation-duration:${6+(k%5)*1.3}s">${['🎃','👻','🦇','🕸️','🍬','🕯️','⭐'][k%7]}</i>`).join('');
   const parade=GM_PCOS.map((c,k)=>`<div class="evtp" style="animation-delay:${k*.35}s">${gmPet({},84,{cfg:{...PET_DEF,...c,bc:petBcOf(c.sp)},vb:[0,-70,320,500],bg:''})}</div>`).join('');
   const close=()=>{ev.classList.add('out');setTimeout(()=>ev.remove(),300);document.body.style.overflow=''};
+  const kit=`<div class="evtkit"><b>🎁 Тебе выдан праздничный набор</b><div class="evtchips"><span>🏅 значок «Парад кошмаров»</span><span>⭐ +150 очков</span><span>🧙 шляпа ведьмы</span><span>😈 рожки</span><span>🎃 тыква-шапка</span><span>🦇 крылья летучей мыши</span><span>🌃 праздничный фон</span></div></div>`;
   let pick='';
   const phase1=()=>{
     ev.innerHTML=`<div class="evtf">${flo}</div><div class="evtc">
-      <div class="evtk">СОБЫТИЕ ДРИМВУДА</div>
+      <div class="evtk">С ХЭЛЛОУИНОМ, ${esc(gmFirst()).toUpperCase()}!</div>
       <h1 class="evtt">Парад кошмаров</h1><div class="evts">Теперь мы — дримвудовые 🎃</div>
       <div class="evtpar">${parade}</div>
-      <div class="evtsay"><img src="stickers/mascot-hi.webp" alt="" width="64" height="64"><div class="dsb">Эй, ${esc(gmFirst())}! В Дримвуде начался Парад кошмаров, и у каждого из нас теперь есть <b>свой питомец</b>. Выбери того, с кем зашагаешь в параде!</div></div>
-      <div class="petch evtch">${PET_SP.map(([k,nm])=>`<button class="petc" data-sp="${k}"><span class="petcv">${gmPet({},84,{cfg:{...PET_DEF,sp:k,bc:petBcOf(k)},vb:GM_PETCROP,bg:''})}</span><b>${nm}</b><span class="evtg">${GM_PTAG[k]}</span></button>`).join('')}</div>
-      <button class="btn evtgo" id="ev_go" disabled>Выбери питомца</button>
-      <button class="tskip" id="ev_x">Выберу позже</button></div>`;
-    ev.querySelectorAll('[data-sp]').forEach(b=>b.onclick=()=>{pick=b.dataset.sp;ev.querySelectorAll('[data-sp]').forEach(x=>x.classList.toggle('on',x===b));const g=ev.querySelector('#ev_go');g.disabled=false;g.textContent='Вступить в парад 🎃';setTimeout(()=>g.scrollIntoView({block:'nearest',behavior:'smooth'}),50)});
+      <div class="evtsay"><img src="stickers/mascot-hi.webp" alt="" width="64" height="64"><div class="dsb">Поздравляю с Хэллоуином! В Дримвуде начался Парад кошмаров: теперь все мы дримвудовые, и у каждого есть <b>свой питомец</b>.${has?' Твой уже ждёт тебя в параде!':' Выбери того, с кем зашагаешь в параде!'}</div></div>
+      ${kit}
+      ${has?`<div class="evtbig" style="margin-top:2px">${gmPet({},150,{cfg:{...petCfg(me),ha:'h_witch'},vb:[0,-70,320,500],bg:''})}</div><button class="btn evtgo" id="ev_dress">Примерить костюмы 🎃</button><button class="tskip" id="ev_x">Спасибо, потом!</button>`
+      :`<div class="petch evtch">${PET_SP.map(([k,nm])=>`<button class="petc" data-sp="${k}"><span class="petcv">${gmPet({},84,{cfg:{...PET_DEF,sp:k,bc:petBcOf(k)},vb:GM_PETCROP,bg:''})}</span><b>${nm}</b><span class="evtg">${GM_PTAG[k]}</span></button>`).join('')}</div>
+      <button class="btn evtgo" id="ev_go" disabled>Выбери питомца</button><button class="tskip" id="ev_x">Выберу позже</button>`}
+      </div>`;
     ev.querySelector('#ev_x').onclick=close;
-    ev.querySelector('#ev_go').onclick=async e=>{
+    const dr=ev.querySelector('#ev_dress');if(dr)dr.onclick=()=>{close();S.gmTab='pet';go('game')};
+    ev.querySelectorAll('[data-sp]').forEach(b=>b.onclick=()=>{pick=b.dataset.sp;ev.querySelectorAll('[data-sp]').forEach(x=>x.classList.toggle('on',x===b));const g=ev.querySelector('#ev_go');g.disabled=false;g.textContent='Вступить в парад 🎃';setTimeout(()=>g.scrollIntoView({block:'nearest',behavior:'smooth'}),50)});
+    const go_=ev.querySelector('#ev_go');
+    if(go_)go_.onclick=async e=>{
       if(!pick)return;e.target.disabled=true;
-      const cur=petCfg(gmMe());const ok=await gmPetSave({...(cur||PET_DEF),sp:pick,bc:cur&&cur.bc!==petBcOf(cur.sp)?cur.bc:petBcOf(pick)});
+      const ok=await gmPetSave({...PET_DEF,sp:pick});
       if(!ok){e.target.disabled=false;return}
-      gmParadeClaim();dwParty();phase2();
+      dwParty();phase2();
     };
   };
   const phase2=()=>{
-    const me2=gmMe(),c=petCfg(me2)||{...PET_DEF,sp:pick,bc:petBcOf(pick)};
+    const c=petCfg(gmMe())||{...PET_DEF,sp:pick,bc:petBcOf(pick)};
     ev.querySelector('.evtc').innerHTML=`<div class="evtk">ТЫ В ПАРАДЕ!</div><h1 class="evtt" style="font-size:30px">Добро пожаловать, дримвудовец</h1>
       <div class="evtbig">${gmPet({},180,{cfg:{...c,ha:'h_witch'},vb:[0,-70,320,500],bg:''})}</div>
-      <div class="evtsay"><img src="stickers/mascot-hi.webp" alt="" width="64" height="64"><div class="dsb">Ура, ${esc(gmFirst())}! Теперь вы с питомцем в команде. За вступление тебе <b>значок «Парад кошмаров» и +150 очков</b>. А ещё открылись праздничные костюмы: шляпа ведьмы, рожки, тыква и крылья летучей мыши!</div></div>
+      <div class="evtsay"><img src="stickers/mascot-hi.webp" alt="" width="64" height="64"><div class="dsb">Ура, ${esc(gmFirst())}! Теперь вы с питомцем в команде. Праздничные костюмы уже открыты: шляпа ведьмы, рожки, тыква и крылья летучей мыши. Примерь их!</div></div>
       <button class="btn evtgo" id="ev_dress">Одеть питомца 🎃</button><button class="tskip" id="ev_x2">Позже</button>`;
     ev.querySelector('#ev_dress').onclick=()=>{close();S.gmTab='pet';go('game')};
     ev.querySelector('#ev_x2').onclick=close;
