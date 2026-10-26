@@ -151,7 +151,7 @@ function alertSheet(){
 }
 window.alertSheet=alertSheet;
 const alertCard=()=>isManager()?`<button class="alcard" id="td_alert"><span>🚨</span><span><b>Тревога</b><br><small>Предупредить всех сотрудников</small></span></button>`:'';
-setInterval(()=>{if(!document.hidden)alertCheck()},15000);
+setInterval(()=>{if(!document.hidden)alertCheck()},45000); // мгновенно приходит через realtime и пуш; опрос — страховка (реже, чтобы не нагружать сеть)
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)alertCheck()});
 setTimeout(alertCheck,2500);
 try{sb.channel('alerts-live').on('postgres_changes',{event:'INSERT',schema:'public',table:'alerts'},()=>alertCheck()).subscribe()}catch(e){}

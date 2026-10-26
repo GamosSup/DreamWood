@@ -22,11 +22,16 @@ async function apThread(box,kind,id){
   box.querySelector('#am_s').onclick=async e=>{const t=box.querySelector('#am_t').value.trim();if(!t)return;e.target.disabled=true;const r=await sb.from('ap_msgs').insert({kind,ref_id:id,body:t});if(r.error){e.target.disabled=false;return alert(r.error.message)}apThread(box,kind,id)};
 }
 const apStOpts=(D,cur,legacy)=>Object.entries(D).filter(([k])=>!legacy.includes(k)||k===cur).map(([k,v])=>`<option value="${k}" ${k===cur?'selected':''}>${v[0]}</option>`).join('');
+let peopleP=null;
 async function ensurePeople(force){
   if(!force&&S.dg.people&&S.dg.people.length&&S.dg.people[0].position!==undefined)return;
-  let r=await sb.from('profiles').select('id,full_name,tab_no,team,phone,role,position,avatar_url').eq('status','approved').order('full_name');
-  if(r.error)r=await sb.from('profiles').select('id,full_name,tab_no,team,phone,role,position').eq('status','approved').order('full_name');
-  S.dg.people=r.data||[];
+  if(peopleP&&!force)return peopleP; // одновременные вызовы делят один запрос
+  peopleP=(async()=>{
+    let r=await sb.from('profiles').select('id,full_name,tab_no,team,phone,role,position,avatar_url').eq('status','approved').order('full_name');
+    if(r.error)r=await sb.from('profiles').select('id,full_name,tab_no,team,phone,role,position').eq('status','approved').order('full_name');
+    S.dg.people=r.data||[];
+  })();
+  try{await peopleP}finally{peopleP=null}
 }
 function keepScroll(fn){const st=app.scrollTop;return Promise.resolve(fn()).then(()=>{app.scrollTop=st})}
 function downloadCSV(name,rows){

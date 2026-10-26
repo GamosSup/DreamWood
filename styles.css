@@ -264,3 +264,7 @@ body.hasal{padding-top:46px}
 .subbar{overflow-x:auto;scrollbar-width:none}.subbar::-webkit-scrollbar{display:none}.subbar button{flex:1 0 auto;padding:0 8px}
 
 .mpick{display:grid;grid-template-columns:1fr 1fr;gap:8px}.mpick button{min-height:52px;border:0;border-radius:16px;font-weight:700;color:var(--ink);text-align:left;padding:0 14px;transition:transform .15s}.mpick button.on{outline:3px solid var(--ink);transform:scale(1.02)}.mpick button:active{transform:scale(.96)}
+
+/* v36: заглушка при запуске и реакция кнопок */
+.sk{height:14px;border-radius:8px;background:linear-gradient(90deg,rgba(0,0,0,.06),rgba(0,0,0,.12),rgba(0,0,0,.06));background-size:200% 100%;animation:skm 1.2s ease-in-out infinite}
+@keyframes skm{0%{background-position:200% 0}100%{background-position:-200% 0}}

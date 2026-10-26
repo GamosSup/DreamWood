@@ -1,14 +1,15 @@
-const C='dw-v42';
+const C='dw-v43';
 self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(['./','index.html','styles.css','app.js','dgx.js','ext1.js','ext2.js','ext3.js','ext4.js','today.js','roted.js','xlsx.js','stickers/logo.webp','stickers/acorn.svg','stickers/balloon.svg','stickers/butterfly.svg','stickers/cherry.svg','stickers/cupcake.svg','stickers/drum.svg','stickers/flower.svg','stickers/leaf.svg','stickers/moon.svg','stickers/mushroom.svg','stickers/paw.svg','stickers/pumpkin.svg','stickers/rainbow.svg','stickers/snow.svg','stickers/star.svg','stickers/sun.svg','stickers/umbrella.svg','stickers/drop.svg','stickers/mountain.svg','stickers/wind.svg','stickers/city.svg','stickers/dome.svg','stickers/mascot-hi.webp','stickers/mascot-balloon.webp','stickers/sunglasses.webp','stickers/cloud.webp','stickers/tree.webp','stickers/smile.webp','stickers/sparkle.webp','stickers/burst.webp','stickers/bird.webp','stickers/heart.webp','stickers/thumb.webp','rep.js','push.js','config.js','manifest.webmanifest','icons/icon.svg'])));self.skipWaiting()});
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
-// Сеть с таймаутом: если сайт не ответил за 3 секунды, сразу отдаём сохранённую копию (при слабой связи или блокировках приложение всё равно открывается), а обновление докачивается в фоне
+// Сеть с таймаутом: если сайт не ответил за 1,2 секунды, сразу отдаём сохранённую копию (при слабой связи или блокировках приложение всё равно открывается), а обновление докачивается в фоне
 self.addEventListener('fetch',e=>{const q=e.request,u=new URL(q.url);
 if(q.method!=='GET'||u.origin!==location.origin||/^\/(api|sb)\//.test(u.pathname))return;
 e.respondWith((async()=>{
   const c=await caches.open(C),hit=await c.match(q,{ignoreSearch:q.mode==='navigate'});
   const net=fetch(q).then(r=>{if(r&&r.ok){c.put(q,r.clone())}return r});
   if(!hit)return net.catch(()=>caches.match('index.html'));
-  const slow=new Promise(res=>setTimeout(()=>res(hit),3000));
+  const slow=new Promise(res=>setTimeout(()=>res(hit),1200));
+  e.waitUntil(net.catch(()=>{}));
   return Promise.race([net.catch(()=>hit),slow]);
 })())});
 

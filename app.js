@@ -3,16 +3,19 @@ const cfg=window.APP_CONFIG;
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 // Все запросы идут через свой домен (/sb), чтобы сайт открывался, даже если supabase.co заблокирован; при сбое сети — запасной прямой путь
 const SB_PROXY=location.origin+'/sb';
-// запросы к базе: основной путь — свой домен; если он молчит дольше 6 с (или упал), параллельно пробуем прямой путь, берём тот, что ответил первым
+// запросы к базе: сначала путь, который в прошлый раз ответил (свой домен или прямой); если он молчит дольше 3 с — параллельно пробуем второй, берём тот, что ответил первым, и запоминаем его
+let ROUTE=(()=>{try{return localStorage.getItem('dw-route')==='direct'?'direct':'proxy'}catch(e){return 'proxy'}})();
 function sbFetch(u,o){
   const s=String(u&&u.url||u),direct=s.startsWith(SB_PROXY)?cfg.SUPABASE_URL+s.slice(SB_PROXY.length):null,m=String((o&&o.method)||(u&&u.method)||'GET').toUpperCase();
   const safe=m==='GET'||m==='HEAD'||/\/auth\/v1\/(token|user|logout)/.test(s);
-  const a=fetch(u,o);if(!direct)return a;
+  if(!direct)return fetch(u,o);
+  const P=[['proxy',u],['direct',direct]];if(ROUTE==='direct')P.reverse();
   return new Promise((res,rej)=>{let fin=0,fails=0,started=1,t=null;
-    const win=r=>{if(!fin){fin=1;clearTimeout(t);res(r)}};
-    const start2=()=>{if(started>1||fin)return;started=2;fetch(direct,o).then(win,lose)};
+    const run=i=>fetch(P[i][1],o).then(r=>win(r,P[i][0]),lose);
+    const win=(r,route)=>{if(fin)return;fin=1;clearTimeout(t);if(started>1&&route!==ROUTE){ROUTE=route;try{localStorage.setItem('dw-route',route)}catch(e){}}res(r)};
+    const start2=()=>{if(started>1||fin)return;started=2;run(1)};
     const lose=e=>{fails++;if(fails===1&&started===1)return start2();if(fails>=started&&!fin){fin=1;clearTimeout(t);rej(e)}};
-    a.then(win,lose);if(safe)t=setTimeout(start2,6000);
+    run(0);if(safe)t=setTimeout(start2,3000);
   });
 }
 const sb=supabase.createClient(/^https?:$/.test(location.protocol)&&!/\.(test|localhost)$|^localhost$|^127\./.test(location.hostname)?SB_PROXY:cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY,{auth:{storageKey:'sb-bvlwpfmtcdgfsomvwqrp-auth-token'},global:{fetch:sbFetch}});
@@ -86,19 +89,52 @@ async function cq(key,fn){
 }
 const clearCache=()=>{try{Object.keys(localStorage).filter(k=>k.startsWith('dw:')).forEach(k=>localStorage.removeItem(k))}catch(e){}};
 
-async function boot(){
+// запуск приложения для одобренного сотрудника (вынесено, чтобы использовать и при быстром старте, и при обычном)
+function startApp(){
+  nav.hidden=false;nav.querySelectorAll('[data-mgr]').forEach(b=>b.hidden=!isManager());nav.querySelectorAll('[data-lead]').forEach(b=>b.hidden=!canMng());go(S.tab);
+  const g=new URLSearchParams(location.search).get('go');if(g){history.replaceState(null,'',location.pathname);openLink(g)}
+  window.pushRefresh&&pushRefresh();
+}
+// последняя сохранённая сессия: читаем прямо из памяти телефона, не дожидаясь сети
+function storedUid(){
+  try{const j=JSON.parse(localStorage.getItem('sb-bvlwpfmtcdgfsomvwqrp-auth-token')||'null');return j&&j.user&&j.user.id&&j.refresh_token?j.user.id:null}catch(e){return null}
+}
+function bootSkeleton(){
+  if(app.innerHTML.trim())return;
+  app.innerHTML='<div class="card pad col" style="margin-top:28px"><div class="sk" style="width:55%;height:22px"></div><div class="sk" style="width:90%"></div><div class="sk" style="width:75%"></div></div><div class="card pad col"><div class="sk" style="width:40%;height:18px"></div><div class="sk" style="width:80%"></div></div>';
+}
+async function boot(sess){
   if(document.readyState==='loading')await new Promise(r=>document.addEventListener('DOMContentLoaded',r,{once:true}));
   if(cfg.SUPABASE_ANON_KEY.startsWith('ВСТАВЬ')){app.innerHTML='<div class="card pad">Нужно вставить anon key в config.js</div>';return}
-  const {data:{session}}=await sb.auth.getSession();
+  // быстрый старт: если телефон уже входил, показываем приложение сразу из сохранённого профиля, а проверку сессии и свежие данные догружаем в фоне
+  if(!sess&&!S.me){
+    const uid=storedUid();let c=null;
+    if(uid){try{c=JSON.parse(localStorage.getItem('dw:'+uid+':me'))}catch(e){}}
+    if(uid&&c&&c.d&&c.d.status==='approved'){
+      S.uid=uid;S.me=c.d;S.viewUser=uid;startApp();
+      (async()=>{
+        try{
+          const {data:{session}}=await sb.auth.getSession();
+          if(!session){S.me=null;clearCache();return authView('in','Нужно войти заново')}
+          const {data}=await cq('me',()=>sb.from('profiles').select('*').eq('id',uid).single());
+          if(!data)return;
+          const old=S.me;S.me=data;
+          if(data.status!=='approved')return pendingView();
+          if(old.role!==data.role||old.position!==data.position||old.team!==data.team){nav.querySelectorAll('[data-mgr]').forEach(b=>b.hidden=!isManager());nav.querySelectorAll('[data-lead]').forEach(b=>b.hidden=!canMng());if(!document.querySelector('.ov'))go(S.tab)}
+        }catch(e){}
+      })();
+      return;
+    }
+  }
+  bootSkeleton();
+  const session=sess||(await sb.auth.getSession()).data.session;
   if(!session)return authView('in');
   S.uid=session.user.id;
   const {data}=await cq('me',()=>sb.from('profiles').select('*').eq('id',session.user.id).single());
   S.me=data||{id:session.user.id,full_name:session.user.email,role:'employee',status:'pending'};
   S.viewUser=S.me.id;
   if(S.me.status!=='approved')return pendingView();
-  nav.hidden=false;nav.querySelectorAll('[data-mgr]').forEach(b=>b.hidden=!isManager());nav.querySelectorAll('[data-lead]').forEach(b=>b.hidden=!canMng());go(S.tab);
-  const g=new URLSearchParams(location.search).get('go');if(g){history.replaceState(null,'',location.pathname);openLink(g)}
-  window.pushRefresh&&pushRefresh();
+  startApp();
 }
 const normPhone=v=>{let d=String(v||'').replace(/\D/g,'');if(d.length===11&&d[0]==='8')d='7'+d.slice(1);if(d.length===10)d='7'+d;return d.length>=11&&d.length<=15?d:''};
 const phEmail=d=>d+'@dreamwood.pages.dev';
@@ -119,7 +155,14 @@ function authView(mode,err,ok){
   $('#go').onclick=async()=>{
     const password=$('#pw').value,ph=normPhone($('#ph').value),email=$('#em')?.value.trim()||'';
     if(!ph)return authView(reg?'up':'in','Введи номер телефона полностью, например +7 978 123-45-67');
-    if(!reg){const {error}=await sb.auth.signInWithPassword({email:phEmail(ph),password});return error?authView('in','Не получилось войти: проверь номер и пароль'):boot()}
+    if(!reg){
+      const btn=$('#go'),t0=btn.textContent;btn.disabled=true;btn.textContent='Входим…';
+      const slow=setTimeout(()=>{btn.textContent='Связь медленная, ещё пробуем…'},6000);
+      let r;try{r=await sb.auth.signInWithPassword({email:phEmail(ph),password})}catch(e){r={error:{message:String(e&&e.message||e)}}}
+      clearTimeout(slow);const {data,error}=r;
+      if(error){const net=!error.status||error.status>=500||/fetch|network|timeout|load failed/i.test(error.message||'');
+        return authView('in',net?'Нет связи с сервером. Подожди минуту и попробуй ещё раз или открой запасной адрес (ссылка ниже)':'Не получилось войти: проверь номер и пароль')}
+      return boot(data.session)}
     const fn=$('#fn').value.trim(),ln=$('#ln').value.trim();
     if(!fn||!ln)return authView('up','Укажи имя и фамилию');
     if(email&&!/^\S+@\S+\.\S+$/.test(email))return authView('up','Проверь почту или оставь поле пустым');
@@ -138,7 +181,7 @@ function pendingView(){
   <p class="muted">${rej?'Руководитель не подтвердил доступ. Если это ошибка, напиши ему напрямую.':`Привет, ${esc(firstName())}! Заявка отправлена руководителю. Как только он её подтвердит, откроются ротации, график и афиша.`}</p></div>
   <div class="card pad"><b>${esc(S.me.full_name||'')}</b><div class="muted">${esc(S.me.email||'')}</div></div>
   <button class="btn" id="chk">Проверить ещё раз</button><button class="btn ghost" id="out">Выйти</button>`;
-  $('#chk').onclick=boot;$('#out').onclick=()=>sb.auth.signOut().then(()=>{clearCache();S.me=null;boot()});
+  $('#chk').onclick=()=>boot();$('#out').onclick=()=>sb.auth.signOut().then(()=>{clearCache();S.me=null;boot()});
 }
 nav.onclick=e=>{const b=e.target.closest('button');if(b)go(b.dataset.tab)};
 const VIEWS={sch:schView,afisha:afishaView,dg:dgView,staff:staffView,set:settingsView};
@@ -152,7 +195,8 @@ const SUBG={req:'ap',fix:'ap',inc:'ap',wo:'ap',news:'park',afisha:'park',contact
 const onTab=k=>SUBG[k]?(S.tab===SUBG[k]&&S.sub[SUBG[k]]===k):S.tab===k;
 function go(t){if(SUBG[t]){S.sub[SUBG[t]]=t;t=SUBG[t]}if(!VIEWS[t]||(t==='dg'&&!isManager()))t='today';S.tab=t;S.offline=0;document.body.dataset.tab=S.sub[t]||t;
   nav.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t||(b.dataset.tab==='more'&&MORE_TABS.includes(t))));window.scrollTo(0,0);app.scrollTop=0;
-  Promise.resolve(VIEWS[t]()).then(refreshUnread)}
+  const v=Promise.resolve(VIEWS[t]());
+  if(Date.now()-(S.ruAt||0)>25000)refreshUnread();else v.then(()=>markSeen());return v}
 const NKNOWN=new Set(['req','fix','inc','wo','news','afisha','staff','rot','dg','shift','set','feedback']);
 const NLK=l=>{l=String(l||'');return l.startsWith('rot:')?'rot':l.startsWith('checkin')?'':l};
 const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}},lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
@@ -183,23 +227,30 @@ async function markSeen(){
 }
 async function refreshUnread(){
   if(!S.me||S.me.status!=='approved')return;
-  const [n,r,p]=await Promise.all([sb.from('notifications').select('id,kind,link'),sb.from('notif_reads').select('notif_id').eq('user_id',S.me.id),isAdmin()?sb.from('profiles').select('id',{count:'exact',head:true}).eq('status','pending'):Promise.resolve({count:0})]);
+  S.ruAt=Date.now();
+  const Q=p=>Promise.resolve(p).then(x=>x,e=>({error:e,data:null,count:0})),mgr=isManager(),td=iso(new Date());
+  let ks=lsGet('dw_seen_kb');if(!ks){ks=new Date().toISOString();lsSet('dw_seen_kb',ks);S.kbNew=0;ks=null}
+  // все независимые запросы идут одновременно (раньше шли цепочкой — это были лишние секунды на каждом переходе)
+  const [n,r,p,dq,rq,fx,kq,mq]=await Promise.all([
+    Q(sb.from('notifications').select('id,kind,link')),
+    Q(sb.from('notif_reads').select('notif_id').eq('user_id',S.me.id)),
+    Q(isAdmin()?sb.from('profiles').select('id',{count:'exact',head:true}).eq('status','pending'):{count:0}),
+    Q(mgr?sb.from('dg_tasks').select('id,title,deadline,assignees').eq('done',false).not('deadline','is',null):{data:[]}),
+    Q(sb.from('requests').select('id,status,peer_id').in('status',['peer','pending'])),
+    Q(mgr?sb.from('repairs').select('id',{count:'exact',head:true}).eq('status','new'):{count:0}),
+    Q(ks?sb.from('kb_pages').select('id,updated_by').gt('updated_at',ks):{data:[]}),
+    Q(sb.from('marks').select('day,kind').eq('user_id',S.me.id).gte('day',td).order('day'))]);
   if(!n.error&&!r.error){const seen=new Set((r.data||[]).map(x=>x.notif_id));const un=(n.data||[]).filter(x=>!seen.has(x.id));S.unread=un.length;S.nl=un.map(x=>({id:x.id,k:NLK(x.link)})).filter(x=>x.k)}
-  try{const today=iso(new Date());S.ckPending=false;
-    if(!n.error&&(n.data||[]).some(x=>x.kind==='checkin'&&x.link==='checkin:'+today)){const c=await sb.from('checkins').select('at').eq('user_id',S.me.id).eq('day',today).maybeSingle();S.ckPending=!c.data}}catch(e){}
-  try{if(!isManager())throw 0;const q=await sb.from('dg_tasks').select('id,title,deadline,assignees').eq('done',false).not('deadline','is',null);
-    const lim=iso(new Date(Date.now()+864e5));S.due=(q.data||[]).filter(t=>(t.assignees||[]).includes(S.me.id)&&t.deadline<=lim).sort((a,b)=>a.deadline<b.deadline?-1:1)}catch(e){S.due=[]}
+  S.ckPending=false;
+  try{if(!n.error&&(n.data||[]).some(x=>x.kind==='checkin'&&x.link==='checkin:'+td)){const c=await sb.from('checkins').select('at').eq('user_id',S.me.id).eq('day',td).maybeSingle();S.ckPending=!c.data}}catch(e){}
+  try{if(!mgr)throw 0;const lim=iso(new Date(Date.now()+864e5));S.due=(dq.data||[]).filter(t=>(t.assignees||[]).includes(S.me.id)&&t.deadline<=lim).sort((a,b)=>a.deadline<b.deadline?-1:1)}catch(e){S.due=[]}
   S.pending=p.count||0;
-  try{const q=await sb.from('requests').select('id,status,peer_id').in('status',['peer','pending']);
-    const rq=(q.data||[]).filter(x=>(x.status==='pending'&&canMng())||(x.status==='peer'&&x.peer_id===S.me.id)).length;
-    let fx=0;if(isManager()){const q2=await sb.from('repairs').select('id',{count:'exact',head:true}).eq('status','new');fx=q2.count||0}
-    S.act={req:rq,fix:fx,staff:S.pending}}catch(e){S.act=S.act||{}}
+  try{const n2=(rq.data||[]).filter(x=>(x.status==='pending'&&canMng())||(x.status==='peer'&&x.peer_id===S.me.id)).length;
+    S.act={req:n2,fix:mgr?(fx.count||0):0,staff:S.pending}}catch(e){S.act=S.act||{}}
   // «База знаний»: страницы, изменённые не мной после последнего просмотра
-  try{let ks=lsGet('dw_seen_kb');if(!ks){ks=new Date().toISOString();lsSet('dw_seen_kb',ks);S.kbNew=0}
-    else{const q=await sb.from('kb_pages').select('id,updated_by').gt('updated_at',ks);S.kbNew=(q.data||[]).filter(x=>x.updated_by!==S.me.id).length}}catch(e){S.kbNew=0}
+  if(ks)S.kbNew=kq.error?0:(kq.data||[]).filter(x=>x.updated_by!==S.me.id).length;
   // «График»: мои отметки с сегодняшнего дня изменились после последнего просмотра
-  try{const td=iso(new Date());const q=await sb.from('marks').select('day,kind').eq('user_id',S.me.id).gte('day',td).order('day');
-    if(!q.error){const cur={};(q.data||[]).forEach(x=>cur[x.day]=x.kind);S.schCur=cur;let old=null;try{old=JSON.parse(lsGet('dw_seen_sch')||'null')}catch(e){}
+  try{if(!mq.error){const cur={};(mq.data||[]).forEach(x=>cur[x.day]=x.kind);S.schCur=cur;let old=null;try{old=JSON.parse(lsGet('dw_seen_sch')||'null')}catch(e){}
       if(!old){lsSet('dw_seen_sch',JSON.stringify(cur));S.schNew=0}
       else{const days=new Set([...Object.keys(cur),...Object.keys(old).filter(d=>d>=td)]);let d=0;days.forEach(k=>{if(cur[k]!==old[k])d++});S.schNew=d}}}catch(e){S.schNew=0}
   paintBadges();paintBell();
@@ -617,7 +668,7 @@ async function settingsView(){
   app.querySelectorAll('[data-th]').forEach(b=>b.onclick=()=>{applyTheme(b.dataset.th);settingsView()});
   $('#out').onclick=()=>sb.auth.signOut().then(()=>{clearCache();S.me=null;S.unread=0;boot()});
 }
-sb.auth.onAuthStateChange(()=>{});
+sb.auth.onAuthStateChange(ev=>{if(ev==='SIGNED_OUT'&&S.me&&S.tab){S.me=null;S.tab='today';clearCache();authView('in','Сессия закончилась — войди заново')}});
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
 function openLink(l){if(!l)return;if(l==='alert'){window.alertCheck&&alertCheck();return}if(String(l).startsWith('checkin:'))return openBell();if(String(l).startsWith('rot:')){S.day=l.slice(4);go('rot')}else go(l)}
 if('serviceWorker'in navigator)navigator.serviceWorker.addEventListener('message',e=>{if(e.data&&e.data.go&&S.me)openLink(e.data.go)});

@@ -1,8 +1,15 @@
 // Главная «Сегодня»: моя смена, отметка выхода, быстрые кнопки, события дня, для руководителей — что требует внимания
 async function todayView(){
   const me=S.me.id,t=iso(new Date()),mgr=isManager(),tm=(()=>{const x=new Date(t+'T12:00:00');x.setDate(x.getDate()+1);return iso(x)})(),ym=t.slice(0,7),ms=ym+'-01';
-  if(S.rname===undefined){const r=await sb.rpc('my_roster_name');S.rname=r.error?null:(r.data||null)}
+  const rnameP=S.rname===undefined?Promise.resolve(sb.rpc('my_roster_name')).then(r=>{S.rname=r.error?null:(r.data||null)},()=>{}):null;
   const cnt=(tb,f)=>{let q=sb.from(tb).select('id',{count:'exact',head:true});return f(q).then(r=>r.count||0,()=>0)};
+  // блок руководителя считается одновременно с остальным (раньше ждал, пока загрузится всё остальное)
+  const admP=mgr?(async()=>{
+    await ensurePeople();
+    const [inc,sn,tm,cks]=await Promise.all([cnt('incidents',q=>q.eq('status','new')),cnt('shift_notes',q=>q.eq('day',t)),sb.from('marks').select('user_id').eq('day',t),sb.from('checkins').select('user_id').eq('day',t)]);
+    const total=(S.dg.people||[]).length,absent=(tm.data||[]).length;
+    return {inc,sn,total,work:Math.max(0,total-absent),ok:(cks.data||[]).length};
+  })().catch(()=>null):null;
   const [mk,ck,rt,ev,nw,rt2,rq,mm,ot,td]=await Promise.all([
     sb.from('marks').select('kind,note').eq('user_id',me).eq('day',t).maybeSingle(),
     sb.from('checkins').select('at').eq('user_id',me).eq('day',t).maybeSingle(),
@@ -14,13 +21,8 @@ async function todayView(){
     sb.from('marks').select('day,kind').eq('user_id',me).gte('day',ms).lte('day',ym+'-31'),
     sb.from('overtime').select('hours').eq('user_id',me).gte('day',ms).lte('day',ym+'-31'),
     sb.from('todos').select('done').eq('user_id',me)]);
-  let adm=null;
-  if(mgr){
-    await ensurePeople();
-    const [inc,sn,tm,cks]=await Promise.all([cnt('incidents',q=>q.eq('status','new')),cnt('shift_notes',q=>q.eq('day',t)),sb.from('marks').select('user_id').eq('day',t),sb.from('checkins').select('user_id').eq('day',t)]);
-    const total=(S.dg.people||[]).length,absent=(tm.data||[]).length;
-    adm={inc,sn,total,work:Math.max(0,total-absent),ok:(cks.data||[]).length};
-  }
+  if(rnameP)await rnameP;
+  const adm=admP?await admP:null;
   const rot=rt.data?.data,mine=rot&&window.myShift?myShift(rot):[],K=mk.data&&KINDS[mk.data.kind];
   const b=S.act||{};
   let h=head('Сегодня',dayLabel(t));
