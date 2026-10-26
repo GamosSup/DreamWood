@@ -38,10 +38,17 @@ mkdir -p /etc/caddy
 cp /srv/dreamwood/deploy/Caddyfile /etc/caddy/Caddyfile
 mkdir -p /etc/systemd/system/caddy.service.d
 printf '[Service]\nEnvironment=DOMAIN=%s\n' "$DOMAIN" > /etc/systemd/system/caddy.service.d/domain.conf
-# автообновление сайта из GitHub раз в 2 минуты
-cat > /etc/cron.d/dreamwood <<'CRON'
-*/2 * * * * root git -C /srv/dreamwood pull -q --ff-only >/dev/null 2>&1
-CRON
+# автообновление: сайт и конфигурация подтягиваются из GitHub раз в 2 минуты
+cat > /usr/local/bin/dw-update <<'UPD'
+#!/usr/bin/env bash
+git -C /srv/dreamwood pull -q --ff-only >/dev/null 2>&1 || exit 0
+if ! cmp -s /srv/dreamwood/deploy/Caddyfile /etc/caddy/Caddyfile; then
+  DOMAIN=$(sed -n 's/^Environment=DOMAIN=//p' /etc/systemd/system/caddy.service.d/domain.conf) caddy validate --config /srv/dreamwood/deploy/Caddyfile --adapter caddyfile >/dev/null 2>&1 \
+   && cp /srv/dreamwood/deploy/Caddyfile /etc/caddy/Caddyfile && systemctl reload caddy
+fi
+UPD
+chmod +x /usr/local/bin/dw-update
+echo '*/2 * * * * root /usr/local/bin/dw-update' > /etc/cron.d/dreamwood
 DOMAIN=$DOMAIN caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/tmp/caddy-validate.log 2>&1 || { echo '!! Ошибка в конфигурации Caddy:'; tail -5 /tmp/caddy-validate.log; exit 1; }
 systemctl daemon-reload
 systemctl enable --now caddy >/dev/null 2>&1

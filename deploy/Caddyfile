@@ -36,8 +36,8 @@
 		header Cache-Control "public, max-age=86400"
 		file_server
 	}
-	handle /v/f/* {
-		root * /srv/vendor
+	handle_path /v/f/* {
+		root * /srv/vendor/f
 		header Access-Control-Allow-Origin "*"
 		header Cache-Control "public, max-age=31536000, immutable"
 		file_server
