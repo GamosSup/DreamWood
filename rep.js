@@ -35,6 +35,7 @@ async function gridView(){
   all.sort((a,b)=>(a.team?ord[a.team]??8:9)-(b.team?ord[b.team]??8:9)||String(a.name).localeCompare(String(b.name),'ru'));
   const days=Array.from({length:n},(_,i)=>{const d=new Date(y,mo,i+1);return {i:i+1,iso:iso(d),wd:d.getDay()}});
   const today=iso(new Date()),ym=first.slice(0,7),title=gMonthName(G.month);
+  const parkH=days.reduce((a,d)=>{const p=parkOpen(d.iso);return a+(p?+p.hours:0)},0);
   const tc=t=>(TEAMS.find(x=>x[0]===t)||[0,0,'#ddd'])[2];
   const view=()=>{ // строки с учётом команды и поиска
     const toks=gNorm(G.q).split(/\s+/).filter(Boolean);
@@ -57,6 +58,7 @@ async function gridView(){
     if(G.mode==='sum'){
       const cs=rows.map(calc),sum=cs.reduce((a,c)=>{a.wd+=c.wd;a.sch+=c.sch;a.ot+=c.ot;a.tot+=c.tot;REP_K.forEach(k=>a[k]=(a[k]||0)+c.cnt[k]);return a},{wd:0,sch:0,ot:0,tot:0});
       body.innerHTML=`<div class="stat"><div style="background:var(--sage)"><b>${rows.length}</b>сотрудников</div><div style="background:var(--gold)"><b>${repFh(sum.sch)}</b>часов по графику</div></div>
+      <div class="stat"><div style="background:#E3EAD2"><b>${repFh(parkH)}</b>🌳 часов работы парка</div><div style="background:var(--card);border:1px solid var(--line)"><b>${rows.length?repFh(Math.round(sum.tot/rows.length*10)/10):0}</b>в среднем на человека</div></div>
       <div class="stat"><div style="background:var(--pink)"><b>${repFh(sum.ot)}</b>переработки</div><div style="background:var(--blue)"><b>${repFh(sum.tot)}</b>всего часов</div></div>
       <div class="card pad col"><div class="muted">${title}. Нажми на сотрудника — откроется его график. Дни без отметки считаются рабочими; отгул — как отработанный день, ДО — минус день; часы считаются по графику смен (9:30–20:30 с обедом и т.д.), у кого задана личная длина дня — по ней.${mgr?' Серым ○ отмечены те, кто ещё не зарегистрировался.':''}</div><div class="rtw"><table class="rt"><thead><tr><th>Сотрудник</th><th>Дней</th><th>Часы</th><th>Пер.</th><th>Итого</th>${REP_K.map(k=>`<th title="${KINDS[k][2]}">${KINDS[k][0]}</th>`).join('')}</tr></thead><tbody>
       ${cs.map(c=>`<tr data-k="${c.r.key}"><td>${esc(shortName(c.r.name))}${c.r.reg?'':' <span class="nr">○</span>'}<small>${c.r.team?TN[c.r.team]:''}</small></td><td>${c.wd}</td><td>${c.sch}</td><td>${c.ot?repFh(c.ot):'·'}</td><td><b>${repFh(c.tot)}</b></td>${REP_K.map(k=>`<td>${c.cnt[k]||'·'}</td>`).join('')}</tr>`).join('')||`<tr><td colspan="9" class="muted">Никого не нашли</td></tr>`}
@@ -67,12 +69,14 @@ async function gridView(){
     }
     const absent=d=>rows.filter(r=>{const m=r.marks[d.iso];return m&&m.kind!=='off'}).length,work=d=>rows.filter(r=>!r.marks[d.iso]).length;
     body.innerHTML=`<div class="gleg">${Object.entries(KINDS).map(([k,v])=>`<span style="background:${v[1]}"><b>${v[0]}</b> ${v[2]}</span>`).join('')}<span style="background:var(--card);border:1px solid var(--line)">пусто — работает</span><span style="background:var(--card);border:1px solid var(--line)"><i class="ckdot" style="margin:0 4px 0 0"></i>подтвердил выход</span></div>
-    <div class="card pad col"><div class="muted">Нажми на клетку — поставить или убрать отметку.${mgr?' Серым ○ отмечены те, кто ещё не зарегистрировался: их график тоже сохранён.':''}</div><div class="rtw gw"><table class="gt"><thead><tr><th class="gn">Сотрудник</th>${days.map(d=>`<th class="${d.wd%6===0?'we':''} ${d.iso===today?'td':''}">${d.i}<small>${GRID_WD[d.wd]}</small></th>`).join('')}<th>Раб.</th></tr></thead><tbody>
-    ${rows.map(r=>{const w=days.filter(d=>!r.marks[d.iso]).length;return `<tr><td class="gn"><i style="background:${tc(r.team)}"></i>${esc(shortName(r.name))}${r.reg?(r.ck.has(today)?'<span class="ckdot" title="Сегодня подтвердил(а) выход"></span>':''):'<small class="nr" title="ещё не зарегистрирован">○</small>'}</td>${days.map(d=>{const m=r.marks[d.iso],K=m&&KINDS[m.kind];return `<td class="gc ${d.wd%6===0?'we':''} ${d.iso===today?'td':''} ${r.ck.has(d.iso)?'ckd':''}" data-r="${r.key}" data-d="${d.iso}" ${K?`style="background:${K[1]}" title="${esc(K[2]+(m.note?': '+m.note:''))}"`:''}>${K?K[0]:''}</td>`}).join('')}<td class="gs">${w}</td></tr>`}).join('')||`<tr><td colspan="${n+2}" class="muted">Никого не нашли</td></tr>`}
-    </tbody><tfoot><tr><td class="gn">Работают</td>${days.map(d=>`<td class="gs">${work(d)}</td>`).join('')}<td></td></tr><tr><td class="gn">Подтвердили</td>${days.map(d=>`<td class="gs">${d.iso>today?'':(rows.filter(r=>r.ck.has(d.iso)).length||'·')}</td>`).join('')}<td></td></tr><tr><td class="gn">Отсутствуют</td>${days.map(d=>`<td class="gs">${absent(d)||'·'}</td>`).join('')}<td></td></tr></tfoot></table></div></div>`;
+    <div class="card pad col"><div class="muted">Нажми на клетку — поставить или убрать отметку.${mgr?' Серым ○ отмечены те, кто ещё не зарегистрировался: их график тоже сохранён.':''}</div><div class="rtw gw"><table class="gt"><thead><tr><th class="gn">Сотрудник</th>${days.map(d=>`<th class="${d.wd%6===0?'we':''} ${d.iso===today?'td':''}">${d.i}<small>${GRID_WD[d.wd]}</small></th>`).join('')}<th>Раб.</th><th title="Часов за месяц: по графику + переработки">Часы</th></tr></thead><tbody>
+    <tr class="gpark"><td class="gn" title="Часы работы парка по периодам графика">🌳 Парк, ч</td>${days.map(d=>{const p=parkOpen(d.iso);return `<td class="gs ${d.wd%6===0?'we':''}" ${p?`title="${esc(perLabel(d.iso))}"`:''}>${p?repFh(+p.hours):'·'}</td>`}).join('')}<td class="gs">${days.filter(d=>parkOpen(d.iso)).length||'·'}</td><td class="gs"><b>${repFh(parkH)}</b></td></tr>
+    ${rows.map(r=>{const w=days.filter(d=>!r.marks[d.iso]).length,c=calc(r);return `<tr><td class="gn" data-hn="${r.key}"><i style="background:${tc(r.team)}"></i>${esc(shortName(r.name))}${r.reg?(r.ck.has(today)?'<span class="ckdot" title="Сегодня подтвердил(а) выход"></span>':''):'<small class="nr" title="ещё не зарегистрирован">○</small>'}</td>${days.map(d=>{const m=r.marks[d.iso],K=m&&KINDS[m.kind];return `<td class="gc ${d.wd%6===0?'we':''} ${d.iso===today?'td':''} ${r.ck.has(d.iso)?'ckd':''}" data-r="${r.key}" data-d="${d.iso}" ${K?`style="background:${K[1]}" title="${esc(K[2]+(m.note?': '+m.note:''))}"`:''}>${K?K[0]:''}</td>`}).join('')}<td class="gs">${w}</td><td class="gs gh" data-hn="${r.key}" title="Нажми — подробности по часам"><b>${repFh(c.tot)}</b></td></tr>`}).join('')||`<tr><td colspan="${n+3}" class="muted">Никого не нашли</td></tr>`}
+    </tbody><tfoot><tr><td class="gn">Работают</td>${days.map(d=>`<td class="gs">${work(d)}</td>`).join('')}<td></td><td></td></tr><tr><td class="gn">Подтвердили</td>${days.map(d=>`<td class="gs">${d.iso>today?'':(rows.filter(r=>r.ck.has(d.iso)).length||'·')}</td>`).join('')}<td></td></tr><tr><td class="gn">Отсутствуют</td>${days.map(d=>`<td class="gs">${absent(d)||'·'}</td>`).join('')}<td></td><td class="gs"><b>${repFh(rows.reduce((a,r)=>a+calc(r).tot,0))}</b></td></tr></tfoot></table></div></div>`;
     const wrap=body.querySelector('.gw');
     if(G.sx!=null)wrap.scrollLeft=G.sx;else{const t=wrap.querySelector('th.td');if(t)wrap.scrollLeft=Math.max(0,t.offsetLeft-120)}
     wrap.onscroll=()=>{G.sx=wrap.scrollLeft};
+    body.querySelectorAll('[data-hn]').forEach(td=>td.onclick=()=>hoursSheet(byKey.get(td.dataset.hn),calc,title,parkH,days));
     body.querySelectorAll('td.gc').forEach(td=>td.onclick=()=>{const r=byKey.get(td.dataset.r);gridEdit(r,td.dataset.d,r.marks[td.dataset.d])});
   };
   paint();
@@ -94,13 +98,14 @@ async function gridXlsx(o){
   const H={b:1,bg:'#EFE6D8',al:'c',vt:'m',bd:1,wrap:1},B={bd:1,al:'c'},NM={bd:1,al:'l'};
   const cs=rows.map(calc);
   // --- «График»
-  const last=2+n+1,L=xlsxCol(last-1);
+  const Lw=xlsxCol(2+n),L=xlsxCol(2+n+1),parkH=days.reduce((a,d)=>{const p=parkOpen(d.iso);return a+(p?+p.hours:0)},0);
   const g=[[{v:'График работы — '+title,s:{b:1,sz:16}}],[{v:sub+' · выгружено '+when,s:{color:'#7A6A5A'}}],
-    [{v:'Сотрудник',s:H},{v:'Команда',s:H},...days.map(d=>({v:d.i,s:{...H,bg:d.wd%6===0?'#E3D2B5':'#EFE6D8'}})),{v:'Раб. дней',s:H}],
-    ['','',...days.map(d=>({v:GRID_WD[d.wd],s:{...H,bg:d.wd%6===0?'#E3D2B5':'#EFE6D8'}})),'']];
+    [{v:'Сотрудник',s:H},{v:'Команда',s:H},...days.map(d=>({v:d.i,s:{...H,bg:d.wd%6===0?'#E3D2B5':'#EFE6D8'}})),{v:'Раб. дней',s:H},{v:'Часов',s:H}],
+    ['','',...days.map(d=>({v:GRID_WD[d.wd],s:{...H,bg:d.wd%6===0?'#E3D2B5':'#EFE6D8'}})),'','']];
+  g.push([{v:'🌳 Парк, часов работы',s:{...NM,b:1,bg:'#E3EAD2'}},{v:'',s:{...B,bg:'#E3EAD2'}},...days.map(d=>{const p=parkOpen(d.iso);return {v:p?+p.hours:'',s:{...B,bg:'#E3EAD2'}}}),{v:days.filter(d=>parkOpen(d.iso)).length,s:{...B,bg:'#E3EAD2'}},{v:parkH,s:{...B,b:1,bg:'#E3EAD2'}}]);
   rows.forEach((r,i)=>g.push([{v:r.name+(r.reg?'':' (не зарегистрирован)'),s:NM},{v:r.team?TN[r.team]:'',s:NM},
     ...days.map(d=>{const m=r.marks[d.iso],K=m&&KINDS[m.kind];return K?{v:K[0],s:{...B,b:1,sz:10,bg:K[1]}}:{v:'',s:{...B,bg:d.wd%6===0?'#F4EEE4':undefined}}}),
-    {v:days.filter(d=>!r.marks[d.iso]).length,s:B}]));
+    {v:days.filter(d=>!r.marks[d.iso]).length,s:B},{v:calc(r).tot,s:{...B,b:1}}]));
   
   const colSum=(label,fn)=>[{v:label,s:{b:1}},'',...days.map((d,i)=>({v:fn(d),f:null,s:{al:'c',color:'#7A6A5A'}}))];
   g.push([]);
@@ -109,7 +114,7 @@ async function gridXlsx(o){
   g.push([]);g.push([{v:'Обозначения:',s:{b:1}}]);
   Object.values(KINDS).forEach(v=>g.push([{v:v[0]+' — '+v[2],s:{bg:v[1]}}]));
   g.push(['пусто — рабочий день']);
-  const sheet1={name:'График',rows:g,cols:[38,14,...days.map(()=>4.6),10],merges:['A1:'+L+'1','A2:'+L+'2','A3:A4','B3:B4',L+'3:'+L+'4'],freeze:{x:2,y:4},landscape:true,heights:{3:20,4:18}};
+  const sheet1={name:'График',rows:g,cols:[38,14,...days.map(()=>4.6),10,9],merges:['A1:'+L+'1','A2:'+L+'2','A3:A4','B3:B4',Lw+'3:'+Lw+'4',L+'3:'+L+'4'],freeze:{x:2,y:4},landscape:true,heights:{3:20,4:18}};
   // --- «Сводка»
   const tot=k=>cs.reduce((a,c)=>a+(typeof k==='function'?k(c):0),0);
   const colL=i=>xlsxCol(i);
@@ -125,6 +130,22 @@ async function gridXlsx(o){
   const sheet3={name:'Переработки',rows:r3,cols:[12,12,28,16,8,40],freeze:{y:1}};
   const blob=new Blob([makeXlsx([sheet1,sheet2,sheet3])],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`График ${ym}${team?' '+TN[team]:''}.xlsx`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
+}
+function hoursSheet(r,calc,title,parkH,days){
+  if(!r)return;const c=calc(r),pd=days.filter(d=>parkOpen(d.iso)).length;
+  dgxSheet('⏱ '+esc(shortName(r.name)),box=>{
+    const mx=Math.max(parkH,c.tot,1);
+    box.innerHTML=`<div class="muted">${title}${r.team?' · '+TN[r.team]:''} · длина смены: ${repFh(r.len)} ч${r.lenSet?'':' (по периодам графика)'}</div>
+    <div class="stat"><div style="background:var(--gold)"><b>${repFh(c.sch)}</b>часов по графику</div><div style="background:var(--pink)"><b>${repFh(c.ot)}</b>переработки</div></div>
+    <div class="stat"><div style="background:var(--sage)"><b>${repFh(c.tot)}</b>всего часов</div><div style="background:#E3EAD2"><b>${repFh(parkH)}</b>🌳 часов парка</div></div>
+    <div class="hbar"><i style="width:${Math.min(100,c.tot/mx*100)}%"></i></div>
+    <div class="otr"><span>Рабочих дней</span><b>${c.wd}</b></div>
+    ${REP_K.filter(k=>c.cnt[k]).map(k=>`<div class="otr"><span>${KINDS[k][0]} ${KINDS[k][2]}</span><b>${c.cnt[k]}</b></div>`).join('')}
+    <div class="otr"><span>Дней работы парка</span><b>${pd}</b></div>
+    <div class="muted">Дни без отметки считаются рабочими; отгул — как отработанный день, ДО — минус день. Часы парка — по периодам графика (раздел «График»).</div>
+    <button class="btn ghost" id="hs_o">Открыть график сотрудника</button>`;
+    box.querySelector('#hs_o').onclick=()=>{document.querySelector('.ov #bk')?.click();if(r.reg){S.viewUser=r.id;S.month=new Date(days[0].iso+'T12:00:00');S.sel=null;go('sch')}};
+  });
 }
 function gridEdit(r,day,cur){
   dgxSheet(`${esc(shortName(r.name))} · ${dayLabel(day)}`,(box,paint,close)=>{

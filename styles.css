@@ -217,3 +217,48 @@ details.area .card{margin:0}
 .avb{background:none;border:0;padding:0;border-radius:50%;cursor:pointer;line-height:0}
 .av{border-radius:50%;object-fit:cover;flex:none;display:inline-block;border:2px solid #fff;box-shadow:0 1px 4px rgba(60,40,50,.25);background:#fff}
 .av.ini{display:inline-flex;align-items:center;justify-content:center;font-weight:800;background:var(--sage,#C9D4B0);color:#3B2A35}
+
+/* ===== v35: гости в происшествиях, часы в графике, тревога, анимации ===== */
+.gbox{border:1.5px dashed var(--line);border-radius:16px;padding:10px 12px;display:flex;flex-direction:column;gap:10px}
+.grow{position:relative;display:flex;flex-direction:column;gap:6px;padding:10px 40px 10px 10px;background:var(--tab);border-radius:14px;animation:pop .22s ease-out}
+.grow .two{display:grid;grid-template-columns:1fr 1fr;gap:6px}.grow input{min-width:0}
+.grow .gx{position:absolute;top:6px;right:6px;width:30px;height:30px;border:0;border-radius:50%;background:var(--card);color:var(--ink);font-weight:800}
+.gt .gpark td{background:#E3EAD2;font-weight:800;color:var(--ink)}.gt .gpark .gn{background:#E3EAD2}
+.gt td.gh{cursor:pointer}.gt td[data-hn].gn{cursor:pointer}
+.hbar{height:12px;border-radius:6px;background:var(--line);overflow:hidden}.hbar i{display:block;height:100%;background:var(--ink);border-radius:6px;transition:width .5s ease}
+/* тревога */
+.alov{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;overflow:auto;animation:alIn .25s ease-out}
+.alov.danger{animation:alIn .25s ease-out,alFlash 1s ease-in-out infinite alternate}
+.alin{max-width:460px;width:100%;display:flex;flex-direction:column;gap:14px;align-items:center}
+.alic{font-size:84px;line-height:1;animation:alPulse 1s ease-in-out infinite}.alin h1{margin:0;font-size:28px;line-height:1.15;font-family:Alegreya,Georgia,serif}.alin p{margin:0;font-size:18px;line-height:1.35;font-weight:600}
+.alm{font-size:13px;opacity:.85}.alacks{font-size:15px}
+.albtn{width:100%;min-height:58px;border:0;border-radius:18px;background:#fff;color:#222;font-weight:800;font-size:18px;box-shadow:0 4px 0 rgba(0,0,0,.25)}
+.albtn.ghost{background:transparent;color:inherit;border:2px solid currentColor;box-shadow:none;min-height:48px;font-size:15px}
+.alb{position:fixed;top:0;left:0;right:0;z-index:9990;border:0;padding:10px 14px;font-weight:800;color:#fff;background:#C0392B;animation:alFlash 1.2s ease-in-out infinite alternate}.alb.prepare{background:#F2B84B;color:#3a2a00}
+.alcard{display:flex;gap:14px;align-items:center;width:100%;text-align:left;border:2px solid #C0392B;background:#FBE9E5;color:#7a1f14;border-radius:20px;padding:12px 16px;font-weight:700}.alcard>span:first-child{font-size:32px}.alcard small{font-weight:600;opacity:.8}
+.btn.alsend{min-height:56px;font-size:16px}.btn.alsend.prepare{background:#F2B84B;color:#3a2a00}.btn.alsend.danger{background:#C0392B}.btn.alsend.clear{background:#5E9C76}
+.btn.alsend.armed{animation:alShake .35s ease-in-out infinite;outline:4px solid rgba(0,0,0,.35)}
+@keyframes alIn{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:none}}
+@keyframes alFlash{from{filter:brightness(1)}to{filter:brightness(1.18)}}
+@keyframes alPulse{50%{transform:scale(1.12)}}
+@keyframes alShake{25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
+@keyframes pop{from{opacity:0;transform:translateY(6px) scale(.97)}to{opacity:1;transform:none}}
+/* анимация кнопок */
+.btn,.tabs button,.seg button,nav button,.alcard,.albtn,.avb,.gx{transition:transform .15s cubic-bezier(.3,1.6,.5,1),box-shadow .2s ease,filter .2s ease,background-color .2s ease;-webkit-tap-highlight-color:transparent}
+.btn,.tabs button,.seg button,.albtn,.alcard{position:relative;overflow:hidden}
+.btn:active,.tabs button:active,.seg button:active,nav button:active,.alcard:active,.albtn:active,.avb:active,.gx:active{transform:scale(.94)}
+@media (hover:hover){.btn:hover:not(:disabled),.tabs button:hover,.alcard:hover{transform:translateY(-2px);box-shadow:0 6px 14px rgba(60,40,20,.18)}.btn:active:not(:disabled){transform:scale(.96)}}
+.btn:disabled{opacity:.6}.btn:disabled:not(.nospin)::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.35) 50%,transparent 70%);background-size:200% 100%;animation:shimmer 1s linear infinite}
+.tabs button.on,.seg button.on,nav button.on{animation:tabOn .3s cubic-bezier(.3,1.6,.5,1)}
+.card[data-go],.card[data-inc],.card[data-fx],.card[data-wo],.card[data-dcard],.card[data-nw]{transition:transform .15s ease,box-shadow .2s ease}
+.card[data-go]:active,.card[data-inc]:active,.card[data-fx]:active,.card[data-wo]:active,.card[data-dcard]:active{transform:scale(.985)}
+.ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,.55);transform:scale(0);animation:rip .55s ease-out forwards;pointer-events:none}
+.btn.ghost .ripple,.tabs button .ripple,.seg button .ripple{background:rgba(0,0,0,.14)}
+@keyframes rip{to{transform:scale(1);opacity:0}}
+@keyframes shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+@keyframes tabOn{from{transform:scale(.9)}to{transform:none}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}.alic{animation:none!important}}
+
+.alin h1{text-shadow:none!important;color:inherit}.alov *{text-shadow:none!important}
+body.hasal{padding-top:46px}
+.subbar{overflow-x:auto;scrollbar-width:none}.subbar::-webkit-scrollbar{display:none}.subbar button{flex:1 0 auto;padding:0 8px}

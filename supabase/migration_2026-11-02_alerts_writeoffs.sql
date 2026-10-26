@@ -121,3 +121,7 @@ begin
 end $$;
 drop trigger if exists wo_notify on public.writeoffs;
 create trigger wo_notify after insert or update of status on public.writeoffs for each row execute function public.trg_writeoff_notify();
+
+-- дни недели работы парка в периоде (0=вс … 6=сб); пусто = каждый день. 1–23.10 работаем пт, сб, вс.
+alter table public.sched_periods add column if not exists dows int[];
+update public.sched_periods set dows='{5,6,0}' where date_from='2026-10-01' and dows is null;

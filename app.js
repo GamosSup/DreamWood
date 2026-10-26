@@ -27,8 +27,9 @@ const areaHead=(a,right)=>`<summary class="ah" style="background:${a.c}"><span c
 // Периоды графика: часы смены по датам (пт-вс 9:30–20:30, потом каждый день 9:30–18:30 и т.п.). Личная длина дня главнее периода.
 async function loadPeriods(){const r=await cq('sched_periods',()=>sb.from('sched_periods').select('*').order('date_from'));S.periods=r&&!r.error?(r.data||[]):[]}
 const perOf=k=>(S.periods||[]).find(x=>k>=x.date_from&&k<=x.date_to);
-const dayH=(k,len,set)=>{if(set)return len;const p=perOf(k);return p?Number(p.hours):len};
-const perLabel=k=>{const p=perOf(k);return p?`${String(p.start_time).slice(0,5)}–${String(p.end_time).slice(0,5)}${p.break_min?', перерыв '+(p.break_min%60?p.break_min+' мин':p.break_min/60+' ч'):''} · ${String(p.hours).replace('.',',')} ч`:''};
+const parkOpen=k=>{const p=perOf(k);return p&&(!p.dows||!p.dows.length||p.dows.includes(new Date(k+'T12:00:00').getDay()))?p:null};
+const dayH=(k,len,set)=>{if(set)return len;const p=perOf(k);return p?(parkOpen(k)?Number(p.hours):0):len};
+const perLabel=k=>{const p=perOf(k);if(p&&!parkOpen(k))return 'парк не работает (выходной по графику)';return p?`${String(p.start_time).slice(0,5)}–${String(p.end_time).slice(0,5)}${p.break_min?', перерыв '+(p.break_min%60?p.break_min+' мин':p.break_min/60+' ч'):''} · ${String(p.hours).replace('.',',')} ч`:''};
 function bindAreas(root){(root||document).querySelectorAll('details.area').forEach(d=>d.addEventListener('toggle',()=>{S.areaOpen[d.dataset.ar]=d.open}))}
 const STEPC={'Шахта':'#BCC8D6','Джипы':'#B7CFC4','Карусель':'#D3BFD0','Плющ':'#C9D4B0','Данделион':'#E4B5A3','Кон-Тики':'#E6CC8F','Ротация':'#E3E3E3','Пс':'#F3C29B','Боулинг':'#BCC8D6','Ос':'#F3C29B','Гольф':'#B7CFC4','Золото':'#E6CC8F','Метро':'#CFC6BC','Веревочный лагерь / инд. задачи':'#C9D4B0','Веревочный лагерь':'#C9D4B0'};
 const brkBg=t=>t.startsWith('Ос')||t.startsWith('Пс')?'#F3C29B':t.startsWith('О')?'#F5E2A8':'#CFE0EE';
@@ -108,25 +109,25 @@ nav.onclick=e=>{const b=e.target.closest('button');if(b)go(b.dataset.tab)};
 const VIEWS={sch:schView,afisha:afishaView,dg:dgView,staff:staffView,set:settingsView};
 VIEWS.ap=()=>VIEWS[S.sub.ap]();VIEWS.park=()=>VIEWS[S.sub.park]();
 VIEWS.team=()=>{if(!isAdmin())S.sub.team='contacts';return VIEWS[S.sub.team]()};
-function subBar(g,cur){const L={ap:[['req','📨','Заявки'],['fix','🛠','Поломки'],['inc','🚨','Происшествия']],park:[['news','📰','Новости'],['afisha','🎟️','Афиша']],team:[['contacts','📞','Контакты'],...(isAdmin()?[['staff','👥','Сотрудники']]:[])]}[g];if(!L||L.length<2)return '';const b=S.badges||{};
+function subBar(g,cur){const L={ap:[['req','📨','Заявки'],['fix','🛠','Поломки'],['inc','🚨','Происшествия'],['wo','🗑','Списание']],park:[['news','📰','Новости'],['afisha','🎟️','Афиша']],team:[['contacts','📞','Контакты'],...(isAdmin()?[['staff','👥','Сотрудники']]:[])]}[g];if(!L||L.length<2)return '';const b=S.badges||{};
   return `<div class="seg subbar">${L.map(([k,ic,n])=>`<button data-sub="${k}" class="${k===cur?'on':''}">${ic} ${n}${b[k]&&k!==cur?` <i class="sbn">${b[k]}</i>`:''}</button>`).join('')}</div>`}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-sub]');if(b&&S.me)go(b.dataset.sub)});
 const MORE_TABS=['shift','park','kb','team','grid','feedback','todo','set'];
-const SUBG={req:'ap',fix:'ap',inc:'ap',news:'park',afisha:'park',contacts:'team',staff:'team'};
+const SUBG={req:'ap',fix:'ap',inc:'ap',wo:'ap',news:'park',afisha:'park',contacts:'team',staff:'team'};
 const onTab=k=>SUBG[k]?(S.tab===SUBG[k]&&S.sub[SUBG[k]]===k):S.tab===k;
 function go(t){if(SUBG[t]){S.sub[SUBG[t]]=t;t=SUBG[t]}if(!VIEWS[t]||(t==='dg'&&!isManager()))t='today';S.tab=t;S.offline=0;document.body.dataset.tab=S.sub[t]||t;
   nav.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t||(b.dataset.tab==='more'&&MORE_TABS.includes(t))));window.scrollTo(0,0);app.scrollTop=0;
   Promise.resolve(VIEWS[t]()).then(refreshUnread)}
-const NKNOWN=new Set(['req','fix','inc','news','afisha','staff','rot','dg','shift','set','feedback']);
+const NKNOWN=new Set(['req','fix','inc','wo','news','afisha','staff','rot','dg','shift','set','feedback']);
 const NLK=l=>{l=String(l||'');return l.startsWith('rot:')?'rot':l.startsWith('checkin')?'':l};
 const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}},lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
 function paintBell(){const el=$('#bellN');if(!el)return;const tot=(S.unread||0)+(S.due||[]).length+(S.ckPending?1:0);el.hidden=!tot;el.textContent=tot>9?'9+':tot}
 // красные кружки у пунктов меню: считаем непросмотренные уведомления по разделам (+ «База знаний» и «График» — по изменениям)
 function paintBadges(){
   const c=k=>(S.nl||[]).filter(x=>x.k===k).length,B={};
-  ['req','fix','inc','news','afisha','staff','rot','dg','shift','set','feedback'].forEach(k=>B[k]=c(k));
+  ['req','fix','inc','wo','news','afisha','staff','rot','dg','shift','set','feedback'].forEach(k=>B[k]=c(k));
   B.contacts=0;B.kb=S.kbNew||0;B.sch=S.schNew||0;
-  B.ap=B.req+B.fix+B.inc;B.park=B.news+B.afisha;B.team=B.staff;B.today=0;B.grid=0;
+  B.ap=B.req+B.fix+B.inc+B.wo;B.park=B.news+B.afisha;B.team=B.staff;B.today=0;B.grid=0;
   B.more=B.shift+B.park+B.kb+B.team+B.set+B.feedback;
   S.badges=B;
   nav.querySelectorAll('button[data-tab]').forEach(btn=>{let i=btn.querySelector('i');const n=B[btn.dataset.tab]||0;
@@ -567,7 +568,7 @@ async function settingsView(){
 }
 sb.auth.onAuthStateChange(()=>{});
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
-function openLink(l){if(!l)return;if(String(l).startsWith('checkin:'))return openBell();if(String(l).startsWith('rot:')){S.day=l.slice(4);go('rot')}else go(l)}
+function openLink(l){if(!l)return;if(l==='alert'){window.alertCheck&&alertCheck();return}if(String(l).startsWith('checkin:'))return openBell();if(String(l).startsWith('rot:')){S.day=l.slice(4);go('rot')}else go(l)}
 if('serviceWorker'in navigator)navigator.serviceWorker.addEventListener('message',e=>{if(e.data&&e.data.go&&S.me)openLink(e.data.go)});
 boot();
 

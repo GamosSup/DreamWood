@@ -7,7 +7,8 @@ export const ROOT_NAME='Дримвуд — файлы сайта';
 export const KINDS={
   repairs:{dir:'Поломки',files:'repair_files',rec:'repairs',fk:'repair_id',col:'zone'},
   inc:{dir:'Происшествия',files:'inc_files',rec:'incidents',fk:'inc_id',col:'zone'},
-  dg:{dir:'Задачи DreamGile',files:'dg_files',rec:'dg_tasks',fk:'task_id',col:'title'}
+  dg:{dir:'Задачи DreamGile',files:'dg_files',rec:'dg_tasks',fk:'task_id',col:'title'},
+  wo:{dir:'Списания',files:'wo_files',rec:'writeoffs',fk:'wo_id',col:'item'}
 };
 export const sbUrl=env=>env.SUPABASE_URL||SB_URL;
 export const sbKey=env=>env.SUPABASE_ANON_KEY||SB_KEY;

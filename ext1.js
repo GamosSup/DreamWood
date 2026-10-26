@@ -154,12 +154,12 @@ async function incView(){
   h+=list.map(x=>`<div class="card pad col" data-inc="${x.id}" style="cursor:pointer;border-left:8px solid ${INC_S[x.severity][1]}">
     <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><b>${INC_K[x.kind][0]} ${esc(x.zone||'—')}</b><span class="pill" style="background:${INC_ST[x.status][1]}">${INC_ST[x.status][0]}</span></div>${apSeenPill('inc',x)}
     <div style="font-size:14px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">${esc(x.descr)}</div>
-    <div class="muted">${dayLabel(x.day)}${x.at_time?' · '+esc(x.at_time):''} · ${INC_K[x.kind][1]} · ${INC_S[x.severity][0]}${mgr?' · '+esc(shortName(pname(x.reported_by))):''}</div></div>`).join('')||'<div class="card pad muted">Пока записей нет.</div>';
+    <div class="muted">${dayLabel(x.day)}${x.at_time?' · '+esc(x.at_time):''} · ${INC_K[x.kind][1]} · ${INC_S[x.severity][0]}${x.guests_count?' · 👥 '+x.guests_count:''}${mgr?' · '+esc(shortName(pname(x.reported_by))):''}</div></div>`).join('')||'<div class="card pad muted">Пока записей нет.</div>';
   app.innerHTML=h;
   $('#inc_new').onclick=incForm;apWatch('inc',list,'[data-inc]','data-inc');
   app.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{S.inc.f=b.dataset.f;incView()});
   app.querySelectorAll('[data-inc]').forEach(b=>b.onclick=()=>incOpen(all.find(x=>x.id===b.dataset.inc)));
-  $('#inc_csv')?.addEventListener('click',()=>downloadCSV('proisshestviya_'+iso(new Date())+'.csv',[['Дата','Время','Зона','Вид','Серьёзность','Что произошло','Что сделано','Кто пострадал / свидетели','Сообщил(а)','Статус','Решение']].concat(all.map(x=>[x.day,x.at_time||'',x.zone||'',INC_K[x.kind][1],INC_S[x.severity][0],x.descr,x.actions||'',x.people||'',pname(x.reported_by),INC_ST[x.status][0],x.resolution||'']))));
+  $('#inc_csv')?.addEventListener('click',()=>downloadCSV('proisshestviya_'+iso(new Date())+'.csv',[['Дата','Время','Зона','Вид','Серьёзность','Что произошло','Что сделано','Гостей','Гости (ФИО; телефон; возраст)','Свидетели / дополнительно','Сообщил(а)','Статус','Решение']].concat(all.map(x=>[x.day,x.at_time||'',x.zone||'',INC_K[x.kind][1],INC_S[x.severity][0],x.descr,x.actions||'',x.guests_count??'',(x.guests||[]).map(g=>[g.name||'',g.phone||'',g.age??''].join('; ')).join(' | '),x.people||'',pname(x.reported_by),INC_ST[x.status][0],x.resolution||'']))));
 }
 function incForm(){
   let files=[];const now=new Date(),t0=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
@@ -169,14 +169,23 @@ function incForm(){
     <div class="two"><label>Что за случай<select id="n_k">${Object.entries(INC_K).map(([k,v])=>`<option value="${k}">${v[0]} ${v[1]}</option>`).join('')}</select></label><label>Насколько серьёзно<select id="n_s">${Object.entries(INC_S).map(([k,v])=>`<option value="${k}">${v[0]}</option>`).join('')}</select></label></div>
     <label>Что произошло<textarea id="n_d"></textarea></label>
     <label>Что сделано<textarea id="n_a" placeholder="Помощь оказана, вызван врач, зона огорожена…"></textarea></label>
-    <label>Кто пострадал / свидетели<input id="n_p" placeholder="Имена, возраст гостя, контакты"></label>
+    <div class="gbox"><b style="font-size:14px">👥 Гости</b>
+      <label>Сколько гостей затронуто<input id="n_gc" type="number" inputmode="numeric" min="0" max="999" placeholder="Например: 2"></label>
+      <div id="n_gl" class="col"></div>
+      <button type="button" class="btn ghost" id="n_ga" style="min-height:42px">➕ Добавить гостя (ФИО, телефон, возраст)</button></div>
+    <label>Свидетели / дополнительно<input id="n_p" placeholder="Кто видел, другие контакты"></label>
     <label class="btn ghost" style="display:flex;align-items:center;justify-content:center;cursor:pointer;flex-direction:row">📷 Прикрепить фото<input id="n_f" type="file" multiple accept="image/*" hidden></label><div class="muted" id="n_fl"></div>
     <button class="btn" id="n_go">Отправить</button><div class="err" id="n_er"></div>`;
     box.querySelector('#n_f').onchange=e=>{files=[...e.target.files];box.querySelector('#n_fl').textContent='Выбрано файлов: '+files.length};
+    const gl=box.querySelector('#n_gl'),gc=box.querySelector('#n_gc');
+    const addG=()=>{const d=document.createElement('div');d.className='grow';d.innerHTML=`<input class="g_n" placeholder="ФИО гостя" autocomplete="off"><div class="two"><input class="g_p" type="tel" inputmode="tel" placeholder="Телефон" autocomplete="off"><input class="g_a" type="number" inputmode="numeric" min="0" max="120" placeholder="Возраст, лет"></div><button type="button" class="gx" aria-label="Убрать">✕</button>`;
+      d.querySelector('.gx').onclick=()=>{d.remove()};gl.appendChild(d);d.querySelector('.g_n').focus()};
+    box.querySelector('#n_ga').onclick=addG;
     box.querySelector('#n_go').onclick=async e=>{
       const d=box.querySelector('#n_d').value.trim(),er=box.querySelector('#n_er');if(!d)return er.textContent='Опиши, что произошло';
+      const guests=[...gl.querySelectorAll('.grow')].map(g=>({name:g.querySelector('.g_n').value.trim(),phone:g.querySelector('.g_p').value.trim(),age:g.querySelector('.g_a').value===''?null:+g.querySelector('.g_a').value})).filter(g=>g.name||g.phone||g.age!==null);
       e.target.disabled=true;er.style.color='var(--muted)';er.textContent='Отправляю…';
-      const r=await sb.from('incidents').insert({zone:box.querySelector('#n_z').value,at_time:box.querySelector('#n_t').value||null,kind:box.querySelector('#n_k').value,severity:box.querySelector('#n_s').value,descr:d,actions:box.querySelector('#n_a').value.trim()||null,people:box.querySelector('#n_p').value.trim()||null}).select().single();
+      const r=await sb.from('incidents').insert({zone:box.querySelector('#n_z').value,at_time:box.querySelector('#n_t').value||null,kind:box.querySelector('#n_k').value,severity:box.querySelector('#n_s').value,descr:d,actions:box.querySelector('#n_a').value.trim()||null,people:box.querySelector('#n_p').value.trim()||null,guests_count:gc.value===''?(guests.length||null):Math.max(0,+gc.value),guests}).select().single();
       if(r.error){e.target.disabled=false;er.style.color='';return er.textContent='Не получилось: '+r.error.message}
       for(const f of files)await fileUpload('inc','inc_files','inc_id',r.data.id,f);
       close(false);alert('Записано, руководители уведомлены ✅');incView();
@@ -191,7 +200,8 @@ function incOpen(x){
     box.innerHTML=`<div class="muted">${dayLabel(x.day)}${x.at_time?' · '+esc(x.at_time):''} · ${INC_K[x.kind][1]} · <span class="pill" style="background:${INC_S[x.severity][1]}">${INC_S[x.severity][0]}</span> · сообщил(а): ${esc(pname(x.reported_by))}</div>
     <div><b style="font-size:14px">Что произошло</b><div style="white-space:pre-wrap;margin-top:4px">${esc(x.descr)}</div></div>
     ${x.actions?`<div><b style="font-size:14px">Что сделано</b><div style="white-space:pre-wrap;margin-top:4px">${esc(x.actions)}</div></div>`:''}
-    ${x.people?`<div><b style="font-size:14px">Кто пострадал / свидетели</b><div style="margin-top:4px">${esc(x.people)}</div></div>`:''}
+    ${(x.guests_count!=null||(x.guests||[]).length)?`<div><b style="font-size:14px">👥 Гости${x.guests_count!=null?': '+x.guests_count:''}</b>${(x.guests||[]).map(g=>`<div class="otr" style="margin-top:4px"><span>${esc(g.name||'—')}${g.age!=null?` · ${g.age} лет`:''}</span>${g.phone?`<a href="tel:${esc(g.phone.replace(/[^\d+]/g,''))}" class="pill" style="background:var(--tab);text-decoration:none">📞 ${esc(g.phone)}</a>`:''}</div>`).join('')}</div>`:''}
+    ${x.people?`<div><b style="font-size:14px">Свидетели / дополнительно</b><div style="margin-top:4px">${esc(x.people)}</div></div>`:''}
     ${files.length?`<div class="fgrid">${files.map((y,i)=>`<div class="fi">${/^image\//.test(y.mime||'')&&urls[i]?`<a href="${urls[i]}" target="_blank" rel="noopener"><img src="${urls[i]}" loading="lazy" alt=""></a>`:`<a href="${urls[i]||'#'}" target="_blank" rel="noopener">📎<br>${esc((y.name||'файл').slice(-22))}</a>`}</div>`).join('')}</div>`:''}
     ${mgr?`<label>Статус<select id="i_st">${apStOpts(INC_ST,st,['review','closed'])}</select></label>
       <label>Решение / комментарий руководителя<textarea id="i_rs">${esc(x.resolution||'')}</textarea></label>

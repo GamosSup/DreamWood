@@ -36,13 +36,13 @@ export async function onRequestPost({request}){
   let b;try{b=await request.json()}catch{return new Response('bad json',{status:400})}
   const {pub,jwk,subs,msg}=b||{};
   if(!pub||!jwk||!Array.isArray(subs)||!msg)return new Response('bad request',{status:400});
-  const payload=JSON.stringify({title:String(msg.title||'Дримвуд').slice(0,100),body:String(msg.body||'').slice(0,200),link:msg.link||null,tag:msg.tag||null});
+  const payload=JSON.stringify({title:String(msg.title||'Дримвуд').slice(0,100),body:String(msg.body||'').slice(0,200),link:msg.link||null,tag:msg.tag||null,urgent:!!msg.urgent});
   const out=await Promise.all(subs.slice(0,40).map(async s=>{
     try{
       const u=new URL(s.endpoint);
       if(u.protocol!=='https:'||!HOSTS.some(r=>r.test(u.hostname)))return {e:s.endpoint,s:0,err:'host'};
       const body=await encrypt(s,payload);
-      const r=await fetch(s.endpoint,{method:'POST',headers:{'Content-Encoding':'aes128gcm','Content-Type':'application/octet-stream',TTL:'86400',Urgency:'normal',Authorization:await vapid(u.origin,jwk,pub)},body});
+      const r=await fetch(s.endpoint,{method:'POST',headers:{'Content-Encoding':'aes128gcm','Content-Type':'application/octet-stream',TTL:msg.urgent?'1800':'86400',Urgency:msg.urgent?'high':'normal',Authorization:await vapid(u.origin,jwk,pub)},body});
       return {e:s.endpoint.slice(-12),s:r.status};
     }catch(err){return {e:'?',s:0,err:String(err).slice(0,80)}}
   }));
