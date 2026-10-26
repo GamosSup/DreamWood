@@ -1,0 +1,36 @@
+# Дримвуд на своём сервере: сайт + прокси к базе (Supabase) + остальное (файлы, пуши, шрифты) через Cloudflare-версию
+{$DOMAIN} {
+	encode zstd gzip
+	root * /srv/dreamwood
+
+	handle /sb/* {
+		uri strip_prefix /sb
+		reverse_proxy https://bvlwpfmtcdgfsomvwqrp.supabase.co {
+			header_up Host {upstream_hostport}
+			flush_interval -1
+			transport http {
+				dial_timeout 8s
+				response_header_timeout 60s
+			}
+		}
+	}
+
+	handle /api/* {
+		reverse_proxy https://dreamwood.pages.dev {
+			header_up Host {upstream_hostport}
+			flush_interval -1
+		}
+	}
+	handle /v/* {
+		reverse_proxy https://dreamwood.pages.dev {
+			header_up Host {upstream_hostport}
+		}
+	}
+
+	handle {
+		header /sw.js Cache-Control "no-cache"
+		header /index.html Cache-Control "no-cache"
+		try_files {path} {path}.html {path}/index.html /index.html
+		file_server
+	}
+}
