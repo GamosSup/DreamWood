@@ -310,3 +310,5 @@ body.hasal{padding-top:46px}
 
 /* смена темы: цвета перетекают, а не мигают */
 html.themeswap,html.themeswap *{transition:background-color .35s ease,color .35s ease,border-color .35s ease,box-shadow .35s ease!important}
+
+.extra{margin-top:4px;padding:7px 10px;border-radius:12px;background:#F5E2A8;font-weight:700;font-size:14px}

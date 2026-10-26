@@ -251,5 +251,12 @@ function rotZoom(src){
   document.body.appendChild(ov);document.body.style.overflow='hidden';
 }
 
+// допзамены из примечания к зоне («Дополнительно: 12:30–13:00 · БХ (Бабл хаус)», «Давид дополнительно меняет: …») показываем в личной смене сотрудника
+function myExtra(x){
+  const n=String(x.row&&x.row.note||'').trim();if(!n||!/дополнительно|меняет/i.test(n))return '';
+  const names=(x.row.people||[]).map(q=>String(q.name||'').trim()).filter(Boolean),named=names.filter(m=>m&&n.toLowerCase().includes(m.toLowerCase()));
+  if(named.length&&!named.some(m=>m.toLowerCase()===String(x.p.name||'').trim().toLowerCase()))return '';
+  return n;
+}
 function myShiftCard(mine,label){return mine.length?`<div class="card pad col" style="border:2px solid var(--ink)"><b>👤 ${label||'Твоя смена'}</b>${mine.map(x=>{const mates=(x.row?.people||[]).filter(q=>q!==x.p);
-  return `<div><b>${esc(x.zone)}</b> <span class="muted">· ${esc(x.sec.replace(/^.*·\s*/,''))}${x.team==='W'?' · если дождь':''}</span>${x.p.brks?.length?`<div class="muted">Перерыв: ${x.p.brks.map(esc).join(' · ')}</div>`:''}${x.steps?.length?`<div class="muted">Замены: ${x.steps.map(s=>esc(s[0])+' '+esc(s[1])).join(' · ')}</div>`:''}${mates.length?`<div style="margin-top:4px">👥 <b>С тобой:</b> ${mates.map(q=>esc(q.name)+(q.brks?.length?` <span class="muted">(${q.brks.map(esc).join(', ')})</span>`:'')).join(' · ')}</div>`:''}<a href="#" class="lnk" data-kbz="${esc(x.zone)}" style="display:inline-block;margin-top:4px">📖 Памятка по зоне</a></div>`}).join('')}</div>`:''}
+  return `<div><b>${esc(x.zone)}</b> <span class="muted">· ${esc(x.sec.replace(/^.*·\s*/,''))}${x.team==='W'?' · если дождь':''}</span>${x.p.brks?.length?`<div class="muted">Перерыв: ${x.p.brks.map(esc).join(' · ')}</div>`:''}${myExtra(x)?`<div class="extra">➕ ${esc(myExtra(x).replace(/^[^:]*дополнительно(\s+меняет)?:?\s*/i,m=>/меняет/i.test(m)?'Дополнительно меняешь: ':'Дополнительно: '))}</div>`:''}${x.steps?.length?`<div class="muted">Замены: ${x.steps.map(s=>esc(s[0])+' '+esc(s[1])).join(' · ')}</div>`:''}${mates.length?`<div style="margin-top:4px">👥 <b>С тобой:</b> ${mates.map(q=>esc(q.name)+(q.brks?.length?` <span class="muted">(${q.brks.map(esc).join(', ')})</span>`:'')).join(' · ')}</div>`:''}<a href="#" class="lnk" data-kbz="${esc(x.zone)}" style="display:inline-block;margin-top:4px">📖 Памятка по зоне</a></div>`}).join('')}</div>`:''}
