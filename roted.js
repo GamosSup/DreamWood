@@ -83,6 +83,10 @@ function rotNew(){
       if(ex)D=ex.data;
       else if(src){D=JSON.parse(JSON.stringify((await sb.from('rotations').select('data').eq('day',src).single()).data.data));delete D.image;delete D.rain}
       else D={banner:'',legend:[],teams:{R:[],K:[],M:[],W:[]},close:18};
+      if(!ex){const tpl=D.teams?.M?.length?D.teams.M:null;
+        const mm=await sb.rpc('metro_for_day',{p_day:day,p_tpl:tpl});
+        if(mm.data){D.teams=D.teams||{};D.teams.M=mm.data;alert('Метрополис подставлен автоматически по графику: проверь, кто где стоит.')}
+        else if(!mm.error)alert('График Метрополиса на этот месяц не загружен — Метрополис оставлен как в шаблоне. Проверь людей.')}
       close(false);rotEditor(day,D,!ex);
     };
   },()=>{});
