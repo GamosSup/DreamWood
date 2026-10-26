@@ -128,7 +128,7 @@ async function gmLoad(force){
       const old=S.gm?JSON.stringify(S.gm.rows.map(x=>[x.id,x.lvl_text,x.cos,gmLv(x.xp).n])):'';
       const g=gmIndex(r.data||[]);S.gm=g;
       try{localStorage.setItem('dw:gm:'+S.me.id,JSON.stringify({rows:g.rows}))}catch(e){}
-      gmLevelUp();
+      gmLevelUp();setTimeout(gmDreemiPopup,1800);
       if(old&&old!==JSON.stringify(g.rows.map(x=>[x.id,x.lvl_text,x.cos,gmLv(x.xp).n]))&&window.qcRerender)qcRerender();
     }catch(e){}finally{S.gmP=null}
     return S.gm})();
@@ -200,12 +200,13 @@ function gameCard(){
   const row=gmMe();if(!row)return '';
   const L=gmLv(row.xp),cos=gmCos(row),have=(row.ach||[]).length;
   return `<div class="card pad col gmc" data-go="game" style="cursor:pointer">
-    <div class="gmcr">${gmLvChip(row,true)}<div style="flex:1;min-width:0"><b>${row.lvl_text?esc(row.lvl_text):esc(GM_RANKS[L.r].full)}</b>${row.lvl_text?'':`<div class="muted">Уровень ${L.n}${L.hi?` · до следующего ${L.left} оч.`:' · максимум'}</div>`}</div><span class="muted" style="white-space:nowrap">🏅 ${have}</span></div>
+    <div class="gmcr">${gmLvChip(row,true)}<div style="flex:1;min-width:0"><b>${row.lvl_text?esc(row.lvl_text):esc(GM_RANKS[L.r].full)}</b>${row.lvl_text?'':`<div class="muted">Уровень ${L.n}${L.hi?` · до следующего ${L.left} оч.`:' · максимум'}</div>`}</div><span class="muted" style="white-space:nowrap">🏅 ${have}</span><span class="drmmini">${typeof gmDreemi==='function'?gmDreemi(row,34):''}</span></div>
     ${row.lvl_text?'':`<div class="pgb"><div class="pg" style="width:${L.pct}%"></div></div>`}</div>`;
 }
 
 // ---------- экран «Мой профиль» ----------
 const gmTab=()=>S.gmTab||'ach';
+const gmSeeAll=()=>!!gmMe()?.lvl_text; // только у владельца приложения видны и закрытые достижения; у остальных — лишь открытые
 function gmHero(row){
   const L=gmLv(row.xp),cos=gmCos(row);
   return `<div class="card gmh"><div class="gmhr"><div>${av(S.me,84)}</div><div style="flex:1;min-width:0">
@@ -223,7 +224,7 @@ async function gameView(){
     app.innerHTML=h;return;
   }
   h+=gmHero(me);
-  const tabs=[['ach','🏅 Достижения'],['look','🎨 Мой образ'],['lv','📈 Уровни'],...(isManager()?[['mng','🎖 Выдать']]:[])];
+  const tabs=[['ach','🏅 Достижения'],['drm','🐲 Мой Дримми'],['look','🎨 Мой образ'],['lv','📈 Уровни'],...(isManager()?[['mng','🎖 Выдать']]:[])];
   h+=`<div class="tabs gmtabs">${tabs.map(([k,n])=>`<button data-gt="${k}" class="${gmTab()===k?'on':''}" style="background:var(--tab)">${n}</button>`).join('')}</div><div id="gm_body"></div>`;
   app.innerHTML=h;
   app.querySelectorAll('[data-gt]').forEach(b=>b.onclick=()=>{S.gmTab=b.dataset.gt;app.querySelectorAll('[data-gt]').forEach(x=>x.classList.toggle('on',x===b));gmPaint()});
@@ -231,7 +232,7 @@ async function gameView(){
 }
 async function gmPaint(){
   const box=$('#gm_body');if(!box)return;const t=gmTab();
-  if(t==='ach')await gmAchTab(box);else if(t==='look')gmLookTab(box);else if(t==='lv')gmLvTab(box);else gmMngTab(box);
+  if(t==='ach')await gmAchTab(box);else if(t==='drm')gmDrmTab(box);else if(t==='look')gmLookTab(box);else if(t==='lv')gmLvTab(box);else gmMngTab(box);
 }
 
 // --- достижения ---
@@ -240,10 +241,10 @@ async function gmAchTab(box){
   let st={};try{const r=await sb.rpc('ach_stats');st=r.data||{}}catch(e){}
   const rew=c=>{const r=[];GM_FRAMES.concat(GM_NAMES,GM_BGS).forEach(x=>{if(x[2]===c)r.push(x)});return r.map(x=>(GM_FRAMES.includes(x)?'рамка':GM_NAMES.includes(x)?'цвет имени':'фон')+' «'+x[1]+'»').join(', ')};
   // каталог + выданные вручную, которых нет в каталоге
-  const all=GM_ACH.filter(a=>!(a.secret&&!got.has(a.c))).map(a=>({...a}));
+  const all=GM_ACH.filter(a=>gmSeeAll()?!(a.secret&&!got.has(a.c)):got.has(a.c)).map(a=>({...a}));
   (me.ach||[]).forEach(a=>{if(!GM_BY[a.c])all.push(gmDef(a))});
   const total=all.filter(a=>!a.man||got.has(a.c)).length,have=all.filter(a=>got.has(a.c)).length;
-  let h=`<div class="muted" style="margin:2px 2px 10px">Получено <b>${have}</b> из ${total}. За каждое достижение — бонус к очкам, а многие открывают рамки, цвета имени и фоны.</div>`;
+  let h=gmSeeAll()?`<div class="muted" style="margin:2px 2px 10px">Получено <b>${have}</b> из ${total}. За каждое достижение — бонус к очкам, а многие открывают рамки, цвета имени и фоны.</div>`:`<div class="muted" style="margin:2px 2px 10px">Получено: <b>${have}</b>. Новые достижения приходят сами, когда ты делаешь своё дело: отмечаешь чек-листы, выходишь на смены, ведёшь привычки, говоришь спасибо коллегам. За каждое — очки и, часто, новая красота для профиля.</div>${have?'':`<div class="card pad col" style="align-items:center;text-align:center"><img src="stickers/mascot-hi.webp" alt="" width="90"><b>Пока пусто</b><div class="muted">Первое достижение уже рядом. Отметь пункт в чек-листе смены.</div></div>`}`;
   h+=GM_GR.map(([g,ic,nm])=>{
     const L=all.filter(a=>a.g===g).sort((a,b)=>a.t-b.t||(got.has(b.c)?1:0)-(got.has(a.c)?1:0));if(!L.length)return '';
     const hv=L.filter(a=>got.has(a.c)).length;
@@ -256,19 +257,22 @@ async function gmAchTab(box){
 }
 
 // --- мой образ ---
+async function gmSaveCos(patch){
+  const me=gmMe();if(!me)return false;
+  const cur={...(me.cos||{}),...patch};Object.keys(cur).forEach(k=>{if(!cur[k])delete cur[k]});
+  const r=await sb.rpc('set_my_cos',{p:cur});
+  if(r.error){toast('Не сохранилось: '+r.error.message,3500);return false}
+  me.cos=cur;try{localStorage.setItem('dw:gm:'+S.me.id,JSON.stringify({rows:S.gm.rows}))}catch(e){}
+  toast('Сохранено ✨',1400);$('.gmh')&&($('.gmh').outerHTML=gmHero(me));return true;
+}
 function gmLookTab(box){
   const me=gmMe();let cur={...(me.cos||{})};
-  const save=async(patch)=>{
-    cur={...cur,...patch};Object.keys(cur).forEach(k=>{if(!cur[k])delete cur[k]});
-    const r=await sb.rpc('set_my_cos',{p:cur});
-    if(r.error){toast('Не сохранилось: '+r.error.message,3500);return}
-    me.cos={...cur};try{localStorage.setItem('dw:gm:'+S.me.id,JSON.stringify({rows:S.gm.rows}))}catch(e){}
-    toast('Сохранено ✨',1400);paint();$('.gmh')&&($('.gmh').outerHTML=gmHero(me));
-  };
+  const save=async(patch)=>{if(await gmSaveCos(patch)){cur={...(me.cos||{})};paint()}};
   const reqName=req=>{if(!req)return '';if(req.endsWith('*'))return req==='adm*'?'любой допуск':'любое мероприятие';const a=GM_BY[req];return a?a.n:req};
   const earned=(me.ach||[]).map(a=>gmDef(a));
   const opt=(k,it)=>{
     const [v,n,req]=it,ok=gmHas(me,req),on=(cur[k]||'')===v;
+    if(!ok&&!gmSeeAll())return '';
     const pv=k==='frame'?`<span class="avw${v?' fr '+v:''}" style="margin:6px"><span class="av ini" style="width:30px;height:30px;font-size:12px">${esc((S.me.full_name||'?')[0])}</span></span>`
       :k==='name'?`<span class="gnm ${v}" style="font-size:15px">Имя</span>`
       :`<span class="bgsw ${v}"></span>`;
@@ -356,3 +360,35 @@ async function gmMngTab(box){
 
 VIEWS.game=gameView;
 gmBoot();
+
+// ---------- «Мой Дримми» ----------
+function gmDrmTab(box){
+  const me=gmMe();
+  const draw=()=>{
+    const cur=me.cos||{},sel=gmDrSet(me);
+    box.innerHTML=`<div class="card pad col" style="align-items:center"><div id="drm_pv">${gmDreemi(me,200)}</div><div class="muted" style="text-align:center">Это твой личный Дримми. Одевай его как хочешь: он всегда остаётся собой, меняется только одежда и взгляд. Новые вещи открываются за достижения и события. Фон берётся из раздела «Мой образ».</div></div>`+
+    Object.entries(GM_DR).map(([slot,[ttl,L]])=>{
+      const opts=L.map(it=>{const [id,n,req]=it,ok=gmHas(me,req);if(!ok&&!gmSeeAll())return '';const on=(sel[slot]||'')===id;
+        return `<button class="gop${on?' on':''}${ok?'':' lk'}" data-s="${slot}" data-v="${id}" ${ok?'':'disabled'}><span class="gopv">${id?gmDreemi(me,78,{set:{[slot]:id},bg:'',vb:GM_DR_VB[slot]}):'—'}</span><span class="gopn">${esc(n)}</span>${ok?'':`<span class="gopl">🔒 ${esc(gmReqName(req))}</span>`}</button>`}).join('');
+      return `<div class="card pad col"><b>${ttl}</b><div class="gops">${opts}</div></div>`}).join('');
+    box.querySelectorAll('.gop:not([disabled])').forEach(b=>b.onclick=async()=>{if(await gmSaveCos({[GM_DR_KEY[b.dataset.s]]:b.dataset.v}))draw()});
+  };
+  draw();
+}
+function gmReqName(req){if(!req)return '';if(req.endsWith('*'))return req==='adm*'?'любой допуск':'любое мероприятие';const a=GM_BY[req];return a?a.n:req}
+
+// ---------- награда: «Вы разблокировали Дримми» (один раз каждому) ----------
+function gmDreemiPopup(tries=0){
+  const me=gmMe();if(!me||!S.me)return;
+  const key='dw-drm:'+S.me.id;let seen=null;try{seen=localStorage.getItem(key)}catch(e){}
+  if(seen)return;
+  if(document.querySelector('.ov,#tour,.alov,.ibox')||S.tab==='game'&&S.gmTab==='drm'){if(tries<8)setTimeout(()=>gmDreemiPopup(tries+1),3000);return}
+  try{localStorage.setItem(key,'1')}catch(e){}
+  dgxSheet('🎉 Новая награда',(box,paint,close)=>{
+    box.innerHTML=`<div class="drmpop"><div class="drmt">Вы разблокировали Дримми!</div>${gmDreemi(me,190,{set:{head:'h_party',eyes:'e_round',neck:'n_scarf'},bg:me.cos?.bg})}
+      <div class="muted" style="text-align:center">Теперь у каждого в команде есть свой личный Дримми. Одевай его: шапки, очки, шарфы и бейджи. Новые вещи и рамки приходят за достижения: чек-листы, смены, привычки, спасибо коллегам и участие в событиях парка.</div>
+      <button class="btn" id="dp_go">🐲 Одеть Дримми</button><button class="btn ghost" id="dp_x">Позже</button></div>`;
+    $('#dp_go').onclick=()=>{close(false);S.gmTab='drm';go('game')};$('#dp_x').onclick=()=>close(false);
+    setTimeout(dwParty,350);
+  },()=>{},'drmsheet');
+}

@@ -134,7 +134,7 @@ declare k text; clean jsonb:='{}'::jsonb;
 begin
   if not is_approved() then raise exception 'Нет доступа'; end if;
   for k in select jsonb_object_keys(coalesce(p,'{}'::jsonb)) loop
-    if k in('frame','name','bg','badge','title') and jsonb_typeof(p->k)='string' and length(p->>k) between 1 and 80 then
+    if k in('frame','name','bg','badge','title','dh','de','dn','dc') and jsonb_typeof(p->k)='string' and length(p->>k) between 1 and 80 then
       clean:=clean||jsonb_build_object(k,p->>k);
     end if;
   end loop;
@@ -150,9 +150,10 @@ begin
 end $$;
 grant execute on function public.set_lvl_text(uuid,text) to authenticated;
 
--- ============ 9. Личное: Игорян — уровень «Невозможный» и «Админ на сервере» ============
+-- ============ 9. Личное: Игорь Шубчик (админ) — уровень «Невозможный» и «Админ на сервере» ============
 do $$ declare u uuid; begin
-  select id into u from auth.users where lower(email)='goga.sabaka@gmail.com' limit 1;
+  select id into u from profiles where role='admin' and full_name='Игорь Шубчик' limit 1;
+  if u is null then select id into u from auth.users where lower(email) in('goga.sabaka@gmail.com','gamossup@yandex.com') limit 1; end if;
   if u is not null and exists(select 1 from profiles where id=u) then
     update profiles set lvl_text='Невозможный' where id=u;
     insert into user_ach(user_id,code,label,bonus) values(u,'spec:admin_server','Админ на сервере',500) on conflict do nothing;
@@ -163,5 +164,4 @@ end $$;
 select p.full_name, p.role, p.lvl_text, xp_of(p.id) as xp,
   (select string_agg(a.code,', ') from user_ach a where a.user_id=p.id) as ach
 from profiles p
-where p.id in(select id from auth.users where lower(email)='goga.sabaka@gmail.com')
-   or p.id in(select user_id from user_ach);
+where p.lvl_text is not null or p.id in(select user_id from user_ach);

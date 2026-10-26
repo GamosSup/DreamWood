@@ -113,7 +113,7 @@ create policy "todos own" on public.todos for all to authenticated using(user_id
 alter table public.roster add column if not exists day_len int check(day_len in(8,10,12));
 alter table public.profiles add column if not exists day_len int check(day_len in(8,10,12));
 update public.roster set day_len=12 where team='M' and day_len is null;
-update public.roster set day_len=8 where day_len is null and (full_name ilike '%Алексюк%' or full_name ilike '%Прошутинск%' or full_name ilike '%Ярошенко%');
+update public.roster set day_len=8 where day_len is null and (full_name ilike '%Олексюк%' or full_name ilike '%Прошутинск%' or full_name ilike '%Ярошенко%');
 update public.profiles set day_len=10 where role='admin' and day_len is null;
 
 -- 6. Аттракционы: чек-листы «Смены» и страницы базы знаний для всех зон из ротаций

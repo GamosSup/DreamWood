@@ -123,14 +123,14 @@ begin update profiles set push_prefs=coalesce(p,'{}'::jsonb) where id=auth.uid()
 update public.profiles set role='admin', position='Старший специалист' where lower(email)='gamossup@yandex.com';
 -- руководители: роль и должность применятся при одобрении их регистрации (если выберешь строку списка)
 insert into public.roster(full_name,team,pre_role,pre_position)
-select x.n,null,'manager',x.p from (values ('Алексюк Игорь','Заместитель руководителя тематического парка'),('Прошутинская К.','Супервайзер')) x(n,p)
+select x.n,null,'manager',x.p from (values ('Олексюк Игорь','Заместитель руководителя тематического парка'),('Прошутинская К.','Супервайзер')) x(n,p)
 where not exists(select 1 from public.roster r where r.full_name=x.n);
 update public.roster set pre_role='manager', pre_position='Супервайзер' where full_name='Ярошенко М.О';
 update public.roster set pre_role='manager', pre_position='Старший специалист' where full_name='Лефенцова А.В';
--- график 5/2 (выходные сб и вс) у Алексюка: октябрь–декабрь 2026
+-- график 5/2 (выходные сб и вс) у Олексюка: октябрь–декабрь 2026
 insert into public.roster_marks(roster_id,day,kind,note)
 select r.id,d::date,'off','выходной 5/2' from public.roster r, generate_series('2026-10-01'::date,'2026-12-31'::date,'1 day') d
-where r.full_name='Алексюк Игорь' and extract(dow from d) in(0,6) on conflict do nothing;
+where r.full_name='Олексюк Игорь' and extract(dow from d) in(0,6) on conflict do nothing;
 -- график Прошутинской К. на октябрь (из листа «Октябрь 2026»; с 23-го в файле ещё не заполнено)
 insert into public.roster_marks(roster_id,day,kind)
 select r.id,make_date(2026,10,i),'off' from public.roster r, generate_series(1,22) i

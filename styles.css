@@ -506,3 +506,11 @@ html[data-dark="1"] .gnm.n_shine{background-image:linear-gradient(100deg,#E0B84A
 .gmlv div b{font-size:16px;color:var(--ink)}.gmlv .done{opacity:.55}.gmlv .cur{background:var(--gold);color:var(--ink);box-shadow:0 0 0 2px var(--ink)}
 @media(prefers-reduced-motion:reduce){.lvx,.gnm.n_shine,.gnm.n_rainbow,.f_spark::after,.f_aurora::after,.f_fire::after,.f_diamond::after,.gmsp{animation:none}}
 .avgap{display:inline-block;width:9px}
+.drm{position:relative;border-radius:22px;background:var(--bgv,transparent);display:inline-block;flex:none}
+.drm svg{display:block}
+.gmc .drmmini{flex:none;margin:-8px 0 -8px 0}.gmc .drmmini .drm{border-radius:10px}
+.drmpop{display:flex;flex-direction:column;gap:12px;align-items:center}.drmt{font-size:22px;font-weight:800;text-align:center;line-height:1.2;background:linear-gradient(90deg,#E8590C,#D6336C,#7048E8);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+.drmpop .btn{width:100%}
+.drmsheet .drm{animation:drmbob 2.4s ease-in-out infinite}
+@keyframes drmbob{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-8px) rotate(2deg)}}
+@media(prefers-reduced-motion:reduce){.drmsheet .drm{animation:none}}
