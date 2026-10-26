@@ -263,6 +263,29 @@ function dayModal(k){
   },()=>{S.sel=null});
 }
 const KINDS={off:['ВЫХ','#E8DCCB','Выходной'],otgul:['ОТ','#E4B5A3','Отгул'],do:['ДО','#F5E2A8','ДО'],sick:['Б','#BCC8D6','Больничный'],vac:['ОП','#C9D4B0','Отпуск']};
+// руководитель выбирает день в графике: окно с выбором (выходной, отгул, ДО, больничный, отпуск, рабочий)
+function markModal(k,after){
+  const mk=S.marks[k],uid=S.viewUser;let pick=mk?.kind||'';
+  dgxSheet(dayLabel(k),(box,paint,close)=>{
+    box.innerHTML=`<div class="muted">${esc((S.people.find(p=>p.id===uid)||S.me).full_name||'')}</div>
+    <b>Что поставить в графике</b>
+    <div class="mpick">${Object.entries(KINDS).map(([c,v])=>`<button data-m="${c}" style="background:${v[1]}" class="${pick===c?'on':''}"><b>${v[0]}</b> ${v[2]}</button>`).join('')}<button data-m="" style="background:#fff;border:1px solid #ccc" class="${pick===''?'on':''}"><b>—</b> Рабочий день</button></div>
+    <label>Если несколько дней: по какое число<input type="date" id="mm_to" min="${k}"></label>
+    <label>Комментарий<textarea id="mm_n" placeholder="Комментарий (необязательно)">${esc(mk?.note||'')}</textarea></label>
+    ${S.dnotes[k]?`<div class="muted">📝 Личный комментарий сотрудника: ${esc(S.dnotes[k])}</div>`:''}
+    <button class="btn" id="mm_s">Сохранить</button><div class="err" id="mm_e"></div>`;
+    box.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{pick=b.dataset.m;box.querySelectorAll('[data-m]').forEach(x=>x.classList.toggle('on',x===b))});
+    box.querySelector('#mm_s').onclick=async e=>{
+      const note=box.querySelector('#mm_n').value,to=box.querySelector('#mm_to').value,er=box.querySelector('#mm_e');
+      if(to&&to<k)return er.textContent='Конец раньше начала';
+      const days=[];for(let d=new Date(k+'T12:00:00');iso(d)<=(to||k);d.setDate(d.getDate()+1))days.push(iso(d));
+      if(days.length>62)return er.textContent='Не больше двух месяцев за раз';
+      e.target.disabled=true;
+      const r=pick?await sb.from('marks').upsert(days.map(day=>({user_id:uid,day,kind:pick,note}))):await sb.from('marks').delete().eq('user_id',uid).in('day',days);
+      if(r.error){e.target.disabled=false;return er.textContent='Не удалось сохранить: '+r.error.message}
+      close(false);S.sel=null;after&&after()};
+  },()=>{S.sel=null});
+}
 async function schView(){
   S.offline=0;
   if(canMng()&&!S.people.length){let q=sb.from('profiles').select('id,full_name,team').eq('status','approved').order('full_name');if(!isManager())q=q.eq('team',S.me.team);const {data}=await q;S.people=data||[]}
@@ -301,26 +324,19 @@ async function schView(){
   h+=`<div class="card pad col"><b>⏱ Переработки</b>${otRows.length?otRows.map(r=>`<div class="otr"><span><b>${dayLabel(r.day)}</b> · с ${esc(String(r.start_time||'—').slice(0,5))} · ${fh(+r.hours)} ч${r.note?' · '+esc(r.note):''}</span>${otOk?`<button class="x" data-od="${r.id}" aria-label="Удалить">✕</button>`:''}</div>`).join(''):'<div class="muted">В этом месяце переработок нет</div>'}
   ${otOk?`<div class="col" style="border-top:1px solid var(--line);padding-top:10px"><div class="muted">Добавить переработку для выбранного сотрудника</div><input type="date" id="otd" value="${defd}"><div class="two"><label>С какого времени<input type="time" id="ots" value="20:00"></label><label>Сколько часов<input type="number" id="oth" step="0.5" min="0.5" placeholder="2"></label></div><input id="otn" placeholder="Комментарий (необязательно)"><button class="btn" id="otadd">Добавить</button></div>`:''}</div>`;
   if(selfMode)h+=`<div class="muted">Нажми на дату: можно отправить заявку на отгул, ДО, больничный или отпуск и оставить комментарий. ⏳ — отправлено на согласование руководителю.</div>`;
-  if(S.sel&&!selfMode){const mk=S.marks[S.sel];
-    h+=`<div class="card pad" style="display:flex;flex-direction:column;gap:10px"><b>${S.sel}</b><div class="tabs">${Object.entries(KINDS).map(([k,v])=>`<button data-m="${k}" style="background:${v[1]}" class="${mk?.kind===k?'on':''}">${v[2]}</button>`).join('')}<button data-m="" style="background:#fff;border:1px solid #ccc">Рабочий</button></div><textarea id="note" placeholder="Комментарий">${esc(mk?.note||'')}</textarea>${S.dnotes[S.sel]?`<div class="muted">📝 Личный комментарий сотрудника: ${esc(S.dnotes[S.sel])}</div>`:''}<button class="btn" id="save">Сохранить</button></div>`}
   app.innerHTML=h;
   $('#dlen')?.addEventListener('change',async e=>{const v=e.target.value?+e.target.value:null;e.target.disabled=true;
     const a=await sb.from('profiles').update({day_len:v}).eq('id',S.viewUser);if(a.error)return alert(a.error.message);
     if(vr.data)await sb.from('roster').update({day_len:v}).eq('id',vr.data.id);schView()});
   $('#who')?.addEventListener('change',e=>{S.viewUser=e.target.value;S.sel=null;schView()});
   $('#pm').onclick=()=>{S.month=new Date(y,mo-1,1);S.sel=null;schView()};$('#nm').onclick=()=>{S.month=new Date(y,mo+1,1);S.sel=null;schView()};
-  app.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{S.sel=b.dataset.k;S.pick=S.marks[S.sel]?.kind||'';if(selfMode)dayModal(S.sel);else schView()});
-  app.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{S.pick=b.dataset.m;app.querySelectorAll('[data-m]').forEach(x=>x.classList.toggle('on',x===b))});
+  app.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{S.sel=b.dataset.k;S.pick=S.marks[S.sel]?.kind||'';if(selfMode)dayModal(S.sel);else markModal(S.sel,schView)});
   $('#otadd')?.addEventListener('click',async()=>{
     const day=$('#otd').value,hours=parseFloat(String($('#oth').value).replace(',','.'));
     if(!day||!(hours>0))return alert('Укажи дату и сколько часов (больше нуля)');
     const r=await sb.from('overtime').insert({user_id:S.viewUser,day,start_time:$('#ots').value||null,hours,note:$('#otn').value.trim()||null,created_by:S.me.id});
     if(r.error)return alert('Не удалось добавить: '+r.error.message);schView()});
   app.querySelectorAll('[data-od]').forEach(b=>b.onclick=async()=>{if(!confirm('Удалить эту переработку?'))return;const r=await sb.from('overtime').delete().eq('id',b.dataset.od);if(r.error)alert(r.error.message);schView()});
-  $('#save')?.addEventListener('click',async()=>{
-    const kind=S.pick??S.marks[S.sel]?.kind??'',note=$('#note').value;
-    const r=kind?await sb.from('marks').upsert({user_id:S.viewUser,day:S.sel,kind,note}):await sb.from('marks').delete().eq('user_id',S.viewUser).eq('day',S.sel);
-    if(r.error)alert('Не удалось сохранить: '+r.error.message);S.sel=null;schView()});
 }
 
 
