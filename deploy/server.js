@@ -29,6 +29,7 @@ const load = f => import(pathToFileURL(path.join(ROOT, 'functions/api', f)).href
 const routes = {
   'GET /api/file': ['file.js', 'onRequestGet'],
   'GET /api/link': ['link.js', 'onRequestGet'],
+  'GET /api/site': ['site.js', 'onRequestGet'],
   'POST /api/upload': ['upload.js', 'onRequestPost'],
 };
 

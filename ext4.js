@@ -163,3 +163,19 @@ document.addEventListener('pointerdown',e=>{
   const r=b.getBoundingClientRect(),d=Math.max(r.width,r.height)*2,s=document.createElement('span');
   s.className='ripple';s.style.cssText=`width:${d}px;height:${d}px;left:${e.clientX-r.left-d/2}px;top:${e.clientY-r.top-d/2}px`;
   b.appendChild(s);setTimeout(()=>s.remove(),600)},{passive:true});
+
+// ---- «С сайта парка»: новости и афиша с официального сайта для гостей + быстрые ссылки ----
+const SITE='https://www.dreamwoodpark.com';
+const SITE_LINKS=[['🎟️','Билеты','/tickets/'],['📅','Расписание активностей','/programm/'],['🎢','Аттракционы и услуги','/attractions/'],['🏙️','Метрополис','/metropolis/'],['🍽️','Точки питания','/restaurants/'],['📜','Правила посещения','/rules/'],['❓','Вопросы и ответы','/faq/'],['📞','Контакты и проезд','/contacts/']];
+async function siteBlock(){
+  const box=document.getElementById('sitebox');if(!box)return;
+  const links=`<div class="card pad col"><b>🧭 Для ответов гостям</b><div class="muted">Официальный сайт парка: быстрые ссылки</div><div class="sitel">${SITE_LINKS.map(([ic,n,u])=>`<a href="${SITE+u}" target="_blank" rel="noopener">${ic} ${n}</a>`).join('')}</div><div class="muted">Телефоны для гостей: <a href="tel:88005504326">8 800 550-43-26</a> · консьерж <a href="tel:88004442417">8 800 444-24-17</a></div></div>`;
+  box.innerHTML=links;
+  let d=null;
+  try{const c=new AbortController(),t=setTimeout(()=>c.abort(),9000);const r=await fetch('/api/site',{signal:c.signal});clearTimeout(t);if(r.ok){d=await r.json();lsSet('dw_site',JSON.stringify({t:Date.now(),d}))}}catch(e){}
+  if(!d||!(d.items||[]).length){try{const c=JSON.parse(lsGet('dw_site'));if(c)d=c.d}catch(e){}}
+  if(!document.getElementById('sitebox')||!d||!(d.items||[]).length)return;
+  const e=x=>esc(x);
+  box.innerHTML=`<div class="card pad col"><b>🌐 С сайта парка</b><div class="muted">Что сейчас видят гости: афиша и новости dreamwoodpark.com</div>${d.items.slice(0,6).map(x=>`<a class="sitei" href="${e(x.url)}" target="_blank" rel="noopener">${x.img?`<img src="${e(x.img)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:''}<span><b>${e(x.title)}</b>${x.date?`<span class="pill" style="background:var(--gold);align-self:flex-start">${e(x.date)}</span>`:''}${x.text?`<span class="muted sitet">${e(x.text)}</span>`:''}<span class="sitem">Открыть на сайте →</span></span></a>`).join('')}</div>`+links;
+}
+window.siteBlock=siteBlock;

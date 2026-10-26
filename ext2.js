@@ -77,13 +77,14 @@ async function newsView(){
   const mgr=isManager(),list=n.data||[],acks=a.data||[],me=S.me.id,total=S.dg.people.length;
   let h=head('Новости','Что нового в парке')+subBar('park','news');
   if(mgr)h+='<button class="btn" id="nw_new">➕ Опубликовать новость</button>';
+  h+='<div id="sitebox"></div>';
   h+=list.map(x=>{
     const ack=acks.filter(k=>k.news_id===x.id),mine=ack.find(k=>k.user_id===me),lg=(x.body||'').length>240;
     return `<div class="card pad col" style="${x.pinned?'border-color:var(--ink)':''}"><div style="display:flex;justify-content:space-between;gap:8px"><b style="font-size:17px">${x.pinned?'📌 ':''}${esc(x.title)}</b>${mgr?`<button class="x" data-ne="${x.id}" aria-label="Править">✏️</button>`:''}</div>
       <div class="muted">${ago(x.created_at)}</div><div class="nbody ${lg?'cl':''}">${esc(x.body)}</div>${lg?'<a href="#" class="more" style="font-weight:700;color:var(--ink)">читать полностью</a>':''}
       ${x.require_ack?(mgr?`<div class="pill" style="background:#F3C29B;align-self:flex-start">❗ Нужно ознакомиться · ${ack.length} из ${total}</div><div class="two"><button class="btn ghost" data-who="${x.id}" style="min-height:40px">Кто не ознакомился</button><button class="btn ghost" data-rm="${x.id}" style="min-height:40px">🔔 Напомнить</button></div><div class="muted" id="who_${x.id}" hidden></div>`
         :(mine?`<div class="pill" style="background:#C9D4B0;align-self:flex-start">✅ Ты ознакомился(ась)</div>`:`<button class="btn" data-ak="${x.id}">✔ Ознакомлен(а)</button>`)):''}</div>`}).join('')||'<div class="card pad muted">Новостей пока нет.</div>';
-  app.innerHTML=h;
+  app.innerHTML=h;window.siteBlock&&siteBlock();
   app.querySelectorAll('.more').forEach(a=>a.onclick=e=>{e.preventDefault();a.previousElementSibling.classList.remove('cl');a.remove()});
   $('#nw_new')?.addEventListener('click',()=>newsForm());
   app.querySelectorAll('[data-ne]').forEach(b=>b.onclick=()=>newsForm(list.find(x=>x.id==b.dataset.ne)));
