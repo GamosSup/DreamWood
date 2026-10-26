@@ -569,3 +569,6 @@ html[data-dark="1"] .gnm.n_shine{background-image:linear-gradient(100deg,#E0B84A
 .evtkit b{display:block;margin-bottom:8px;color:#FFE9B8;font-size:15px}
 .evtchips{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
 .evtchips span{padding:5px 10px;border-radius:99px;background:rgba(255,255,255,.14);font-size:12.5px;font-weight:700}
+.gmav{display:flex;flex-direction:column;align-items:center;gap:6px;flex:none}
+.gmcam{border:0;border-radius:99px;padding:5px 12px;font-size:12px;font-weight:800;background:var(--ink);color:var(--card);cursor:pointer}
+.gmcam:disabled{opacity:.6}

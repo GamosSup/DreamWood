@@ -217,7 +217,7 @@ const gmTab=()=>S.gmTab||'ach';
 const gmSeeAll=()=>!!gmMe()?.lvl_text; // только у владельца приложения видны и закрытые достижения; у остальных — лишь открытые
 function gmHero(row){
   const L=gmLv(row.xp),cos=gmCos(row);
-  return `<div class="card gmh"><div class="gmhr"><div>${av(S.me,84)}</div><div style="flex:1;min-width:0">
+  return `<div class="card gmh"><div class="gmhr"><div class="gmav">${av(S.me,84)}<button class="avcam gmcam" aria-label="Поставить фото из галереи">📷 Фото</button></div><div style="flex:1;min-width:0">
     <div class="gmn">${gmName(S.me.full_name||'',row,{lv:false})}</div>${gmTitleHtml(row)}
     <div style="margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">${gmLvChip(row,true)}${row.lvl_text?'':`<span><b>${esc(GM_RANKS[L.r].full)}</b><br><span class="muted">Уровень ${L.n} из 50</span></span>`}</div></div><div class="gmhp">${gmPetHead(row,62)}</div></div>
     ${row.lvl_text?`<div class="muted" style="margin-top:8px">Всего очков: <b>${row.xp}</b></div>`:`<div class="pgb" style="margin-top:12px"><div class="pg" style="width:${L.pct}%"></div></div><div class="muted" style="margin-top:6px">${row.xp} очков${L.hi?` · до уровня ${L.n+1} осталось <b>${L.left}</b>`:' · максимальный уровень, ты легенда'}</div>`}</div>`;
