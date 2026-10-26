@@ -64,26 +64,29 @@ async function shiftView(){
   const complete=all.filter(isFull).length,can=day===today||mgr;
   let h=head('Смена','Чек-листы открытия и закрытия зон');
   h+=`<div class="two"><button class="btn ghost" id="sh_p" style="flex:none;width:56px">←</button><button class="btn ghost" id="sh_t" style="flex:1">${day===today?'Сегодня · ':''}${dayLabel(day)}</button><button class="btn ghost" id="sh_n" style="flex:none;width:56px">→</button></div>`;
-  h+=`<div class="seg"><button data-k="open" class="${S.sh.kind==='open'?'on':''}">🌅 Открытие</button><button data-k="close" class="${S.sh.kind==='close'?'on':''}">🌙 Закрытие</button></div>`;
-  h+=`<div class="stat"><div style="background:var(--sage)"><b>${complete} из ${all.length}</b>${S.sh.kind==='open'?'зон открыто':'зон закрыто'}</div><div style="background:var(--gold)"><b>${all.reduce((a,l)=>a+doneOf(l).length,0)} из ${all.reduce((a,l)=>a+l.items.length,0)}</b>пунктов отмечено</div></div>`;
+  h+=`<div class="tabs"><button data-k="alpha_k" class="${S.sh.kind==='alpha_k'?'on':''}" style="background:#F5E2A8">🛡 Альфа хранителей</button><button data-k="alpha_r" class="${S.sh.kind==='alpha_r'?'on':''}" style="background:#C9D4B0">🧭 Альфа рейнджеров</button></div>
+  <div class="seg"><button data-k="open" class="${S.sh.kind==='open'?'on':''}">🌅 Открытие</button><button data-k="close" class="${S.sh.kind==='close'?'on':''}">🌙 Закрытие</button></div>`;
+  h+=`<div class="stat"><div style="background:var(--sage)"><b>${complete} из ${all.length}</b>${S.sh.kind==='open'?'зон открыто':S.sh.kind==='close'?'зон закрыто':'блоков выполнено'}</div><div style="background:var(--gold)"><b>${all.reduce((a,l)=>a+doneOf(l).length,0)} из ${all.reduce((a,l)=>a+l.items.length,0)}</b>пунктов отмечено</div></div>`;
   if(!can)h+='<div class="muted">Прошлые дни можно только смотреть.</div>';
   S.shZ=S.shZ||{};
   const zoneHtml=l=>{
-    const dn=doneOf(l),full=isFull(l),c=areaOf(l.zone||l.title).d;
+    const dn=doneOf(l),full=isFull(l),c=l.kind==='alpha_k'?'#F5E2A8':l.kind==='alpha_r'?'#DDE7C6':areaOf(l.zone||l.title).d;
     const mine=checks.filter(x=>x.list_id===l.id).sort((a,b)=>a.at<b.at?1:-1),last=mine[0]||null,nl=notes.filter(n=>n.list_id===l.id);
     return `<details class="card shl" data-zl="${l.id}" ${S.shZ[l.id]?'open':''}><summary class="zh" style="background:${c}"><span>${esc(l.zone||l.title)}</span><span class="pill" style="background:${full?'#C9D4B0':'#FFFDF9'};align-self:center">${nl.length?'💬'+nl.length+' · ':''}${full?'✅ '+hm(last.at)+' · '+esc(shortName(pname(last.user_id))):dn.length+' / '+l.items.length+(last?' · '+hm(last.at)+' '+esc(shortName(pname(last.user_id)).split(' ')[0]):'')}</span></summary>
       <div class="zb">${l.items.map(it=>{const ck=checks.find(x=>x.list_id===l.id&&x.item===it);
         return `<label class="shi"><input type="checkbox" data-l="${l.id}" data-i="${esc(it)}" data-u="${ck?ck.user_id:''}" ${ck?'checked':''} ${can&&(!ck||ck.user_id===S.me.id||mgr)?'':'disabled'}><span style="${ck?'text-decoration:line-through;color:var(--muted)':''}">${esc(it)}${ck?`<br><small class="who">✔ ${esc(pname(ck.user_id))} · ${hm(ck.at)}</small>`:''}${notes.some(n=>n.list_id===l.id&&n.item===it)?` <small class="who" style="background:#F5E2A8">💬 ${notes.filter(n=>n.list_id===l.id&&n.item===it).length}</small>`:''}</span></label>`}).join('')||'<div class="muted">Пунктов нет</div>'}
       <div class="shn"><b>💬 Комментарии${nl.length?' · '+nl.length:''}</b>${nl.map(n=>`<div class="shc"><div><b>${esc(shortName(pname(n.user_id)))}</b> <span class="muted">${hm(n.created_at)}${n.item?' · к пункту «'+esc(n.item)+'»':''}</span>${n.user_id===S.me.id||mgr?` <button class="x" data-nd="${n.id}" aria-label="Удалить">✕</button>`:''}</div><div>${esc(n.body)}</div></div>`).join('')}
         ${can?`<div class="shnf"><select data-nl="${l.id}"><option value="">Ко всему списку</option>${l.items.map(it=>`<option value="${esc(it)}">${esc(it.length>46?it.slice(0,46)+'…':it)}</option>`).join('')}</select><textarea data-nt="${l.id}" placeholder="Например: закончились журналы, нужны новые"></textarea><button class="btn" data-ns="${l.id}" style="min-height:42px">Отправить</button></div>`:''}</div></div></details>`};
-  h+=byArea(all,l=>l.zone||l.title).map(({a,items})=>{const dz=items.filter(isFull).length;
+  const isAl=S.sh.kind==='alpha_k'||S.sh.kind==='alpha_r';
+  if(isAl)h+=`<div class="muted">${S.sh.kind==='alpha_k'?'Альфа хранителей: проверка локаций, журналы, Купол.':'Альфа рейнджеров: Метрополис и помощь в Лесу.'}</div>${all.map(zoneHtml).join('')||'<div class="card pad muted">Списков пока нет.</div>'}`;
+  else h+=byArea(all,l=>l.zone||l.title).map(({a,items})=>{const dz=items.filter(isFull).length;
     return `<details class="area" data-ar="${a.k}" ${S.areaOpen[a.k]?'open':''}>${areaHead(a,(dz===items.length?'✅ ':'')+'отмечено '+dz+' из '+items.length)}<div class="ab" style="background:${a.d}">${items.map(zoneHtml).join('')}</div></details>`}).join('')||'<div class="card pad muted">Списков пока нет.</div>';
   if(mgr){
     const [ac,mk]=await Promise.all([sb.from('shift_checks').select('list_id,user_id,item').eq('day',day),sb.from('marks').select('user_id').eq('day',day)]);
     const off=new Set((mk.data||[]).map(x=>x.user_id)),tot=all.reduce((a,l)=>a+l.items.length,0),by={};
     (ac.data||[]).forEach(c=>{const l=all.find(x=>x.id===c.list_id);if(l&&l.items.includes(c.item))by[c.user_id]=(by[c.user_id]||0)+1});
     const ppl=(S.dg.people||[]).filter(p=>!off.has(p.id)),done=ppl.filter(p=>by[p.id]),none=ppl.filter(p=>!by[p.id]);
-    h+=`<div class="card pad col"><b>👥 Кто ${S.sh.kind==='open'?'открывал':'закрывал'} зоны · ${dayLabel(day)}</b><div class="muted">Чек-лист общий: пункт, который отметил кто-то из команды, виден всем с именем и временем.</div>${done.map(p=>`<div class="otr"><span>${esc(shortName(p.full_name))}</span><b>${by[p.id]} из ${tot}${by[p.id]>=tot&&tot?' ✅':''}</b></div>`).join('')}${none.length?`<div class="muted">Не начинали: ${none.map(p=>esc(shortName(p.full_name))).join(', ')}</div>`:''}</div>`;
+    h+=`<div class="card pad col"><b>👥 Кто ${S.sh.kind==='open'?'открывал':S.sh.kind==='close'?'закрывал':'выполнял'} ${S.sh.kind.startsWith('alpha')?'списки':'зоны'} · ${dayLabel(day)}</b><div class="muted">Чек-лист общий: пункт, который отметил кто-то из команды, виден всем с именем и временем.</div>${done.map(p=>`<div class="otr"><span>${esc(shortName(p.full_name))}</span><b>${by[p.id]} из ${tot}${by[p.id]>=tot&&tot?' ✅':''}</b></div>`).join('')}${none.length?`<div class="muted">Не начинали: ${none.map(p=>esc(shortName(p.full_name))).join(', ')}</div>`:''}</div>`;
     h+='<button class="btn ghost" id="sh_ed">✏️ Править чек-листы</button>';
   }
   app.innerHTML=h;bindAreas(app);
@@ -114,7 +117,7 @@ function shiftEditor(){
     if(!edit){
       const r=await sb.from('shift_lists').select('*').order('sort');const list=r.data||[];
       box.innerHTML=`<div class="muted">Здесь можно править пункты, добавлять зоны и отключать списки. Шаблоны созданы для примера — поправь под ваши регламенты.</div>
-      ${list.map(l=>`<div class="otr"><span><b>${esc(l.title)}</b><br><span class="muted">${l.kind==='open'?'Открытие':'Закрытие'} · пунктов: ${l.items.length}${l.active?'':' · выключен'}</span></span><button class="btn ghost" data-e="${l.id}" style="min-height:38px;padding:0 14px">Изменить</button></div>`).join('')}
+      ${list.map(l=>`<div class="otr"><span><b>${esc(l.title)}</b><br><span class="muted">${({open:'Открытие',close:'Закрытие',alpha_k:'Альфа хранителей',alpha_r:'Альфа рейнджеров'})[l.kind]} · пунктов: ${l.items.length}${l.active?'':' · выключен'}</span></span><button class="btn ghost" data-e="${l.id}" style="min-height:38px;padding:0 14px">Изменить</button></div>`).join('')}
       <button class="btn" id="sl_new">+ Новый список</button>`;
       box.querySelectorAll('[data-e]').forEach(b=>b.onclick=()=>{edit={...list.find(x=>x.id==b.dataset.e)};paint()});
       box.querySelector('#sl_new').onclick=()=>{edit={id:null,title:'',kind:'open',zone:DGX_ZONES[0],items:[],sort:(list.reduce((m,x)=>Math.max(m,x.sort),0))+1,active:true};paint()};
@@ -122,14 +125,14 @@ function shiftEditor(){
     }
     const x=edit;
     box.innerHTML=`<label>Название<input id="e_t" value="${esc(x.title)}" placeholder="Например: Гольф · открытие"></label>
-    <div class="two"><label>Когда<select id="e_k"><option value="open" ${x.kind==='open'?'selected':''}>Открытие</option><option value="close" ${x.kind==='close'?'selected':''}>Закрытие</option></select></label>
-    <label>Зона<select id="e_z">${DGX_ZONES.map(z=>`<option ${z===x.zone?'selected':''}>${esc(z)}</option>`).join('')}</select></label></div>
+    <div class="two"><label>Когда<select id="e_k"><option value="open" ${x.kind==='open'?'selected':''}>Открытие</option><option value="close" ${x.kind==='close'?'selected':''}>Закрытие</option><option value="alpha_k" ${x.kind==='alpha_k'?'selected':''}>Альфа хранителей</option><option value="alpha_r" ${x.kind==='alpha_r'?'selected':''}>Альфа рейнджеров</option></select></label>
+    <label>Зона<select id="e_z"><option value="">— без зоны —</option>${DGX_ZONES.map(z=>`<option ${z===x.zone?'selected':''}>${esc(z)}</option>`).join('')}</select></label></div>
     <label>Пункты (каждый с новой строки)<textarea id="e_i" style="min-height:160px">${esc(x.items.join('\n'))}</textarea></label>
     <label style="flex-direction:row;align-items:center;gap:10px"><input type="checkbox" id="e_a" ${x.active?'checked':''} style="width:24px;min-height:24px"> Список включён</label>
     <button class="btn" id="e_sv">Сохранить</button><button class="btn ghost" id="e_cn">Назад</button>${x.id?'<button class="btn ghost" id="e_dl" style="color:#9b2c2c;border-color:#9b2c2c">Удалить список</button>':''}<div class="err" id="e_er"></div>`;
     box.querySelector('#e_cn').onclick=()=>{edit=null;paint()};
     box.querySelector('#e_sv').onclick=async()=>{
-      const row={title:box.querySelector('#e_t').value.trim(),kind:box.querySelector('#e_k').value,zone:box.querySelector('#e_z').value,items:box.querySelector('#e_i').value.split('\n').map(s=>s.trim()).filter(Boolean),active:box.querySelector('#e_a').checked,sort:x.sort};
+      const row={title:box.querySelector('#e_t').value.trim(),kind:box.querySelector('#e_k').value,zone:box.querySelector('#e_z').value||null,items:box.querySelector('#e_i').value.split('\n').map(s=>s.trim()).filter(Boolean),active:box.querySelector('#e_a').checked,sort:x.sort};
       if(!row.title)return box.querySelector('#e_er').textContent='Введи название';
       const r=x.id?await sb.from('shift_lists').update(row).eq('id',x.id):await sb.from('shift_lists').insert(row);
       if(r.error)return box.querySelector('#e_er').textContent=r.error.message;edit=null;paint()};
