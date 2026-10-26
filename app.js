@@ -482,7 +482,8 @@ async function staffView(){
   const adm=isAdmin(),lockRole=p=>!adm&&(p.role==='manager'||p.role==='admin'),roleOpts=p=>Object.entries(ROLE_RU).filter(([k])=>adm?k!=='admin'||p.role==='admin':k==='employee'||k==='lead');
   h+=`<div class="card pad col"><b>👥 Команда · ${ap.length}</b><div class="muted">Имя (первое слово идёт в приветствие), табельный номер и должность${adm?'. Роли руководителей и удаление — только у админа':''}</div>${ap.map(p=>`<div class="col" style="border-top:1px solid var(--line);padding-top:10px;gap:6px"><div class="prow"><input class="pn" data-pn="${p.id}" value="${esc(p.full_name||'')}" placeholder="Имя Фамилия"><input class="pt" data-pt="${p.id}" value="${esc(p.tab_no||'')}" placeholder="№"><button class="btn" style="padding:0 14px" data-sp="${p.id}" aria-label="Сохранить">💾</button></div>
     <input data-ps="${p.id}" value="${esc(p.position||'')}" placeholder="Должность (например, супервайзер)">
-    <div class="muted">${p.id===S.me.id||lockRole(p)||p.role==='admin'?`<b>${roleLbl(p)}</b>`:`<select class="rl" data-rl="${p.id}">${roleOpts(p).map(([k,v])=>`<option value="${k}" ${p.role===k?'selected':''}>${v}</option>`).join('')}</select>`}${rl.get(p.id)?' · в списке: '+esc(rl.get(p.id)):''}${p.team?' · '+(TN[p.team]||''):''}${p.phone?' · '+esc(p.phone):''} · с ${dt(p.created_at)}</div>
+    <label style="flex-direction:row;align-items:center;gap:8px;font-weight:600">Команда <select class="rl" data-tm="${p.id}"><option value="">— без команды —</option>${Object.entries(TN).map(([k,v])=>`<option value="${k}" ${p.team===k?'selected':''}>${v}</option>`).join('')}</select></label>
+    <div class="muted">${p.id===S.me.id||lockRole(p)||p.role==='admin'?`<b>${roleLbl(p)}</b>`:`<select class="rl" data-rl="${p.id}">${roleOpts(p).map(([k,v])=>`<option value="${k}" ${p.role===k?'selected':''}>${v}</option>`).join('')}</select>`}${rl.get(p.id)?' · в списке: '+esc(rl.get(p.id)):''}${p.phone?' · '+esc(p.phone):''} · с ${dt(p.created_at)}</div>
     ${adm&&p.id!==S.me.id?`<div class="two"><button class="btn ghost" data-pw="${p.id}">🔑 Новый пароль</button><button class="btn ghost" data-rm="${p.id}" style="color:#9b2c2c;border-color:#9b2c2c">🚫 Убрать</button></div>`:''}</div>`).join('')}</div>`;
   h+=`<div class="card pad col"><b>📋 Ещё не зарегистрировались · ${free.length}</b><div class="muted">${free.length?free.map(r=>esc(r.full_name)).join(', '):'Все из списка уже в приложении'}</div></div>`;
   app.innerHTML=h;
@@ -493,6 +494,10 @@ async function staffView(){
   app.querySelectorAll('[data-rl]').forEach(sel=>sel.onchange=async()=>{const nm=ap.find(x=>x.id===sel.dataset.rl);
     if(sel.value==='lead'&&!nm?.team)alert('У сотрудника не указана команда (он не привязан к списку), поэтому бригадир увидит только себя.');
     const r=await sb.from('profiles').update({role:sel.value}).eq('id',sel.dataset.rl);if(r.error){alert('Не удалось сменить роль: '+r.error.message);return staffView()}
+    sel.style.outline='2px solid var(--sage)';setTimeout(()=>sel.style.outline='',900)});
+  app.querySelectorAll('[data-tm]').forEach(sel=>sel.onchange=async()=>{
+    const r=await sb.from('profiles').update({team:sel.value||null}).eq('id',sel.dataset.tm);if(r.error){alert('Не удалось сменить команду: '+r.error.message);return staffView()}
+    const x=ap.find(y=>y.id===sel.dataset.tm);if(x)x.team=sel.value||null;S.people=[];S.dg.people=[];
     sel.style.outline='2px solid var(--sage)';setTimeout(()=>sel.style.outline='',900)});
   app.querySelectorAll('[data-sp]').forEach(b=>b.onclick=async()=>{const id=b.dataset.sp,full_name=app.querySelector(`[data-pn="${id}"]`).value.trim(),tab_no=app.querySelector(`[data-pt="${id}"]`).value.trim()||null,position=app.querySelector(`[data-ps="${id}"]`).value.trim()||null;
     const r=await sb.from('profiles').update({full_name,tab_no,position}).eq('id',id);if(r.error)return alert('Не удалось сохранить: '+r.error.message);
