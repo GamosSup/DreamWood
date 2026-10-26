@@ -3,7 +3,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,interactive-widget=resizes-content">
 <title>Дримвуд — команда</title>
 <meta name="theme-color" content="#3B2A35">
-<script>try{document.documentElement.dataset.theme=localStorage.getItem("dw-theme")||"autumn-warm"}catch(e){}</script>
+<script>try{var d=document.documentElement;d.dataset.theme=localStorage.getItem("dw-theme")||"autumn-warm";var k=localStorage.getItem("dw-dark");d.dataset.dark=(k==="1"||(k==="auto"&&matchMedia("(prefers-color-scheme:dark)").matches))?"1":"0"}catch(e){}</script>
 <link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icons/icon.svg"><link rel="apple-touch-icon" href="icons/icon-180.png">
 <link rel="stylesheet" href="/v/fonts" media="print" onload="this.media='all'"><noscript><link rel="stylesheet" href="/v/fonts"></noscript>
 <link rel="stylesheet" href="styles.css">
@@ -17,15 +17,20 @@
   <button data-tab="dg" data-mgr hidden>📋<span>Задачи</span></button>
   <button data-tab="ap">📨<span>Обращения</span><i hidden></i></button>
   <button data-tab="more" class="mob">☰<span>Ещё</span><i hidden></i></button>
+  <div class="ngr dsk">Работа</div>
   <button data-tab="shift" class="dsk">✅<span>Смена</span></button>
   <button data-tab="park" class="dsk">📰<span>Парк</span></button>
   <button data-tab="kb" class="dsk">📚<span>База знаний</span></button>
+  <div class="ngr dsk">Я</div>
+  <button data-tab="todo" class="dsk">📝<span>Мой блокнот</span></button>
+  <button data-tab="newbie" class="dsk">🌱<span>Первая неделя</span></button>
+  <button data-tab="thanks" class="dsk">💛<span>Благодарности</span></button>
+  <button data-tab="set" class="dsk">⚙️<span>Настройки</span></button>
+  <div class="ngr dsk">Команда</div>
   <button data-tab="team" class="dsk">👥<span>Команда</span><i hidden></i></button>
   <button data-tab="grid" class="dsk" data-lead hidden>📆<span>График и сводка</span></button>
-  <button data-tab="todo" class="dsk">📅<span>Мой календарь</span></button>
   <button data-tab="feedback" class="dsk">💡<span>Обратная связь</span><i hidden></i></button>
-  <button data-tab="set" class="dsk">⚙️<span>Настройки</span></button>
 </nav>
 <script src="/v/sbjs"></script><script>window.supabase||document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"><\/script>')</script>
-<script src="config.js"></script><script src="app.js"></script><script src="dgx.js"></script><script src="ext1.js"></script><script src="ext2.js"></script><script src="ext3.js"></script><script src="ext4.js"></script><script src="today.js"></script><script src="roted.js"></script><script src="xlsx.js"></script><script src="rep.js"></script><script src="plan.js"></script><script src="push.js"></script><script src="tour.js"></script>
+<script src="config.js"></script><script src="app.js"></script><script src="dgx.js"></script><script src="ext1.js"></script><script src="ext2.js"></script><script src="ext3.js"></script><script src="ext4.js"></script><script src="today.js"></script><script src="roted.js"></script><script src="xlsx.js"></script><script src="rep.js"></script><script src="plan.js"></script><script src="grow.js"></script><script src="fx.js"></script><script src="push.js"></script><script src="tour.js"></script>
 </body></html>

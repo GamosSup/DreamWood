@@ -187,14 +187,25 @@ async function contactsView(){
   $('#ct_q').oninput=e=>{S.ct.q=e.target.value;draw()};
 }
 
-// ================= МЕНЮ «ЕЩЁ» (телефон) =================
+// ================= МЕНЮ «ЕЩЁ» (телефон): три группы и поиск по разделам =================
 function moreView(){
-  const mgr=isManager(),b=S.badges||{};
-  const items=[['shift','✅','Смена','Открытие и закрытие: чек-листы зон'],['park','📰','Парк','Новости и афиша событий'],['kb','📚','База знаний','Регламенты и инструкции'],['team','👥','Команда','Телефоны'+(isAdmin()?', заявки на регистрацию, роли':'')],
-    ...(isManager()?[['alert','🚨','Тревога','Предупредить всех: приготовиться / эвакуация / отбой']]:[]),
-    ...(canMng()&&VIEWS.grid?[['grid','📆','График и сводка','Все сотрудники по дням, часы и доработки, Excel']]:[]),['todo','📅','Мой календарь','Дела, дедлайны, события и график, видите только вы'],['feedback','💡','Обратная связь',isAdmin()?'Идеи и сообщения от сотрудников':'Предложить идею или сообщить, что что-то не работает'],['set','⚙️','Настройки','Телефон, пароль, уведомления, оформление']];
-  app.innerHTML=head('Ещё','Все разделы приложения')+items.map(([k,ic,n,d])=>`<div class="card pad" data-go="${k}" style="display:flex;gap:14px;align-items:center;cursor:pointer"><span style="font-size:28px">${ic}</span><span style="flex:1"><b style="font-size:16px">${n}</b><div class="muted">${d}</div></span>${b[k]?`<span class="pill" style="background:#C0392B;color:#fff;align-self:center">${b[k]}</span>`:''}</div>`).join('');
-  app.querySelectorAll('[data-go]').forEach(c=>c.onclick=()=>c.dataset.go==='alert'?alertSheet():go(c.dataset.go));
+  const b=S.badges||{};
+  const G=[['Работа',[['shift','✅','Смена','Открытие и закрытие: чек-листы зон'],['park','📰','Парк','Новости и афиша событий'],['kb','📚','База знаний','Регламенты, памятки по аттракционам, правила']]],
+    ['Я',[['todo','📝','Мой блокнот','Дела, привычки, дедлайны и мой график, видите только вы'],['newbie','🌱','Первая неделя','Чек-лист новичка, наставник, вопросы'],['thanks','💛','Благодарности','Сказать спасибо коллеге, «Молодцы недели»'],['set','⚙️','Настройки','Профиль, пароль, уведомления, оформление, тёмная тема']]],
+    ['Команда',[['team','👥','Команда','Телефоны'+(isAdmin()?', заявки на регистрацию, роли':'')],
+      ...(canMng()&&VIEWS.grid?[['grid','📆','График и сводка','Все сотрудники по дням, часы и доработки, Excel']]:[]),
+      ...(isManager()?[['alert','🚨','Тревога','Предупредить всех: приготовиться / эвакуация / отбой']]:[]),
+      ['feedback','💡','Обратная связь',isAdmin()?'Идеи и сообщения от сотрудников':'Предложить идею или сообщить, что что-то не работает']]]];
+  const nq=t=>String(t||'').toLowerCase().replace(/ё/g,'е');
+  const draw=q=>{
+    const t=nq(q).split(/\s+/).filter(Boolean);
+    const out=G.map(([g,l])=>{const it=l.filter(([k,ic,n,d])=>t.every(w=>nq(n+' '+d+' '+g).includes(w)));
+      return it.length?`<div class="mgh">${g}</div>${it.map(([k,ic,n,d])=>`<div class="card pad mrow" data-go="${k}"><span class="mic">${ic}</span><span style="flex:1;min-width:0"><b style="font-size:16px">${n}</b><div class="muted">${d}</div></span>${b[k]?`<span class="pill" style="background:#C0392B;color:#fff;align-self:center">${b[k]}</span>`:''}</div>`).join('')}`:''}).join('');
+    $('#mo_l').innerHTML=out||dEmpty('search','Попробуй другое слово: «график», «спасибо», «тема»');
+    $('#mo_l').querySelectorAll('[data-go]').forEach(c=>c.onclick=()=>c.dataset.go==='alert'?alertSheet():go(c.dataset.go));
+  };
+  app.innerHTML=head('Ещё','Все разделы приложения')+`<input type="search" id="mo_q" placeholder="🔍 Найти раздел" autocomplete="off"><div id="mo_l" class="col"></div>`;
+  draw('');$('#mo_q').oninput=e=>draw(e.target.value);
 }
 
 VIEWS.req=reqView;VIEWS.news=newsView;VIEWS.kb=kbView;VIEWS.contacts=contactsView;VIEWS.more=moreView;

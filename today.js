@@ -12,7 +12,7 @@ async function todayView(){
     const nm=id=>shortName((S.dg.people.find(p=>p.id===id)||{}).full_name||'');
     return {inc,sn,total,work:Math.max(0,total-absent),ok:(cks.data||[]).length,ot:ox.map(o=>`${OT_K[otKind(o)][0]} ${nm(o.user_id)} +${String(+o.hours).replace('.',',')} ч${o.note?' ('+o.note+')':''}`)};
   })().catch(()=>null):null;
-  const [mk,ck,rt,ev,nw,rt2,rq,mm,ot,td]=await Promise.all([
+  const [mk,ck,rt,ev,nw,rt2,rq,mm,ot,td,hb,hl,ob,th]=await Promise.all([
     sb.from('marks').select('kind,note').eq('user_id',me).eq('day',t).maybeSingle(),
     sb.from('checkins').select('at').eq('user_id',me).eq('day',t).maybeSingle(),
     sb.from('rotations').select('data').eq('day',t).maybeSingle(),
@@ -22,14 +22,20 @@ async function todayView(){
     sb.from('requests').select('id,kind,day,day_to,status,created_at').eq('user_id',me).neq('status','cancelled').order('created_at',{ascending:false}).limit(4),
     sb.from('marks').select('day,kind').eq('user_id',me).gte('day',ms).lte('day',ym+'-31'),
     sb.from('overtime').select('*').eq('user_id',me).gte('day',ms).lte('day',ym+'-31'),
-    sb.from('todos').select('*').eq('user_id',me)]);
+    sb.from('todos').select('*').eq('user_id',me),
+    sb.from('habits').select('id,title,icon,days,created_at').eq('user_id',me).eq('arch',false),
+    sb.from('habit_logs').select('habit_id').eq('user_id',me).eq('day',t),
+    sb.from('onb_items').select('id,title,done,link').eq('user_id',me).order('sort').order('id'),
+    sb.from('thanks').select('id,sticker,body,from_user,created_at').eq('to_user',me).gte('created_at',new Date(Date.now()-7*864e5).toISOString()).order('created_at',{ascending:false}).limit(3)]);
   if(rnameP)await rnameP;
+  if((th.data||[]).length)await ensurePeople();
   const adm=admP?await admP:null;
   const rot=rt.data?.data,mine=rot&&window.myShift?myShift(rot):[],K=mk.data&&KINDS[mk.data.kind];
   const b=S.act||{};
   let h=head('Сегодня',dayLabel(t));
   h+=alertCard();h+='<div id="pushbn"></div>';
-  h+=`<div class="card pad" style="background:linear-gradient(120deg,#F5E2A8,#F3C29B);border:0"><div style="font-family:Alegreya,Georgia,serif;font-size:19px;line-height:1.3">✨ ${esc(dayPhrase())}</div></div>`;
+  {const dj=new Date().getDate()%2===0,tx=dj?dayJoke():dayPhrase();
+   h+=`<div class="card pad dayph" id="td_ph" role="button" tabindex="0" aria-label="Ещё один совет"><div style="flex:1;min-width:0"><div class="phh" id="td_pht">${dj?'🌟 Совет Дримми':'✨ Фраза дня'}</div><div class="pht" id="td_phx">${esc(tx)}</div></div><img src="stickers/mascot-hi.webp" alt="" width="64" height="64"></div>`}
   // статус дня
   if(K)h+=`<div class="card pad col" style="background:${K[1]}"><b style="font-size:18px">Сегодня у тебя: ${mk.data.kind==='do'?'день отдыха (ДО)':K[2].toLowerCase()}</b>${mk.data.note?`<div class="muted">${esc(mk.data.note)}</div>`:''}</div>`;
   else h+=`<div class="card pad col"><b style="font-size:18px">Сегодня рабочий день</b>${ck.data?`<div class="pill" style="background:#C9D4B0;align-self:flex-start">✅ Выход подтверждён в ${new Date(ck.data.at).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'})}</div>`:`<button class="btn" id="td_ck">☀️ Я на смене</button>`}</div>`;
@@ -40,10 +46,16 @@ async function todayView(){
   else if(!mgr)h+=`<div class="card pad col"><b>🌙 Завтра</b><div class="muted">Ротация на завтра ещё не вышла: придёт уведомление.</div></div>`;
   // быстрые кнопки
   h+=`<div class="two"><button class="btn ghost" data-go="rot">🔄 Ротация</button><button class="btn ghost" data-go="shift">✅ Смена</button></div><div class="two"><button class="btn ghost" id="td_fix">🛠 Сообщить о поломке</button><button class="btn ghost" data-go="sch">📅 Мой график</button></div>`;
-  // мой блокнот
-  {const tl=(td.data||[]).map(x=>({due:null,kind:'task',...x})),op=tl.filter(x=>!x.done),dn=tl.length-op.length,ov=op.filter(x=>x.due&&x.due<t),tdy=op.filter(x=>x.due===t),nx=op.filter(x=>x.due&&x.due>t).sort((p,q)=>p.due.localeCompare(q.due))[0];
+  // мой блокнот: дела и привычки
+  {const tl=(td.data||[]).map(x=>({due:null,kind:'task',arch:false,...x})).filter(x=>!x.arch),op=tl.filter(x=>!x.done),dn=tl.length-op.length,ov=op.filter(x=>x.due&&x.due<t),tdy=op.filter(x=>x.due===t),nx=op.filter(x=>x.due&&x.due>t).sort((p,q)=>p.due.localeCompare(q.due))[0];
+   const wdn=(new Date().getDay()+6)%7+1,hs=(hb.data||[]).filter(x=>(x.days||[]).includes(wdn)),hdone=new Set((hl.data||[]).map(x=>x.habit_id)),hd=hs.filter(x=>hdone.has(x.id)).length;
    const li=x=>`<div class="muted">${(PL_K[x.kind]||['✅'])[0]} ${x.due&&x.due!==t?dayLabel(x.due)+' · ':''}${x.due_time?String(x.due_time).slice(0,5)+' · ':''}${esc(x.body)}${x.due&&x.due<t?' <b style="color:#C0392B">просрочено</b>':''}</div>`;
-   if(tl.length)h+=`<div class="card pad col" data-go="todo" style="cursor:pointer"><b>📅 Мой календарь${ov.length?` · <span style="color:#C0392B">просрочено ${ov.length}</span>`:''}${tdy.length?` · сегодня ${tdy.length}`:''}</b>${[...ov,...tdy].slice(0,4).map(li).join('')}${!ov.length&&!tdy.length&&nx?`<div class="muted">Ближайшее:</div>${li(nx)}`:''}${!op.length?'<div class="muted">🎉 Все дела сделаны</div>':''}${todoBar(dn,tl.length)}</div>`}
+   if(tl.length||hs.length)h+=`<div class="card pad col" data-go="todo" style="cursor:pointer"><b>📝 Мой блокнот${ov.length?` · <span style="color:#C0392B">просрочено ${ov.length}</span>`:''}${tdy.length?` · сегодня ${tdy.length}`:''}</b>${[...ov,...tdy].slice(0,4).map(li).join('')}${!ov.length&&!tdy.length&&nx?`<div class="muted">Ближайшее:</div>${li(nx)}`:''}${hs.length?`<div class="muted">🔥 Привычки сегодня: <b>${hd} из ${hs.length}</b>${hd===hs.length?' · умница!':''}</div>`:''}${tl.length&&!op.length?'<div class="muted">🎉 Все дела сделаны</div>':''}${tl.length?todoBar(dn,tl.length,1):''}</div>`}
+  // первая неделя и спасибо от коллег
+  {const oi=ob.data||[],od=oi.filter(x=>x.done).length;
+   if(oi.length&&od<oi.length){const nxt=oi.filter(x=>!x.done).slice(0,2);h+=`<div class="card pad col" data-go="newbie" style="cursor:pointer;border:2px solid var(--sage)"><b>🌱 Первая неделя · ${od} из ${oi.length}</b>${todoBar(od,oi.length,1)}${nxt.map(x=>`<div class="muted">⬜ ${esc(x.title)}</div>`).join('')}</div>`}
+   const tt=th.data||[];
+   if(tt.length)h+=`<div class="card pad col" data-go="thanks" style="cursor:pointer;background:linear-gradient(120deg,#FBE9B7,#F8D3C0);border:0;color:#3B2A35"><b>💛 Тебе сказали спасибо</b>${tt.slice(0,2).map(x=>`<div>${x.sticker} <b>${esc(nameOf(x.from_user))}:</b> ${esc(x.body)}</div>`).join('')}</div>`}
   // мои заявки и итоги месяца
   if((rq.data||[]).length)h+=`<div class="card pad col" data-go="req" style="cursor:pointer"><b>📨 Мои заявки</b>${rq.data.map(x=>`<div class="otr"><span>${(REQ_K[x.kind]||['','Заявка'])[0]} ${(REQ_K[x.kind]||['','Заявка'])[1]} · ${dRange(x)}</span><span class="pill" style="background:${(REQ_ST[x.status]||['','#E8DCCB'])[1]}">${(REQ_ST[x.status]||['?'])[0]}</span></div>`).join('')}</div>`;
   {const cnt=k=>(mm.data||[]).filter(x=>x.kind===k).length,hd=(ot.data||[]).filter(x=>otKind(x)==='d').reduce((a,x)=>a+(+x.hours||0),0),hp=(ot.data||[]).filter(x=>otKind(x)==='p').reduce((a,x)=>a+(+x.hours||0),0),dim=new Date(+ym.slice(0,4),+ym.slice(5),0).getDate(),off=(mm.data||[]).length;
@@ -64,6 +76,7 @@ async function todayView(){
   h+=`<button class="btn ghost" id="td_fb" style="min-height:40px;font-size:14px">💡 Предложить идею / что-то сломалось в приложении</button>`;
   app.innerHTML=h;
   $('#td_fb').onclick=()=>fbForm();
+  {const ph=$('#td_ph');if(ph){const next=()=>{const x=$('#td_phx'),cur=x.textContent;const j=dayJoke(cur);$('#td_pht').textContent='🌟 Совет Дримми';x.textContent=j;ph.classList.remove('flip');void ph.offsetWidth;ph.classList.add('flip')};ph.onclick=next;ph.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();next()}}}}
   $('#td_alert')?.addEventListener('click',alertSheet);window.pushBanner&&pushBanner();
   app.querySelectorAll('[data-go]').forEach(c=>c.onclick=()=>go(c.dataset.go));
   $('#td_fix').onclick=()=>{go('fix');setTimeout(()=>{if(window.fixForm)fixForm()},350)};
@@ -78,22 +91,5 @@ const dayPhrase=()=>{const d=new Date(),n=Math.floor((Date.UTC(d.getFullYear(),d
 document.addEventListener('click',async e=>{const a=e.target.closest('[data-kbz]');if(!a)return;e.preventDefault();
   const z=a.dataset.kbz.replace(/\s+\d+$/,'');const r=await sb.from('kb_pages').select('*').eq('title',z).maybeSingle();
   if(r.data)kbOpen(r.data);else alert('Скоро здесь появится нужная информация по зоне «'+z+'».')});
-// ---------- Личный блокнот ----------
-const todoBar=(d,n)=>{const p=n?Math.round(d*100/n):0;return `<div style="height:16px;border-radius:10px;background:var(--line);overflow:hidden"><div style="height:100%;width:${p}%;background:linear-gradient(90deg,var(--sage),var(--gold));border-radius:10px;transition:width .4s"></div></div><div class="muted">${p}%${n&&d===n?' · 🎉 Всё сделано, отличная работа!':''}</div>`};
-async function todoView(){
-  const r=await sb.from('todos').select('*').order('done').order('created_at',{ascending:false});
-  const all=r.data||[],dn=all.filter(x=>x.done).length;
-  let h=head('Мой блокнот','Личные дела на смену и не только');
-  h+=`<div class="card pad col"><b>Выполнено ${dn} из ${all.length}</b>${todoBar(dn,all.length)}</div>`;
-  h+=`<div class="two"><input id="td_in" placeholder="Новое дело…" style="flex:1"><button class="btn" id="td_add" style="flex:none">＋</button></div>`;
-  h+=`<div class="card pad col">${all.map(x=>`<label class="shi" style="flex-direction:row;align-items:center;gap:10px"><input type="checkbox" data-t="${x.id}" ${x.done?'checked':''}><span style="flex:1;${x.done?'text-decoration:line-through;color:var(--muted)':''}">${esc(x.body)}</span><button class="x" data-tx="${x.id}" aria-label="Удалить">✕</button></label>`).join('')||'<div class="muted">Дел пока нет. Добавь первое!</div>'}</div>`;
-  if(dn)h+=`<button class="btn ghost" id="td_clr">Убрать выполненные</button>`;
-  h+=`<div class="muted">🔒 Ваши заметки видите только вы, это конфиденциально. Руководители и администратор их не видят.</div>`;
-  app.innerHTML=h;
-  const add=async()=>{const t=$('#td_in').value.trim();if(!t)return;const r=await sb.from('todos').insert({body:t});if(r.error)return alert(r.error.message);todoView()};
-  $('#td_add').onclick=add;$('#td_in').onkeydown=e=>{if(e.key==='Enter')add()};
-  app.querySelectorAll('[data-t]').forEach(b=>b.onchange=async()=>{const r=await sb.from('todos').update({done:b.checked,done_at:b.checked?new Date().toISOString():null}).eq('id',b.dataset.t);if(r.error)alert(r.error.message);keepScroll(todoView)});
-  app.querySelectorAll('[data-tx]').forEach(b=>b.onclick=async e=>{e.preventDefault();await sb.from('todos').delete().eq('id',b.dataset.tx);todoView()});
-  $('#td_clr')?.addEventListener('click',async()=>{await sb.from('todos').delete().eq('user_id',S.me.id).eq('done',true);todoView()});
-}
-VIEWS.todo=todoView;
+// ---------- Личный блокнот: полоска прогресса (сам блокнот — в plan.js) ----------
+const todoBar=(d,n,compact)=>{const p=n?Math.round(d*100/n):0;return `<div class="pgb"><div class="pg" style="width:${p}%"></div></div>${compact?'':`<div class="muted">${p}%${n&&d===n?' · 🎉 Всё сделано, отличная работа!':''}</div>`}`};

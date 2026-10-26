@@ -39,9 +39,13 @@ async function routeCheck(){
 setTimeout(routeCheck,2500);setTimeout(routeCheck,9000);
 const THEMES={autumn:['🍂','Осень'],winter:['❄️','Зима'],spring:['🌸','Весна'],summer:['☀️','Лето']};
 const getTheme=()=>{try{return localStorage.getItem('dw-theme')||'autumn-warm'}catch(e){return 'autumn-warm'}};
-function applyTheme(t){document.documentElement.dataset.theme=t;try{localStorage.setItem('dw-theme',t)}catch(e){}
-  const m=document.querySelector('meta[name=theme-color]');if(m)m.content=getComputedStyle(document.documentElement).getPropertyValue('--ink').trim()||'#3B2A35'}
-applyTheme(getTheme());
+const getDark=()=>{try{return localStorage.getItem('dw-dark')||'0'}catch(e){return '0'}}; // 0 — светлая, 1 — тёмная, auto — как на телефоне
+const isDarkNow=()=>{const d=getDark();return d==='1'||(d==='auto'&&!!window.matchMedia&&matchMedia('(prefers-color-scheme:dark)').matches)};
+function applyDark(){document.documentElement.dataset.dark=isDarkNow()?'1':'0';metaColor()}
+function metaColor(){const m=document.querySelector('meta[name=theme-color]');if(m)m.content=isDarkNow()?'#1C1721':(getComputedStyle(document.documentElement).getPropertyValue('--ink').trim()||'#3B2A35')}
+function applyTheme(t){document.documentElement.dataset.theme=t;try{localStorage.setItem('dw-theme',t)}catch(e){}metaColor()}
+applyTheme(getTheme());applyDark();
+try{matchMedia('(prefers-color-scheme:dark)').addEventListener('change',()=>{if(getDark()==='auto')applyDark()})}catch(e){}
 const S={unread:0,tab:'today',sub:{ap:'req',park:'news',team:'contacts'},me:null,team:'R',day:null,month:new Date(),viewUser:null,sel:null,people:[],marks:{},ev:null,evFilter:'all'};
 const ZC={'Данделион':'#E4B5A3','Карусель':'#D3BFD0','Джипы':'#B7CFC4','Шахта':'#BCC8D6','Кон-Тики':'#E6CC8F','Плющ':'#C9D4B0','Дерево приключений':'#C9D4B0','Бабл хаус':'#F3C29B','Студия волшебных образов':'#D3BFD0','Квесты/Роботы':'#BFD3D3','Лес Чудес':'#B7CFC4','Альфа 1':'#D3BFD0','Альфа 2':'#D3BFD0','Старший специалист':'#E8C1B5','Супервайзер':'#E8C1B5','Веревочный лагерь':'#C9D4B0','Золото':'#E6CC8F','Гольф':'#B7CFC4','Альфа':'#D3BFD0','Боулинг':'#BCC8D6','Кино':'#E4B5A3','VR-арена':'#BFD3D3','Няня 1':'#D9C3AE','Няня 2':'#D9C3AE','Детский клуб':'#E8C1B5','Аквазона Кит':'#A9D2EC','Визги-брызги':'#A9D2EC','Купол':'#F0D98A','Бильярд':'#CDB9E3'};
 
@@ -201,10 +205,10 @@ VIEWS.team=()=>{if(!isAdmin())S.sub.team='contacts';return VIEWS[S.sub.team]()};
 function subBar(g,cur){const L={ap:[['req','📨','Заявки'],['fix','🛠','Поломки'],['inc','🚨','Происшествия'],['wo','🗑','Списание']],park:[['news','📰','Новости'],['afisha','🎟️','Афиша']],team:[['contacts','📞','Контакты'],...(isAdmin()?[['staff','👥','Сотрудники']]:[])]}[g];if(!L||L.length<2)return '';const b=S.badges||{};
   return `<div class="seg subbar">${L.map(([k,ic,n])=>`<button data-sub="${k}" class="${k===cur?'on':''}">${ic} ${n}${b[k]&&k!==cur?` <i class="sbn">${b[k]}</i>`:''}</button>`).join('')}</div>`}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-sub]');if(b&&S.me)go(b.dataset.sub)});
-const MORE_TABS=['shift','park','kb','team','grid','feedback','todo','set'];
+const MORE_TABS=['shift','park','kb','team','grid','feedback','todo','set','newbie','thanks'];
 const SUBG={req:'ap',fix:'ap',inc:'ap',wo:'ap',news:'park',afisha:'park',contacts:'team',staff:'team'};
 const onTab=k=>SUBG[k]?(S.tab===SUBG[k]&&S.sub[SUBG[k]]===k):S.tab===k;
-function go(t){if(SUBG[t]){S.sub[SUBG[t]]=t;t=SUBG[t]}if(!VIEWS[t]||(t==='dg'&&!isManager()))t='today';S.tab=t;S.offline=0;document.body.dataset.tab=S.sub[t]||t;
+function go(t){if(SUBG[t]){S.sub[SUBG[t]]=t;t=SUBG[t]}if(!VIEWS[t]||(t==='dg'&&!isManager()))t='today';S.tab=t;S.offline=0;S.swapPending=1;document.body.dataset.tab=S.sub[t]||t;
   nav.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t||(b.dataset.tab==='more'&&MORE_TABS.includes(t))));window.scrollTo(0,0);app.scrollTop=0;
   const v=Promise.resolve(VIEWS[t]());
   if(Date.now()-(S.ruAt||0)>25000)refreshUnread();else v.then(()=>markSeen());return v}
@@ -215,10 +219,10 @@ function paintBell(){const el=$('#bellN');if(!el)return;const tot=(S.unread||0)+
 // красные кружки у пунктов меню: считаем непросмотренные уведомления по разделам (+ «База знаний» и «График» — по изменениям)
 function paintBadges(){
   const c=k=>(S.nl||[]).filter(x=>x.k===k).length,B={};
-  ['req','fix','inc','wo','news','afisha','staff','rot','dg','shift','set','feedback'].forEach(k=>B[k]=c(k));
+  ['req','fix','inc','wo','news','afisha','staff','rot','dg','shift','set','feedback','newbie','thanks'].forEach(k=>B[k]=c(k));
   B.contacts=0;B.kb=S.kbNew||0;B.sch=S.schNew||0;
   B.ap=B.req+B.fix+B.inc+B.wo;B.park=B.news+B.afisha;B.team=B.staff;B.today=0;B.grid=0;
-  B.more=B.shift+B.park+B.kb+B.team+B.set+B.feedback;
+  B.more=B.shift+B.park+B.kb+B.team+B.set+B.feedback+B.newbie+B.thanks;
   S.badges=B;
   nav.querySelectorAll('button[data-tab]').forEach(btn=>{let i=btn.querySelector('i');const n=B[btn.dataset.tab]||0;
     if(!i){i=document.createElement('i');i.hidden=true;btn.appendChild(i)}
@@ -284,7 +288,7 @@ async function avSet(file){
   S.me.avatar_url=blob?path:null;
 }
 const head=(h,sub)=>`<div class="top"><div class="brand"><img class="lg" src="stickers/logo.webp" alt="Дримвуд"><div class="hi">Привет, ${esc(firstName())}! 👋</div></div><div class="topr"><button class="avb" aria-label="Мой профиль" onclick="go('set')">${av(S.me,40)}</button>${bell()}</div></div>${S.offline?`<div class="banner" style="background:#E6CC8F;color:#3B2A35;font-size:14px">📴 Нет сети — показаны сохранённые данные (от ${new Date(S.offline).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'})}). Менять что-либо пока нельзя.</div>`:''}${sub?`<div class="muted">${sub}</div>`:''}<h1>${h}</h1>`;
-const NI={news:'📰',rotation:'🔄',afisha:'🎟️',signup:'🧑‍💼',task:'📋',request:'📨',incident:'🚨',shift:'💬',checkin:'☀️',repair:'🛠',feedback:'💡'};
+const NI={mentor:'🌱',thanks:'💛',news:'📰',rotation:'🔄',afisha:'🎟️',signup:'🧑‍💼',task:'📋',request:'📨',incident:'🚨',shift:'💬',checkin:'☀️',repair:'🛠',feedback:'💡'};
 const ago=d=>{const m=Math.round((Date.now()-new Date(d))/6e4);return m<1?'только что':m<60?m+' мин назад':m<1440?Math.floor(m/60)+' ч назад':new Date(d).toLocaleDateString('ru',{day:'numeric',month:'short'})};
 async function openBell(){
   const [n,r,ckq]=await Promise.all([sb.from('notifications').select('*').order('created_at',{ascending:false}).limit(50),sb.from('notif_reads').select('notif_id').eq('user_id',S.me.id),sb.from('checkins').select('day,at').eq('user_id',S.me.id).order('day',{ascending:false}).limit(40)]);
@@ -685,6 +689,7 @@ async function settingsView(){
   h+=`<div class="card pad"><b style="font-size:18px">${esc(S.me.full_name||'')}</b><div class="muted">${roleLbl(S.me)}${S.me.position&&S.me.position!==ROLE_RU[S.me.role]&&S.me.position!=='Владелец'?' · '+esc(S.me.position):''}${S.me.tab_no?` · табельный № ${esc(S.me.tab_no)}`:' · табельный номер пока не назначен'}</div></div>`;
   h+=`<div class="card pad col"><b>📸 Фото профиля</b><div class="muted">Его увидят коллеги в контактах и в шапке. Подойдёт любое фото, оно само обрежется в круг.</div><div class="prow" style="align-items:center">${av(S.me,64)}<label class="btn ghost" style="display:flex;align-items:center;justify-content:center;min-height:44px;cursor:pointer;margin:0;flex:1">Выбрать фото<input id="st_av" type="file" accept="image/*" hidden></label>${S.me.avatar_url?'<button class="btn ghost" id="st_avd" style="flex:none">Убрать</button>':''}</div><div class="err" id="st_ave"></div></div>`;
   h+=`<div class="card pad"><b>Оформление</b><div class="muted">Четыре сезона, у каждого тёплый и холодный вариант</div>${Object.entries(THEMES).map(([k,[ic,n]])=>`<div class="trow"><span>${ic} ${n}</span>${[['warm','Тёплый'],['cold','Холодный']].map(([v,t])=>`<button class="tbtn ${cur===k+'-'+v?'on':''}" data-th="${k}-${v}"><i class="sw" data-theme="${k}-${v}"></i>${t}</button>`).join('')}</div>`).join('')}</div>`;
+  h+=`<div class="card pad col"><b>🌙 Тёмная тема</b><div class="muted">Для вечерних смен и экономии заряда. Работает вместе с любым сезоном выше.</div><div class="seg" id="st_dk">${[['0','☀️ Светлая'],['1','🌙 Тёмная'],['auto','📱 Как на телефоне']].map(([v,n])=>`<button data-dk="${v}" class="${getDark()===v?'on':''}" style="font-size:13px">${n}</button>`).join('')}</div></div>`;
   h+=`<div class="card pad col"><b>📱 Мой телефон</b><div class="muted">Номер — твой логин для входа и виден коллегам в «Команда → Контакты».</div><div class="prow"><input id="st_ph" type="tel" class="pn" placeholder="+7 ..." value="${esc(S.me.phone||'')}"><button class="btn" id="st_phs">Сохранить</button></div></div>`;
   h+=`<div class="card pad col"><b>🔑 Сменить пароль</b><div class="muted">Письмо на почту не отправляется: пароль меняется сразу.</div><input id="st_p1" type="password" autocomplete="new-password" placeholder="Новый пароль (от 6 знаков)"><input id="st_p2" type="password" autocomplete="new-password" placeholder="Повтори пароль"><div class="err" id="st_pe"></div><button class="btn" id="st_pw">Сменить пароль</button></div>`;
   h+=`<div class="card pad col"><b>🔔 Что присылать на телефон</b><div class="muted">Колокольчик внутри приложения работает всегда. Утреннюю отметку «Ты сегодня на смене?» и срочные поломки отключить нельзя.</div>${[['req','📨 Заявки, поломки и ответы по ним'],['news','📰 Новости и афиша'],['rot','🔄 Ротации'],['task','📋 Задачи и комментарии в смене']].map(([k,n])=>`<label class="chk"><input type="checkbox" data-pp="${k}" ${pon(k)?'checked':''}><span>${n}</span></label>`).join('')}</div>`;
@@ -704,6 +709,8 @@ async function settingsView(){
   app.querySelectorAll('[data-pp]').forEach(c=>c.onchange=async()=>{const p={};app.querySelectorAll('[data-pp]').forEach(x=>p[x.dataset.pp]=x.checked);const r=await sb.rpc('set_my_push_prefs',{p});if(r.error){alert(r.error.message);c.checked=!c.checked;return}S.me.push_prefs=p});
   $('#st_lts')&&($('#st_lts').onclick=async e=>{const [h,m]=($('#st_lt').value||'10:00').split(':').map(Number);e.target.disabled=true;const r=await sb.rpc('set_shiftlist_time',{h,m});e.target.disabled=false;const er=$('#st_lte');er.style.color=r.error?'':'var(--ink)';er.textContent=r.error?r.error.message:'Сохранено: напоминание приходит в '+String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+' ✅'});
   $('#st_cts')&&($('#st_cts').onclick=async e=>{const [h,m]=($('#st_ct').value||'09:30').split(':').map(Number);e.target.disabled=true;const r=await sb.rpc('set_checkin_time',{h,m});e.target.disabled=false;const er=$('#st_cte');er.style.color=r.error?'':'var(--ink)';er.textContent=r.error?r.error.message:'Сохранено: теперь отметка приходит в '+String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+' ✅'});
+  app.querySelectorAll('[data-dk]').forEach(b=>b.onclick=()=>{const root=document.documentElement;root.classList.add('themeswap');try{localStorage.setItem('dw-dark',b.dataset.dk)}catch(e){}applyDark();
+    app.querySelectorAll('[data-dk]').forEach(x=>x.classList.toggle('on',x===b));clearTimeout(window.__tsw);window.__tsw=setTimeout(()=>root.classList.remove('themeswap'),450)});
   app.querySelectorAll('[data-th]').forEach(b=>b.onclick=()=>{
     // тема меняется на месте: без перерисовки страницы и без прыжка наверх, с мягким перетеканием цветов
     const root=document.documentElement;root.classList.add('themeswap');applyTheme(b.dataset.th);
