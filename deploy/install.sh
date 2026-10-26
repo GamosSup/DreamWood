@@ -42,6 +42,7 @@ printf '[Service]\nEnvironment=DOMAIN=%s\n' "$DOMAIN" > /etc/systemd/system/cadd
 cat > /etc/cron.d/dreamwood <<'CRON'
 */2 * * * * root git -C /srv/dreamwood pull -q --ff-only >/dev/null 2>&1
 CRON
+DOMAIN=$DOMAIN caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/tmp/caddy-validate.log 2>&1 || { echo '!! Ошибка в конфигурации Caddy:'; tail -5 /tmp/caddy-validate.log; exit 1; }
 systemctl daemon-reload
 systemctl enable --now caddy >/dev/null 2>&1
 systemctl restart caddy
