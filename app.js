@@ -16,6 +16,24 @@ function sbFetch(u,o){
   });
 }
 const sb=supabase.createClient(/^https?:$/.test(location.protocol)&&!/\.(test|localhost)$|^localhost$|^127\./.test(location.hostname)?SB_PROXY:cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY,{auth:{storageKey:'sb-bvlwpfmtcdgfsomvwqrp-auth-token'},global:{fetch:sbFetch}});
+// Автопереключение адресов: если у человека с этого адреса не достучаться до базы ни основным, ни запасным путём, а другой адрес приложения отвечает — переходим на него сами
+const probe=(u,ms=4500)=>{const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);return fetch(u,{mode:'no-cors',cache:'no-store',signal:c.signal}).then(()=>true,()=>false).finally(()=>clearTimeout(t))};
+async function routeCheck(){
+  try{
+    if(!/^https?:$/.test(location.protocol)||/\.(test|localhost)$|^localhost$|^127\./.test(location.hostname))return;
+    if(S.me&&S.tab&&!S.offline)return; // приложение уже загрузило данные
+    const here=location.origin,others=(cfg.ORIGINS||[]).filter(o=>o!==here);
+    if(!others.length||sessionStorage.getItem('dw-routed'))return;
+    const mine=await Promise.all([probe(SB_PROXY+'/auth/v1/health'),probe(cfg.SUPABASE_URL+'/auth/v1/health')]);
+    if(mine[0]||mine[1])return;
+    const res=await Promise.all(others.map(o=>probe(o+'/sb/auth/v1/health').then(ok=>ok?o:null)));
+    const to=res.find(Boolean);if(!to)return;
+    sessionStorage.setItem('dw-routed','1');
+    app.innerHTML='<div class="card pad" style="margin-top:40px"><b>Переходим на рабочий адрес…</b><div class="muted">С этого адреса сейчас нет связи, открываем запасной. Войти нужно будет один раз заново.</div></div>';
+    setTimeout(()=>location.replace(to+location.pathname),900);
+  }catch(e){}
+}
+setTimeout(routeCheck,2500);setTimeout(routeCheck,9000);
 const THEMES={autumn:['🍂','Осень'],winter:['❄️','Зима'],spring:['🌸','Весна'],summer:['☀️','Лето']};
 const getTheme=()=>{try{return localStorage.getItem('dw-theme')||'autumn-warm'}catch(e){return 'autumn-warm'}};
 function applyTheme(t){document.documentElement.dataset.theme=t;try{localStorage.setItem('dw-theme',t)}catch(e){}
@@ -95,7 +113,7 @@ function authView(mode,err,ok){
   <label>Пароль${reg?' (придумай сам, не короче 6 знаков)':''}<input id="pw" type="password" autocomplete="${reg?'new-password':'current-password'}"></label>
   <div class="err">${esc(err||'')}</div>${ok?`<div class="card pad" style="background:var(--sage)">${esc(ok)}</div>`:''}
   <button class="btn" id="go">${reg?'Отправить заявку':'Войти в приключение'}</button>
-  <div class="muted" style="text-align:center">Не открывается или не входит? <a href="/diag">Проверить связь</a></div>
+  <div class="muted" style="text-align:center">Не открывается или не входит? <a href="/diag">Проверить связь</a>${(cfg.ORIGINS||[]).filter(o=>o!==location.origin).map(o=>` · <a href="${o}">запасной адрес</a>`).join('')}</div>
   ${reg?'<div class="muted">Номер телефона — твой логин, почта не обязательна и нужна только для связи: мы ничего на неё не отправляем. Руководитель подтвердит доступ. Пароль знаешь только ты.</div>':'<div class="muted">Нет аккаунта? Открой «Регистрацию»: руководитель подтвердит заявку. Забыл пароль — напиши руководителю, он задаст новый.</div>'}`;
   $('#tin').onclick=()=>authView('in');$('#tup').onclick=()=>authView('up');
   $('#go').onclick=async()=>{
