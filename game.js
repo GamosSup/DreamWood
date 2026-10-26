@@ -128,7 +128,7 @@ async function gmLoad(force){
       const old=S.gm?JSON.stringify(S.gm.rows.map(x=>[x.id,x.lvl_text,x.cos,gmLv(x.xp).n])):'';
       const g=gmIndex(r.data||[]);S.gm=g;
       try{localStorage.setItem('dw:gm:'+S.me.id,JSON.stringify({rows:g.rows}))}catch(e){}
-      gmLevelUp();setTimeout(gmDreemiPopup,1800);
+      gmLevelUp();setTimeout(gmPetPopup,1800);
       if(old&&old!==JSON.stringify(g.rows.map(x=>[x.id,x.lvl_text,x.cos,gmLv(x.xp).n]))&&window.qcRerender)qcRerender();
     }catch(e){}finally{S.gmP=null}
     return S.gm})();
@@ -167,16 +167,23 @@ function gmRotName(p){
 function gmName(text,row,opt={}){
   const t=esc(text);if(!row)return t;
   const c=gmCos(row),ic=c.badge?gmBadgeIc(row,c.badge):'';
-  return `<span class="gnm${c.name?' '+c.name:''}">${t}</span>${ic?` <span class="gbd">${ic==='sword'?gmIc('sword',16):ic}</span>`:''}${opt.lv===false?'':` ${gmLvChip(row)}`}`;
+  return `<span class="gnm${c.name?' '+c.name:''}">${t}</span>${ic?` <span class="gbd gtip" ${gmTipAttr(row,c.badge)}>${ic==='sword'?gmIc('sword',16):ic}</span>`:''}${opt.lv===false?'':` ${gmLvChip(row)}`}`;
 }
-const gmTitleHtml=row=>{if(!row)return '';const c=gmCos(row);return c.title?`<div class="gmtl">${esc(gmTitleTx(row,c.title))}</div>`:''};
+const gmTitleHtml=row=>{if(!row)return '';const c=gmCos(row);return c.title?`<div class="gmtl gtip" ${gmTipAttr(row,c.title)}>${esc(gmTitleTx(row,c.title))}</div>`:''};
+// подсказка к значку и титулу: что это и за что (при наведении и по нажатию)
+function gmTipAttr(row,code){
+  const a=(row.ach||[]).find(x=>x.c===code);if(!a)return '';
+  const d=gmDef(a),tx=`${d.n}: ${d.d||'особое достижение'}`;
+  return `title="${esc(tx)}" data-tip="${esc(tx)}" tabindex="0"`;
+}
+document.addEventListener('click',e=>{const t=e.target.closest&&e.target.closest('.gtip[data-tip]');if(!t)return;e.stopPropagation();e.preventDefault();gmSay(`<b>${esc(t.dataset.tip.split(': ')[0])}</b><br>${esc(t.dataset.tip.split(': ').slice(1).join(': '))}`,{ms:5000})},true);
 
 // ---------- события: новый уровень, новые достижения ----------
 function gmLevelUp(){
   const me=gmMe();if(!me||me.lvl_text)return;
   const n=gmLv(me.xp).n,key='dw-lv:'+S.me.id;let last=0;
   try{last=+localStorage.getItem(key)||0;localStorage.setItem(key,String(n))}catch(e){}
-  if(last&&n>last){setTimeout(()=>{dwParty();toast(`🎉 Новый уровень: ${n}${gmRankIdx(n)>gmRankIdx(last)?' · '+GM_RANKS[gmRankIdx(n)].full:''}`,4200)},500)}
+  if(last&&n>last){setTimeout(()=>{dwParty();gmSay(gmRankIdx(n)>gmRankIdx(last)?`Ого, новый ранг: <b>${esc(GM_RANKS[gmRankIdx(n)].full)}</b>! Уровень ${n}. Я тобой горжусь!`:`Поздравляю, ${esc(gmFirst())}! У тебя уровень <b>${n}</b>. Так держать!`,{ms:6000})},500)}
 }
 async function gmSync(gap=300000){
   if(!S.me||Date.now()-(S.gmSyncAt||0)<gap)return;
@@ -184,7 +191,7 @@ async function gmSync(gap=300000){
   try{
     const r=await sb.rpc('ach_sync');if(r.error||!Array.isArray(r.data))return;
     if(r.data.length){
-      r.data.slice(0,3).forEach((x,i)=>setTimeout(()=>{const d=GM_BY[x.c];toast(`🏅 Достижение: ${d?d.n:x.c} · +${x.b} очков`,3800)},i*1500));
+      gmSayAch(r.data);
       dwParty();await gmLoad(true);if(window.qcRerender)qcRerender();
     }
   }catch(e){}
@@ -192,7 +199,7 @@ async function gmSync(gap=300000){
 function gmClaim(code){
   S.gmClaimed=S.gmClaimed||{};if(S.gmClaimed[code]||!S.me)return;S.gmClaimed[code]=1;
   const have=(gmMe()?.ach||[]).some(a=>a.c===code);if(have)return;
-  sb.rpc('ach_claim',{p_code:code}).then(r=>{if(r.data===true){const d=GM_BY[code];toast(`🏅 Достижение: ${d?d.n:code} · +${d?d.b:0} очков`,3800);gmLoad(true)}},()=>{});
+  sb.rpc('ach_claim',{p_code:code}).then(r=>{if(r.data===true){gmSayAch([{c:code,b:(GM_BY[code]||{}).b||0}]);dwParty();gmLoad(true)}},()=>{});
 }
 
 // ---------- карточка на «Сегодня» ----------
@@ -200,7 +207,7 @@ function gameCard(){
   const row=gmMe();if(!row)return '';
   const L=gmLv(row.xp),cos=gmCos(row),have=(row.ach||[]).length;
   return `<div class="card pad col gmc" data-go="game" style="cursor:pointer">
-    <div class="gmcr">${gmLvChip(row,true)}<div style="flex:1;min-width:0"><b>${row.lvl_text?esc(row.lvl_text):esc(GM_RANKS[L.r].full)}</b>${row.lvl_text?'':`<div class="muted">Уровень ${L.n}${L.hi?` · до следующего ${L.left} оч.`:' · максимум'}</div>`}</div><span class="muted" style="white-space:nowrap">🏅 ${have}</span><span class="drmmini">${typeof gmDreemi==='function'?gmDreemi(row,34):''}</span></div>
+    <div class="gmcr">${gmLvChip(row,true)}<div style="flex:1;min-width:0"><b>${row.lvl_text?esc(row.lvl_text):esc(GM_RANKS[L.r].full)}</b>${row.lvl_text?'':`<div class="muted">Уровень ${L.n}${L.hi?` · до следующего ${L.left} оч.`:' · максимум'}</div>`}</div><span class="muted" style="white-space:nowrap">🏅 ${have}</span><span class="drmmini">${gmPetHead(row,40)}</span></div>
     ${row.lvl_text?'':`<div class="pgb"><div class="pg" style="width:${L.pct}%"></div></div>`}</div>`;
 }
 
@@ -211,7 +218,7 @@ function gmHero(row){
   const L=gmLv(row.xp),cos=gmCos(row);
   return `<div class="card gmh"><div class="gmhr"><div>${av(S.me,84)}</div><div style="flex:1;min-width:0">
     <div class="gmn">${gmName(S.me.full_name||'',row,{lv:false})}</div>${gmTitleHtml(row)}
-    <div style="margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">${gmLvChip(row,true)}${row.lvl_text?'':`<span><b>${esc(GM_RANKS[L.r].full)}</b><br><span class="muted">Уровень ${L.n} из 50</span></span>`}</div></div></div>
+    <div style="margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">${gmLvChip(row,true)}${row.lvl_text?'':`<span><b>${esc(GM_RANKS[L.r].full)}</b><br><span class="muted">Уровень ${L.n} из 50</span></span>`}</div></div><div class="gmhp">${gmPetHead(row,62)}</div></div>
     ${row.lvl_text?`<div class="muted" style="margin-top:8px">Всего очков: <b>${row.xp}</b></div>`:`<div class="pgb" style="margin-top:12px"><div class="pg" style="width:${L.pct}%"></div></div><div class="muted" style="margin-top:6px">${row.xp} очков${L.hi?` · до уровня ${L.n+1} осталось <b>${L.left}</b>`:' · максимальный уровень, ты легенда'}</div>`}</div>`;
 }
 async function gameView(){
@@ -223,8 +230,9 @@ async function gameView(){
     h+=`<div class="card pad col"><b>Раздел почти готов 🙂</b><div class="muted">${S.gmErr&&!/does not exist|function|schema/i.test(S.gmErr)?esc(S.gmErr):'В базе ещё не включены уровни и достижения. Админ должен один раз запустить обновление базы, и всё заработает.'}</div></div>`;
     app.innerHTML=h;return;
   }
+  if(!S.gmTab&&!petCfg(me))S.gmTab='pet';
   h+=gmHero(me);
-  const tabs=[['ach','🏅 Достижения'],['drm','🐲 Мой Дримми'],['look','🎨 Мой образ'],['lv','📈 Уровни'],...(isManager()?[['mng','🎖 Выдать']]:[])];
+  const tabs=[['ach','🏅 Достижения'],['pet','🐾 Мой питомец'],['look','🎨 Мой образ'],['lv','📈 Уровни'],...(isManager()?[['mng','🎖 Выдать']]:[])];
   h+=`<div class="tabs gmtabs">${tabs.map(([k,n])=>`<button data-gt="${k}" class="${gmTab()===k?'on':''}" style="background:var(--tab)">${n}</button>`).join('')}</div><div id="gm_body"></div>`;
   app.innerHTML=h;
   app.querySelectorAll('[data-gt]').forEach(b=>b.onclick=()=>{S.gmTab=b.dataset.gt;app.querySelectorAll('[data-gt]').forEach(x=>x.classList.toggle('on',x===b));gmPaint()});
@@ -232,7 +240,7 @@ async function gameView(){
 }
 async function gmPaint(){
   const box=$('#gm_body');if(!box)return;const t=gmTab();
-  if(t==='ach')await gmAchTab(box);else if(t==='drm')gmDrmTab(box);else if(t==='look')gmLookTab(box);else if(t==='lv')gmLvTab(box);else gmMngTab(box);
+  if(t==='ach')await gmAchTab(box);else if(t==='pet')gmPetTab(box);else if(t==='look')gmLookTab(box);else if(t==='lv')gmLvTab(box);else gmMngTab(box);
 }
 
 // --- достижения ---
@@ -361,34 +369,75 @@ async function gmMngTab(box){
 VIEWS.game=gameView;
 gmBoot();
 
-// ---------- «Мой Дримми» ----------
-function gmDrmTab(box){
+
+// ---------- Дримми: личные поздравления ----------
+const gmFirst=()=>((S.me&&S.me.full_name)||'').trim().split(/\s+/)[0]||'друг';
+const GM_CHEER=['Ура!','Круто!','Вот это да!','Молодец!','Отлично!','Здорово!'];
+let GM_SQ=[],GM_SB=false;
+function gmSay(html,opt={}){GM_SQ.push([html,opt]);gmSayNext()}
+function gmSayNext(){
+  if(GM_SB||!GM_SQ.length)return;GM_SB=true;
+  const [html,o]=GM_SQ.shift(),d=document.createElement('div');
+  d.className='dsay';d.innerHTML=`<img src="stickers/mascot-hi.webp" alt="" width="56" height="56"><div class="dsb">${html}</div>`;
+  document.body.appendChild(d);requestAnimationFrame(()=>d.classList.add('on'));
+  let done=false;const end=()=>{if(done)return;done=true;d.classList.remove('on');setTimeout(()=>{d.remove();GM_SB=false;gmSayNext()},260)};
+  d.onclick=end;setTimeout(end,o.ms||5500);
+}
+function gmSayAch(list){
+  const L=(list||[]).map(x=>({d:GM_BY[x.c]||{n:x.c},b:x.b||0}));if(!L.length)return;
+  const cheer=GM_CHEER[Math.floor(Math.random()*GM_CHEER.length)];
+  if(L.length===1){const x=L[0];gmSay(`${cheer} ${esc(gmFirst())}, у тебя новое достижение: <b>${esc(x.d.n)}</b>${x.b?` и +${x.b} очков`:''}. Я рад за тебя!`,{ms:6500})}
+  else gmSay(`${cheer} ${esc(gmFirst())}, сразу ${L.length} новых достижений: ${L.slice(0,3).map(x=>`<b>${esc(x.d.n)}</b>`).join(', ')}${L.length>3?' и другие':''}. Горжусь тобой!`,{ms:7500});
+}
+
+// ---------- «Мой питомец» ----------
+const GM_PETCROP=[30,-40,260,290];
+function gmPetHead(row,sz){
+  if(typeof petCfg!=='function'||!petCfg(row))return `<img src="stickers/mascot-hi.webp" alt="" width="${sz}" height="${sz}" style="object-fit:contain">`;
+  return gmPet(row,sz,{vb:GM_PETCROP,bg:''});
+}
+const gmPetSw=v=>v==='gold'?'linear-gradient(135deg,#FFF0B0,#EDBE46 50%,#B8821C)':v==='rainbow'?'linear-gradient(135deg,#FF6B8B,#FFB347,#7BDB8A,#52A7FF,#B07CFF)':v==='night'?'radial-gradient(circle at 35% 30%,#4C5CC8,#1B2262)':v;
+async function gmPetSave(cfg){return gmSaveCos({pet:petEnc(cfg)})}
+function gmPetChooser(onPick,sz=104){
+  return `<div class="petch">${PET_SP.map(([k,n,c])=>`<button class="petc" data-sp="${k}"><span class="petcv">${gmPet({},sz,{cfg:{...PET_DEF,sp:k,bc:petBcOf(k)},vb:GM_PETCROP,bg:''})}</span><b>${n}</b></button>`).join('')}</div>`;
+}
+function gmPetTab(box){
   const me=gmMe();
   const draw=()=>{
-    const cur=me.cos||{},sel=gmDrSet(me);
-    box.innerHTML=`<div class="card pad col" style="align-items:center"><div id="drm_pv">${gmDreemi(me,200)}</div><div class="muted" style="text-align:center">Это твой личный Дримми. Одевай его как хочешь: он всегда остаётся собой, меняется только одежда и взгляд. Новые вещи открываются за достижения и события. Фон берётся из раздела «Мой образ».</div></div>`+
-    Object.entries(GM_DR).map(([slot,[ttl,L]])=>{
-      const opts=L.map(it=>{const [id,n,req]=it,ok=gmHas(me,req);if(!ok&&!gmSeeAll())return '';const on=(sel[slot]||'')===id;
-        return `<button class="gop${on?' on':''}${ok?'':' lk'}" data-s="${slot}" data-v="${id}" ${ok?'':'disabled'}><span class="gopv">${id?gmDreemi(me,78,{set:{[slot]:id},bg:'',vb:GM_DR_VB[slot]}):'—'}</span><span class="gopn">${esc(n)}</span>${ok?'':`<span class="gopl">🔒 ${esc(gmReqName(req))}</span>`}</button>`}).join('');
-      return `<div class="card pad col"><b>${ttl}</b><div class="gops">${opts}</div></div>`}).join('');
-    box.querySelectorAll('.gop:not([disabled])').forEach(b=>b.onclick=async()=>{if(await gmSaveCos({[GM_DR_KEY[b.dataset.s]]:b.dataset.v}))draw()});
+    const cfg=petCfg(me);
+    if(!cfg){
+      box.innerHTML=`<div class="card pad col" style="align-items:center;text-align:center"><b style="font-size:18px">Выбери себе питомца 🐾</b><div class="muted">У каждого в команде будет свой зверёк. Выбери того, кто нравится больше. Потом его можно будет одеть и раскрасить как угодно: цвет, глаза, улыбку, причёску, шапки, очки и многое другое.</div>${gmPetChooser()}</div>`;
+      box.querySelectorAll('[data-sp]').forEach(b=>b.onclick=async()=>{if(await gmPetSave({...PET_DEF,sp:b.dataset.sp})){gmSay(`Отличный выбор, ${esc(gmFirst())}! Теперь вы вместе. Одень зверька как тебе нравится, а новые вещи будешь получать за достижения.`,{ms:6500});dwParty();draw()}});
+      return;
+    }
+    const keep=window.scrollY,base={...cfg,ha:'',gl:'',nk:'',ch:'',bk:'',hd:'',hr:''};
+    const tile=(k,kind,crop,it)=>{
+      const [id,n,req,val]=it,ok=gmHas(me,req);if(!ok&&!gmSeeAll())return '';
+      const on=(cfg[k]||'')===id;
+      const v=kind==='sw'?`<span class="petsw" style="background:${gmPetSw(val)}"></span>`:gmPet({},78,{cfg:{...base,...(k==='ec'||k==='gz'?{ex:'x_n'}:{}),[k]:id},vb:crop||PET_VB,bg:''});
+      return `<button class="gop${on?' on':''}${ok?'':' lk'}" data-k="${k}" data-v="${esc(id)}" ${ok?'':'disabled'}><span class="gopv">${v}</span><span class="gopn">${esc(n)}</span>${ok?'':`<span class="gopl">🔒 ${esc(gmReqName(req))}</span>`}</button>`;
+    };
+    box.innerHTML=`<div class="card pad col petpv">${gmPet(me,96,{cfg})}</div>
+    <div class="card pad col"><b>Вид</b><div class="muted">Это твой питомец. Выбирай всё, что нравится, а результат виден в карточке вверху. Новые вещи открываются за достижения и события. Фон берётся из раздела «Мой образ».</div><div class="gops">${PET_SP.map(([k,n])=>`<button class="gop${cfg.sp===k?' on':''}" data-sp="${k}"><span class="gopv">${gmPet({},78,{cfg:{...cfg,sp:k,bc:cfg.bc===petBcOf(cfg.sp)?petBcOf(k):cfg.bc},vb:GM_PETCROP,bg:''})}</span><span class="gopn">${n}</span></button>`).join('')}</div></div>`+
+    PET_G.map(([k,ttl,L,kind,crop])=>`<div class="card pad col"><b>${ttl}</b><div class="gops">${L.map(it=>tile(k,kind,crop,it)).join('')}</div></div>`).join('');
+    box.querySelectorAll('.gop[data-k]:not([disabled])').forEach(b=>b.onclick=async()=>{if(await gmPetSave({...cfg,[b.dataset.k]:b.dataset.v})){draw();window.scrollTo(0,keep)}});
+    box.querySelectorAll('.gop[data-sp]').forEach(b=>b.onclick=async()=>{const sp=b.dataset.sp;if(sp===cfg.sp)return;if(await gmPetSave({...cfg,sp,bc:cfg.bc===petBcOf(cfg.sp)?petBcOf(sp):cfg.bc})){draw();window.scrollTo(0,keep)}});
   };
   draw();
 }
 function gmReqName(req){if(!req)return '';if(req.endsWith('*'))return req==='adm*'?'любой допуск':'любое мероприятие';const a=GM_BY[req];return a?a.n:req}
 
-// ---------- награда: «Вы разблокировали Дримми» (один раз каждому) ----------
-function gmDreemiPopup(tries=0){
-  const me=gmMe();if(!me||!S.me)return;
-  const key='dw-drm:'+S.me.id;let seen=null;try{seen=localStorage.getItem(key)}catch(e){}
-  if(seen)return;
-  if(document.querySelector('.ov,#tour,.alov,.ibox')||S.tab==='game'&&S.gmTab==='drm'){if(tries<8)setTimeout(()=>gmDreemiPopup(tries+1),3000);return}
-  try{localStorage.setItem(key,'1')}catch(e){}
+// ---------- награда: «Вы разблокировали питомца» (до выбора, не больше 3 раз) ----------
+function gmPetPopup(tries=0){
+  const me=gmMe();if(!me||!S.me||typeof petCfg!=='function'||petCfg(me)||S.gmPetShown)return;
+  const key='dw-pet:'+S.me.id;let n=0;try{n=+localStorage.getItem(key)||0}catch(e){}
+  if(n>=3)return;
+  if(document.querySelector('.ov,#tour,.alov,.ibox')||S.tab==='game'&&S.gmTab==='pet'){if(tries<8)setTimeout(()=>gmPetPopup(tries+1),3000);return}
+  S.gmPetShown=1;try{localStorage.setItem(key,String(n+1))}catch(e){}
   dgxSheet('🎉 Новая награда',(box,paint,close)=>{
-    box.innerHTML=`<div class="drmpop"><div class="drmt">Вы разблокировали Дримми!</div>${gmDreemi(me,190,{set:{head:'h_party',eyes:'e_round',neck:'n_scarf'},bg:me.cos?.bg})}
-      <div class="muted" style="text-align:center">Теперь у каждого в команде есть свой личный Дримми. Одевай его: шапки, очки, шарфы и бейджи. Новые вещи и рамки приходят за достижения: чек-листы, смены, привычки, спасибо коллегам и участие в событиях парка.</div>
-      <button class="btn" id="dp_go">🐲 Одеть Дримми</button><button class="btn ghost" id="dp_x">Позже</button></div>`;
-    $('#dp_go').onclick=()=>{close(false);S.gmTab='drm';go('game')};$('#dp_x').onclick=()=>close(false);
+    box.innerHTML=`<div class="drmpop"><div class="drmt">Вы разблокировали питомца!</div><div class="muted" style="text-align:center">Выбери себе зверька, который нравится больше всех. Потом его можно одеть и раскрасить: цвет, глаза, улыбка, причёска, шапки, очки и многое другое. Новые вещи приходят за достижения и события парка.</div>${gmPetChooser(0,92)}<button class="btn ghost" id="dp_x">Выберу позже</button></div>`;
+    box.querySelectorAll('[data-sp]').forEach(b=>b.onclick=async()=>{if(await gmPetSave({...PET_DEF,sp:b.dataset.sp})){close(false);dwParty();gmSay(`Отличный выбор, ${esc(gmFirst())}! Теперь вы вместе. Загляни в «Мой профиль», там его можно одеть.`,{ms:6500})}});
+    $('#dp_x').onclick=()=>close(false);
     setTimeout(dwParty,350);
   },()=>{},'drmsheet');
 }

@@ -514,3 +514,19 @@ html[data-dark="1"] .gnm.n_shine{background-image:linear-gradient(100deg,#E0B84A
 .drmsheet .drm{animation:drmbob 2.4s ease-in-out infinite}
 @keyframes drmbob{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-8px) rotate(2deg)}}
 @media(prefers-reduced-motion:reduce){.drmsheet .drm{animation:none}}
+/* v60: питомец, Дримми-пузырь, подсказки */
+.petch{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;margin-top:6px}
+.petc{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;border-radius:18px;border:2px solid var(--line);background:var(--card);color:var(--ink);font-size:15px}
+.petc:active{transform:scale(.97)}.petc:hover{border-color:var(--ink)}
+.petcv{display:flex;justify-content:center}.petcv .drm{border-radius:14px}
+.petsw{width:38px;height:38px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2px var(--line)}
+.gop .drm{border-radius:12px}
+.petpv{position:sticky;top:6px;z-index:6;align-items:center;padding:6px!important;box-shadow:0 6px 18px #0002}
+.petpv .muted{font-size:12px}
+.gmhp{flex:none;align-self:flex-start;margin:-4px -4px -8px 0}.gmhp .drm,.gmhp img{border-radius:14px}
+.gtip{cursor:pointer}
+.dsay{position:fixed;left:10px;right:10px;bottom:84px;z-index:9100;display:flex;align-items:flex-end;gap:8px;max-width:440px;margin:0 auto;opacity:0;transform:translateY(24px) scale(.96);transition:opacity .25s,transform .25s;cursor:pointer}
+.dsay.on{opacity:1;transform:none}
+.dsay img{flex:none;filter:drop-shadow(0 4px 8px #0003);animation:drmbob 2.4s ease-in-out infinite}
+.dsb{position:relative;flex:1;padding:11px 14px;border-radius:18px 18px 18px 4px;background:var(--card);color:var(--ink);border:2px solid var(--ink);font-weight:600;font-size:14px;line-height:1.35;box-shadow:0 8px 24px #0003}
+@media(prefers-reduced-motion:reduce){.dsay img{animation:none}}
