@@ -41,6 +41,7 @@ const isAdmin=()=>S.me?.role==='admin';
 const isLead=()=>S.me?.role==='lead';
 const canMng=()=>isManager()||isLead();
 const ROLE_RU={employee:'Сотрудник',lead:'Бригадир',manager:'Руководитель',admin:'Админ'};
+const roleLbl=p=>p&&p.position==='Владелец'?'Владелец':(ROLE_RU[p&&p.role]||'Сотрудник');
 // запрос с запасным вариантом: если сети нет — показываем последние сохранённые данные
 async function cq(key,fn){
   const k='dw:'+(S.uid||'')+':'+key;
@@ -370,7 +371,7 @@ async function staffView(){
   const adm=isAdmin(),lockRole=p=>!adm&&(p.role==='manager'||p.role==='admin'),roleOpts=p=>Object.entries(ROLE_RU).filter(([k])=>adm?k!=='admin'||p.role==='admin':k==='employee'||k==='lead');
   h+=`<div class="card pad col"><b>👥 Команда · ${ap.length}</b><div class="muted">Имя (первое слово идёт в приветствие), табельный номер и должность${adm?'. Роли руководителей и удаление — только у админа':''}</div>${ap.map(p=>`<div class="col" style="border-top:1px solid var(--line);padding-top:10px;gap:6px"><div class="prow"><input class="pn" data-pn="${p.id}" value="${esc(p.full_name||'')}" placeholder="Имя Фамилия"><input class="pt" data-pt="${p.id}" value="${esc(p.tab_no||'')}" placeholder="№"><button class="btn" style="padding:0 14px" data-sp="${p.id}" aria-label="Сохранить">💾</button></div>
     <input data-ps="${p.id}" value="${esc(p.position||'')}" placeholder="Должность (например, супервайзер)">
-    <div class="muted">${p.id===S.me.id||lockRole(p)||p.role==='admin'?`<b>${ROLE_RU[p.role]}</b>`:`<select class="rl" data-rl="${p.id}">${roleOpts(p).map(([k,v])=>`<option value="${k}" ${p.role===k?'selected':''}>${v}</option>`).join('')}</select>`}${rl.get(p.id)?' · в списке: '+esc(rl.get(p.id)):''}${p.team?' · '+(TN[p.team]||''):''}${p.phone?' · '+esc(p.phone):''} · с ${dt(p.created_at)}</div>
+    <div class="muted">${p.id===S.me.id||lockRole(p)||p.role==='admin'?`<b>${roleLbl(p)}</b>`:`<select class="rl" data-rl="${p.id}">${roleOpts(p).map(([k,v])=>`<option value="${k}" ${p.role===k?'selected':''}>${v}</option>`).join('')}</select>`}${rl.get(p.id)?' · в списке: '+esc(rl.get(p.id)):''}${p.team?' · '+(TN[p.team]||''):''}${p.phone?' · '+esc(p.phone):''} · с ${dt(p.created_at)}</div>
     ${adm&&p.id!==S.me.id?`<div class="two"><button class="btn ghost" data-pw="${p.id}">🔑 Новый пароль</button><button class="btn ghost" data-rm="${p.id}" style="color:#9b2c2c;border-color:#9b2c2c">🚫 Убрать</button></div>`:''}</div>`).join('')}</div>`;
   h+=`<div class="card pad col"><b>📋 Ещё не зарегистрировались · ${free.length}</b><div class="muted">${free.length?free.map(r=>esc(r.full_name)).join(', '):'Все из списка уже в приложении'}</div></div>`;
   app.innerHTML=h;
@@ -544,7 +545,7 @@ async function settingsView(){
   const cur=getTheme(),adm=isAdmin(),pf=S.me.push_prefs||{},pon=k=>pf[k]!==false;
   let ct=null;if(adm){const r=await sb.from('app_settings').select('value').eq('key','checkin_time').maybeSingle();ct=r.data?.value||{h:9,m:30};const r2=await sb.from('app_settings').select('value').eq('key','shiftlist_time').maybeSingle();window._slt=r2.data?.value||{h:10,m:0}}
   let h=head('Настройки','Профиль и оформление');
-  h+=`<div class="card pad"><b style="font-size:18px">${esc(S.me.full_name||'')}</b><div class="muted">${ROLE_RU[S.me.role]||'Сотрудник'}${S.me.position&&S.me.position!==ROLE_RU[S.me.role]?' · '+esc(S.me.position):''}${S.me.tab_no?` · табельный № ${esc(S.me.tab_no)}`:' · табельный номер пока не назначен'}</div></div>`;
+  h+=`<div class="card pad"><b style="font-size:18px">${esc(S.me.full_name||'')}</b><div class="muted">${roleLbl(S.me)}${S.me.position&&S.me.position!==ROLE_RU[S.me.role]&&S.me.position!=='Владелец'?' · '+esc(S.me.position):''}${S.me.tab_no?` · табельный № ${esc(S.me.tab_no)}`:' · табельный номер пока не назначен'}</div></div>`;
   h+=`<div class="card pad col"><b>📸 Фото профиля</b><div class="muted">Его увидят коллеги в контактах и в шапке. Подойдёт любое фото, оно само обрежется в круг.</div><div class="prow" style="align-items:center">${av(S.me,64)}<label class="btn ghost" style="display:flex;align-items:center;justify-content:center;min-height:44px;cursor:pointer;margin:0;flex:1">Выбрать фото<input id="st_av" type="file" accept="image/*" hidden></label>${S.me.avatar_url?'<button class="btn ghost" id="st_avd" style="flex:none">Убрать</button>':''}</div><div class="err" id="st_ave"></div></div>`;
   h+=`<div class="card pad"><b>Оформление</b><div class="muted">Четыре сезона, у каждого тёплый и холодный вариант</div>${Object.entries(THEMES).map(([k,[ic,n]])=>`<div class="trow"><span>${ic} ${n}</span>${[['warm','Тёплый'],['cold','Холодный']].map(([v,t])=>`<button class="tbtn ${cur===k+'-'+v?'on':''}" data-th="${k}-${v}"><i class="sw" data-theme="${k}-${v}"></i>${t}</button>`).join('')}</div>`).join('')}</div>`;
   h+=`<div class="card pad col"><b>📱 Мой телефон</b><div class="muted">Номер — твой логин для входа и виден коллегам в «Команда → Контакты».</div><div class="prow"><input id="st_ph" type="tel" class="pn" placeholder="+7 ..." value="${esc(S.me.phone||'')}"><button class="btn" id="st_phs">Сохранить</button></div></div>`;

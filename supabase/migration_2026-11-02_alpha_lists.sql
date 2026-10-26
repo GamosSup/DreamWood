@@ -12,3 +12,7 @@ select v.t,v.k,null,v.i,v.s from (values
  ('Помощь в открытии зоны Леса','alpha_r',array['Связался(ась) с хранителем Леса','Помог(ла) осмотреть зону','Помог(ла) с оборудованием','Зона Леса открыта'],203)
 ) as v(t,k,i,s)
 where not exists(select 1 from public.shift_lists where kind in('alpha_k','alpha_r') and title=v.t);
+
+-- Алексюк Игорь — Владелец (права руководителя)
+update public.roster set pre_role='manager', pre_position='Владелец' where full_name='Алексюк Игорь';
+update public.profiles set position='Владелец' where id in(select profile_id from public.roster where full_name='Алексюк Игорь' and profile_id is not null);
