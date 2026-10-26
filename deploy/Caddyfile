@@ -15,16 +15,32 @@
 		}
 	}
 
+	# файлы/пуши через Cloudflare-версию с этого сервера недоступны (Cloudflare режется): пока отдаём 501, приложение само переходит на запасной путь
 	handle /api/* {
-		reverse_proxy https://dreamwood.pages.dev {
-			header_up Host {upstream_hostport}
-			flush_interval -1
-		}
+		header Content-Type "application/json; charset=utf-8"
+		respond `{"error":"not_configured"}` 501
 	}
-	handle /v/* {
-		reverse_proxy https://dreamwood.pages.dev {
-			header_up Host {upstream_hostport}
-		}
+
+	# скрипт supabase-js и шрифты лежат на самом сервере (скачиваются при установке)
+	handle /v/sbjs {
+		root * /srv/vendor
+		rewrite * /sbjs
+		header Content-Type "text/javascript; charset=utf-8"
+		header Cache-Control "public, max-age=86400"
+		file_server
+	}
+	handle /v/fonts {
+		root * /srv/vendor
+		rewrite * /fonts.css
+		header Content-Type "text/css; charset=utf-8"
+		header Cache-Control "public, max-age=86400"
+		file_server
+	}
+	handle /v/f/* {
+		root * /srv/vendor
+		header Access-Control-Allow-Origin "*"
+		header Cache-Control "public, max-age=31536000, immutable"
+		file_server
 	}
 
 	handle {
