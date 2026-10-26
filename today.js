@@ -24,7 +24,7 @@ async function todayView(){
   const rot=rt.data?.data,mine=rot&&window.myShift?myShift(rot):[],K=mk.data&&KINDS[mk.data.kind];
   const b=S.act||{};
   let h=head('Сегодня',dayLabel(t));
-  h+=alertCard();
+  h+=alertCard();h+='<div id="pushbn"></div>';
   h+=`<div class="card pad" style="background:linear-gradient(120deg,#F5E2A8,#F3C29B);border:0"><div style="font-family:Alegreya,Georgia,serif;font-size:19px;line-height:1.3">✨ ${esc(dayPhrase())}</div></div>`;
   // статус дня
   if(K)h+=`<div class="card pad col" style="background:${K[1]}"><b style="font-size:18px">Сегодня у тебя: ${mk.data.kind==='do'?'день отдыха (ДО)':K[2].toLowerCase()}</b>${mk.data.note?`<div class="muted">${esc(mk.data.note)}</div>`:''}</div>`;
@@ -58,7 +58,7 @@ async function todayView(){
   h+=`<button class="btn ghost" id="td_fb" style="min-height:40px;font-size:14px">💡 Предложить идею / что-то сломалось в приложении</button>`;
   app.innerHTML=h;
   $('#td_fb').onclick=()=>fbForm();
-  $('#td_alert')?.addEventListener('click',alertSheet);
+  $('#td_alert')?.addEventListener('click',alertSheet);window.pushBanner&&pushBanner();
   app.querySelectorAll('[data-go]').forEach(c=>c.onclick=()=>go(c.dataset.go));
   $('#td_fix').onclick=()=>{go('fix');setTimeout(()=>{if(window.fixForm)fixForm()},350)};
   $('#td_ck')&&($('#td_ck').onclick=async e=>{e.target.disabled=true;const r=await sb.rpc('checkin_confirm');if(r.error){e.target.disabled=false;return alert(r.error.message)}refreshUnread();todayView()});

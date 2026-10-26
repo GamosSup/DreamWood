@@ -125,3 +125,11 @@ create trigger wo_notify after insert or update of status on public.writeoffs fo
 -- дни недели работы парка в периоде (0=вс … 6=сб); пусто = каждый день. 1–23.10 работаем пт, сб, вс.
 alter table public.sched_periods add column if not exists dows int[];
 update public.sched_periods set dows='{5,6,0}' where date_from='2026-10-01' and dows is null;
+
+-- чек-листы: отметки видны всей команде; Купол = Сухие горки, Студия волшебных образов, Квесты и роботы, Терраса
+drop policy if exists "sc read" on public.shift_checks;
+create policy "sc read" on public.shift_checks for select to authenticated using(is_approved());
+update public.shift_lists set zone='Сухие горки', title=replace(title,'Дерево приключений','Сухие горки'), active=true where zone='Дерево приключений';
+update public.shift_lists set active=true where zone in('Студия волшебных образов','Терраса');
+update public.shift_lists set zone='Квесты и роботы', title=replace(title,'Квесты/Роботы','Квесты и роботы') where zone='Квесты/Роботы';
+update public.shift_lists set active=false where zone='Купол';
