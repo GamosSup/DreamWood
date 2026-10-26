@@ -307,3 +307,6 @@ body.hasal{padding-top:46px}
 #tour [hidden]{display:none!important}
 #tour .thud{pointer-events:none}
 #tour .tskip{align-self:center;background:none;border:0;color:#8b7480;font-size:12.5px;font-weight:700;padding:4px 2px;text-decoration:underline}
+
+/* смена темы: цвета перетекают, а не мигают */
+html.themeswap,html.themeswap *{transition:background-color .35s ease,color .35s ease,border-color .35s ease,box-shadow .35s ease!important}

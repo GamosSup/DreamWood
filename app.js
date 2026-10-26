@@ -683,7 +683,11 @@ async function settingsView(){
   app.querySelectorAll('[data-pp]').forEach(c=>c.onchange=async()=>{const p={};app.querySelectorAll('[data-pp]').forEach(x=>p[x.dataset.pp]=x.checked);const r=await sb.rpc('set_my_push_prefs',{p});if(r.error){alert(r.error.message);c.checked=!c.checked;return}S.me.push_prefs=p});
   $('#st_lts')&&($('#st_lts').onclick=async e=>{const [h,m]=($('#st_lt').value||'10:00').split(':').map(Number);e.target.disabled=true;const r=await sb.rpc('set_shiftlist_time',{h,m});e.target.disabled=false;const er=$('#st_lte');er.style.color=r.error?'':'var(--ink)';er.textContent=r.error?r.error.message:'Сохранено: напоминание приходит в '+String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+' ✅'});
   $('#st_cts')&&($('#st_cts').onclick=async e=>{const [h,m]=($('#st_ct').value||'09:30').split(':').map(Number);e.target.disabled=true;const r=await sb.rpc('set_checkin_time',{h,m});e.target.disabled=false;const er=$('#st_cte');er.style.color=r.error?'':'var(--ink)';er.textContent=r.error?r.error.message:'Сохранено: теперь отметка приходит в '+String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+' ✅'});
-  app.querySelectorAll('[data-th]').forEach(b=>b.onclick=()=>{applyTheme(b.dataset.th);settingsView()});
+  app.querySelectorAll('[data-th]').forEach(b=>b.onclick=()=>{
+    // тема меняется на месте: без перерисовки страницы и без прыжка наверх, с мягким перетеканием цветов
+    const root=document.documentElement;root.classList.add('themeswap');applyTheme(b.dataset.th);
+    app.querySelectorAll('[data-th]').forEach(x=>x.classList.toggle('on',x===b));
+    clearTimeout(window.__tsw);window.__tsw=setTimeout(()=>root.classList.remove('themeswap'),450)});
   $('#out').onclick=()=>sb.auth.signOut().then(()=>{clearCache();S.me=null;S.unread=0;boot()});
 }
 sb.auth.onAuthStateChange(ev=>{if(ev==='SIGNED_OUT'&&S.me&&S.tab){S.me=null;S.tab='today';clearCache();authView('in','Сессия закончилась — войди заново')}});
