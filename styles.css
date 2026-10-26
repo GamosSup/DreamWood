@@ -272,24 +272,38 @@ body.hasal{padding-top:46px}
 @keyframes authSwap{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 #authform{display:flex;flex-direction:column;gap:14px}
 
-/* v37: обучение при первом входе */
-.tour{position:fixed;inset:0;z-index:70;background:rgba(40,28,36,.62);display:flex;align-items:center;justify-content:center;padding:16px;animation:tfade .2s ease-out}
-@keyframes tfade{from{opacity:0}to{opacity:1}}
-.tcard{position:relative;background:var(--bg,#FFF8EF);width:100%;max-width:440px;max-height:92vh;overflow:auto;border-radius:26px;padding:22px 20px 18px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;box-shadow:0 18px 50px rgba(0,0,0,.3);animation:tin .28s cubic-bezier(.3,1.4,.5,1)}
-.tcard.back{animation-name:tinb}
-@keyframes tin{from{opacity:0;transform:translateX(26px) scale(.97)}to{opacity:1;transform:none}}
-@keyframes tinb{from{opacity:0;transform:translateX(-26px) scale(.97)}to{opacity:1;transform:none}}
-.tcard h2{margin:2px 0 0;font-family:Alegreya,Georgia,serif;font-size:24px;line-height:1.15}
-.tcard p{margin:0;font-size:15.5px;line-height:1.45;color:var(--ink)}
-.timg{object-fit:contain;filter:drop-shadow(0 4px 6px rgba(60,40,50,.18));animation:tfloat 3s ease-in-out infinite}
-@keyframes tfloat{50%{transform:translateY(-5px) rotate(2deg)}}
-.tskip{align-self:flex-end;background:none;border:0;color:var(--muted,#7a6a70);font-weight:700;font-size:14px;padding:4px 6px;cursor:pointer}
-.tdots{display:flex;gap:6px;margin:4px 0}.tdots i{width:7px;height:7px;border-radius:50%;background:rgba(0,0,0,.15);transition:.2s}.tdots i.on{width:20px;border-radius:5px;background:var(--ink,#3B2A35)}
-.tcard .two{width:100%}.tcard #t_nb{width:100%;display:flex;flex-direction:column;gap:6px}
-.tcard .two{display:flex;gap:10px}.tcard .two .btn{flex:1}.tcard .two [hidden]{display:none}
 
 /* v38: блок «С сайта парка» */
 .sitel{display:flex;flex-wrap:wrap;gap:8px}.sitel a{padding:9px 13px;border-radius:14px;background:var(--card);border:1px solid var(--line);color:var(--ink);text-decoration:none;font-weight:700;font-size:14px}
 .sitei{display:flex;gap:12px;align-items:flex-start;text-decoration:none;color:var(--ink);border-top:1px solid var(--line);padding-top:12px}.sitei:first-of-type{border-top:0;padding-top:4px}
 .sitei img{width:92px;height:92px;object-fit:cover;border-radius:14px;flex:none}.sitei>span{display:flex;flex-direction:column;gap:5px;min-width:0}
 .sitet{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}.sitem{font-weight:700;font-size:13px;color:#8a5a2b}
+
+/* v39: обучение-игра */
+#tour{position:fixed;inset:0;z-index:80;pointer-events:none}
+#tour .tdim{position:absolute;inset:0;background:rgba(30,20,28,.68);pointer-events:auto;transition:clip-path .25s}
+#tour .tring{position:absolute;border-radius:18px;border:3px solid #FFD66B;box-shadow:0 0 0 4px rgba(255,214,107,.35),0 0 24px 6px rgba(255,214,107,.55);animation:tring 1.2s ease-in-out infinite;pointer-events:none}
+@keyframes tring{50%{box-shadow:0 0 0 9px rgba(255,214,107,.18),0 0 34px 10px rgba(255,214,107,.7)}}
+#tour .tfinger{position:absolute;font-size:30px;animation:tfing .9s ease-in-out infinite;pointer-events:none;filter:drop-shadow(0 2px 3px rgba(0,0,0,.4))}
+@keyframes tfing{50%{transform:translateY(-9px)}}
+#tour .thud{position:absolute;left:0;right:0;top:0;display:flex;align-items:center;gap:10px;padding:max(10px,env(safe-area-inset-top)) 14px 10px;pointer-events:auto;background:linear-gradient(rgba(30,20,28,.9),rgba(30,20,28,0))}
+#tour .tstar{color:#FFD66B;font-weight:800;font-size:16px;white-space:nowrap}
+#tour .tbar{flex:1;height:8px;border-radius:5px;background:rgba(255,255,255,.22);overflow:hidden}#tour .tbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#FFD66B,#F3A683);border-radius:5px;transition:width .35s}
+#tour #t_skip{background:rgba(255,255,255,.16);border:0;color:#fff;border-radius:12px;padding:7px 12px;font-weight:700;font-size:13px}
+#tour .tbub{position:absolute;left:50%;transform:translateX(-50%);width:min(92vw,420px);box-sizing:border-box;background:var(--bg,#FFF8EF);border-radius:22px;padding:14px;display:flex;gap:12px;align-items:flex-start;box-shadow:0 14px 40px rgba(0,0,0,.35);pointer-events:auto;animation:tbin .28s cubic-bezier(.3,1.4,.5,1)}
+@keyframes tbin{from{opacity:0;margin-top:10px}to{opacity:1;margin-top:0}}
+#tour .tbub.intro{flex-direction:column;align-items:center;text-align:center;top:50%!important;transform:translate(-50%,-50%)}
+#tour .tmas{flex:none;object-fit:contain;animation:tfloat 3s ease-in-out infinite}
+@keyframes tfloat{50%{transform:translateY(-4px) rotate(3deg)}}
+#tour .tbt{display:flex;flex-direction:column;gap:6px;min-width:0;width:100%}#tour .tbt b{font-family:Alegreya,Georgia,serif;font-size:20px;line-height:1.15}#tour .tbt p{margin:0;font-size:15px;line-height:1.4}
+#tour .tpulse{font-weight:800;color:#8a5a2b;font-size:14px;animation:tpul 1.3s ease-in-out infinite}@keyframes tpul{50%{opacity:.45}}
+#tour .tpop{position:absolute;left:50%;top:38%;font-size:34px;font-weight:900;color:#FFD66B;text-shadow:0 2px 8px rgba(0,0,0,.5);animation:tpop .9s ease-out forwards}
+@keyframes tpop{from{transform:translate(-50%,0) scale(.6);opacity:1}to{transform:translate(-50%,-90px) scale(1.4);opacity:0}}
+#tour .twin{position:absolute;inset:0;background:rgba(30,20,28,.78);display:flex;align-items:center;justify-content:center;padding:16px;pointer-events:auto;overflow:hidden}
+#tour .tcard{position:relative;z-index:2;background:var(--bg,#FFF8EF);border-radius:26px;padding:22px 20px;max-width:420px;width:100%;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;animation:tbin .4s cubic-bezier(.3,1.5,.5,1)}
+#tour .tcard h2{margin:0;font-family:Alegreya,Georgia,serif;font-size:26px}#tour .tcard p{margin:0;line-height:1.45}#tour .tcard .btn{width:100%}
+#tour .tconf{position:absolute;inset:0;pointer-events:none}#tour .tconf i{position:absolute;top:-40px;font-style:normal;font-size:26px;animation:tfall linear infinite}
+@keyframes tfall{to{transform:translateY(110vh) rotate(360deg)}}
+#tour [hidden]{display:none!important}
+#tour .thud{pointer-events:none}
+#tour .tskip{align-self:center;background:none;border:0;color:#8b7480;font-size:12.5px;font-weight:700;padding:4px 2px;text-decoration:underline}

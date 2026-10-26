@@ -669,7 +669,7 @@ async function settingsView(){
   h+=`<div class="card pad col"><b>🔔 Что присылать на телефон</b><div class="muted">Колокольчик внутри приложения работает всегда. Утреннюю отметку «Ты сегодня на смене?» и срочные поломки отключить нельзя.</div>${[['req','📨 Заявки, поломки и ответы по ним'],['news','📰 Новости и афиша'],['rot','🔄 Ротации'],['task','📋 Задачи и комментарии в смене']].map(([k,n])=>`<label class="chk"><input type="checkbox" data-pp="${k}" ${pon(k)?'checked':''}><span>${n}</span></label>`).join('')}</div>`;
   if(adm)h+=`<div class="card pad col"><b>⚙️ Настройки приложения (только админ)</b><div class="muted">Во сколько утром приходит «Ты сегодня на смене?» (по Москве).</div><div class="prow"><input id="st_ct" type="time" class="pn" value="${String(ct.h).padStart(2,'0')}:${String(ct.m).padStart(2,'0')}"><button class="btn" id="st_cts">Сохранить</button></div><div class="err" id="st_cte"></div><div class="muted" style="margin-top:6px">Во сколько приходит напоминание «Заполни чек-лист открытия» (по Москве).</div><div class="prow"><input id="st_lt" type="time" class="pn" value="${String(window._slt.h).padStart(2,'0')}:${String(window._slt.m).padStart(2,'0')}"><button class="btn" id="st_lts">Сохранить</button></div><div class="err" id="st_lte"></div></div>`;
   h+='<div id="pushbox"></div>';
-  h+=`<button class="btn ghost" id="st_tour">🎓 Показать обучение заново</button>`;
+  h+=`<button class="btn ghost" id="st_tour">🎮 Пройти обучение-игру ещё раз</button>`;
   h+=`<button class="btn ghost" id="out">Выйти из аккаунта</button>`;
   app.innerHTML=h;
   window.pushMount&&pushMount();
