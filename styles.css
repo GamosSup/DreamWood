@@ -425,3 +425,9 @@ html[data-dark="1"] .ov{background:rgba(0,0,0,.65)}
 html[data-dark="1"] h1,html[data-dark="1"] #app>.muted,html[data-dark="1"] .top+.muted{text-shadow:0 0 6px var(--bg),0 0 10px var(--bg)}
 
 .mgh{text-shadow:0 0 5px var(--bg),0 0 9px var(--bg),0 0 12px var(--bg)}.mpick.k3{grid-template-columns:repeat(3,1fr)}.mpick.k3 button{padding:0 4px;font-size:14px;text-align:center}
+
+.dnote{background:linear-gradient(135deg,var(--card),var(--tab))}
+.dnr{display:flex;gap:10px;align-items:flex-start;font-size:15px;line-height:1.4}.dnr>span{font-size:20px;flex:none;width:26px;text-align:center}
+.dnr.q{cursor:pointer;padding:8px 10px;border-radius:14px;background:var(--card);border:1.5px dashed var(--inb);transition:background-color .25s,border-color .25s}
+.dnr.q .dnb{width:26px;height:26px;border-radius:8px;border:2px solid var(--inb);flex:none;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;transition:background-color .2s,transform .25s cubic-bezier(.3,1.7,.5,1)}
+.dnr.q.on{border-style:solid;border-color:#6E8B4E}.dnr.q.on .dnb{background:#6E8B4E;border-color:#6E8B4E;transform:scale(1.1)}

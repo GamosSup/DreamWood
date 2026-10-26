@@ -103,6 +103,7 @@ function startApp(){
 function storedUid(){
   try{const j=JSON.parse(localStorage.getItem('sb-bvlwpfmtcdgfsomvwqrp-auth-token')||'null');return j&&j.user&&j.user.id&&j.refresh_token?j.user.id:null}catch(e){return null}
 }
+const SKEL='<div class="card pad col" style="margin-top:28px"><div class="sk" style="width:55%;height:22px"></div><div class="sk" style="width:90%"></div><div class="sk" style="width:75%"></div></div><div class="card pad col"><div class="sk" style="width:40%;height:18px"></div><div class="sk" style="width:80%"></div></div>';
 function bootSkeleton(){
   if(app.innerHTML.trim())return;
   app.innerHTML='<div class="card pad col" style="margin-top:28px"><div class="sk" style="width:55%;height:22px"></div><div class="sk" style="width:90%"></div><div class="sk" style="width:75%"></div></div><div class="card pad col"><div class="sk" style="width:40%;height:18px"></div><div class="sk" style="width:80%"></div></div>';
@@ -210,7 +211,10 @@ const SUBG={req:'ap',fix:'ap',inc:'ap',wo:'ap',news:'park',afisha:'park',contact
 const onTab=k=>SUBG[k]?(S.tab===SUBG[k]&&S.sub[SUBG[k]]===k):S.tab===k;
 function go(t){if(SUBG[t]){S.sub[SUBG[t]]=t;t=SUBG[t]}if(!VIEWS[t]||(t==='dg'&&!isManager()))t='today';S.tab=t;S.offline=0;S.swapPending=1;document.body.dataset.tab=S.sub[t]||t;
   nav.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t||(b.dataset.tab==='more'&&MORE_TABS.includes(t))));window.scrollTo(0,0);app.scrollTop=0;
+  clearTimeout(S.skT);S.vDone=false;
+  S.skT=setTimeout(()=>{if(!S.vDone&&S.tab===t)app.innerHTML=SKEL},160); // если данные не пришли за 0,16 с, вместо старого экрана показываем заглушку
   const v=Promise.resolve(VIEWS[t]());
+  v.then(()=>{S.vDone=true;clearTimeout(S.skT)},()=>{S.vDone=true;clearTimeout(S.skT)});
   if(Date.now()-(S.ruAt||0)>25000)refreshUnread();else v.then(()=>markSeen());return v}
 const NKNOWN=new Set(['req','fix','inc','wo','news','afisha','staff','rot','dg','shift','set','feedback']);
 const NLK=l=>{l=String(l||'');return l.startsWith('rot:')?'rot':l.startsWith('checkin')?'':l};

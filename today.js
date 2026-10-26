@@ -56,6 +56,7 @@ async function todayView(){
    if(oi.length&&od<oi.length){const nxt=oi.filter(x=>!x.done).slice(0,2);h+=`<div class="card pad col" data-go="newbie" style="cursor:pointer;border:2px solid var(--sage)"><b>🌱 Первая неделя · ${od} из ${oi.length}</b>${todoBar(od,oi.length,1)}${nxt.map(x=>`<div class="muted">⬜ ${esc(x.title)}</div>`).join('')}</div>`}
    const tt=th.data||[];
    if(tt.length)h+=`<div class="card pad col" data-go="thanks" style="cursor:pointer;background:linear-gradient(120deg,#FBE9B7,#F8D3C0);border:0;color:#3B2A35"><b>💛 Тебе сказали спасибо</b>${tt.slice(0,2).map(x=>`<div>${x.sticker} <b>${esc(nameOf(x.from_user))}:</b> ${esc(x.body)}</div>`).join('')}</div>`}
+  h+=dayNotesCard();
   // мои заявки и итоги месяца
   if((rq.data||[]).length)h+=`<div class="card pad col" data-go="req" style="cursor:pointer"><b>📨 Мои заявки</b>${rq.data.map(x=>`<div class="otr"><span>${(REQ_K[x.kind]||['','Заявка'])[0]} ${(REQ_K[x.kind]||['','Заявка'])[1]} · ${dRange(x)}</span><span class="pill" style="background:${(REQ_ST[x.status]||['','#E8DCCB'])[1]}">${(REQ_ST[x.status]||['?'])[0]}</span></div>`).join('')}</div>`;
   {const cnt=k=>(mm.data||[]).filter(x=>x.kind===k).length,hd=(ot.data||[]).filter(x=>otKind(x)==='d').reduce((a,x)=>a+(+x.hours||0),0),hp=(ot.data||[]).filter(x=>otKind(x)==='p').reduce((a,x)=>a+(+x.hours||0),0),dim=new Date(+ym.slice(0,4),+ym.slice(5),0).getDate(),off=(mm.data||[]).length;
@@ -75,7 +76,7 @@ async function todayView(){
   if(n)h+=`<div class="card pad col" data-go="news" style="cursor:pointer"><b>📰 ${n.pinned?'📌 ':''}${esc(n.title)}</b><div class="muted" style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">${esc(n.body||'')}</div></div>`;
   h+=`<button class="btn ghost" id="td_fb" style="min-height:40px;font-size:14px">💡 Предложить идею / что-то сломалось в приложении</button>`;
   app.innerHTML=h;
-  $('#td_fb').onclick=()=>fbForm();
+  $('#td_fb').onclick=()=>fbForm();dayNotesBind();
   {const ph=$('#td_ph');if(ph){const next=()=>{const x=$('#td_phx'),cur=x.textContent;const j=dayJoke(cur);$('#td_pht').textContent='🌟 Совет Дримми';x.textContent=j;ph.classList.remove('flip');void ph.offsetWidth;ph.classList.add('flip')};ph.onclick=next;ph.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();next()}}}}
   $('#td_alert')?.addEventListener('click',alertSheet);window.pushBanner&&pushBanner();
   app.querySelectorAll('[data-go]').forEach(c=>c.onclick=()=>go(c.dataset.go));

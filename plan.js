@@ -31,7 +31,8 @@ async function noteView(){
   if(!P.sel)P.sel=today;
   const me=S.me.id,ws=wkMon(P.sel),we=addD(ws,6);
   S.offline=0;
-  const [tq,pb,hq,hl,mk,ot,dnq]=await Promise.all([
+  const [,tq,pb,hq,hl,mk,ot,dnq]=await Promise.all([
+    loadPeriods().catch(()=>{}),
     sb.from('todos').select('*').eq('user_id',me).order('created_at'),
     sb.from('todos').select('due,prio,tag,subs,arch').limit(1),
     sb.from('habits').select('*').eq('user_id',me).eq('arch',false).order('created_at'),
@@ -39,7 +40,6 @@ async function noteView(){
     sb.from('marks').select('day,kind,note').eq('user_id',me).gte('day',ws).lte('day',we),
     sb.from('overtime').select('*').eq('user_id',me).gte('day',ws).lte('day',we),
     sb.from('day_notes').select('day,body').eq('user_id',me).gte('day',ws).lte('day',we)]);
-  try{await loadPeriods()}catch(e){}
   P.ext=!pb.error;P.hab=!hq.error;
   const every=(tq.data||[]).map(plNorm),all=every.filter(x=>!x.arch),archived=every.filter(x=>x.arch);
   S.plTags=[...new Set(every.map(x=>x.tag).filter(Boolean))].sort();
@@ -107,7 +107,7 @@ async function noteView(){
       soon=open.filter(x=>x.due&&x.due>today&&x.due<=addD(today,7)).sort((a,b)=>a.due.localeCompare(b.due)||srt(a,b)),
       later=open.filter(x=>x.due&&x.due>addD(today,7)).sort((a,b)=>a.due.localeCompare(b.due)||srt(a,b)),
       und=open.filter(x=>!x.due).sort(srt);
-    h+=`<input type="search" id="pl_s" placeholder="🔍 Поиск по делам, заметкам, тегам" value="${esc(P.q||'')}" autocomplete="off"><div class="plf">${[['all','Все'],['task','✅ Дела'],['deadline','⏰ Дедлайны'],['event','📌 События'],...(P.ext?[['star','⭐ Важные']]:[])].map(([k,v])=>`<button data-pf="${k}" class="${(P.f||'all')===k?'on':''}">${v}</button>`).join('')}<button id="pl_hd" class="${P.hd?'on':''}">${P.hd?'Сделанные скрыты':'Скрыть сделанные'}</button></div>`;
+    h+=`<input type="search" id="pl_s" placeholder="🔍 Поиск по делам и тегам" value="${esc(P.q||'')}" autocomplete="off"><div class="plf">${[['all','Все'],['task','✅ Дела'],['deadline','⏰ Дедлайны'],['event','📌 События'],...(P.ext?[['star','⭐ Важные']]:[])].map(([k,v])=>`<button data-pf="${k}" class="${(P.f||'all')===k?'on':''}">${v}</button>`).join('')}<button id="pl_hd" class="${P.hd?'on':''}">${P.hd?'Сделанные скрыты':'Скрыть сделанные'}</button></div>`;
     if(tags.length)h+=`<div class="plf">${tags.map(t=>`<button data-tg="${esc(t)}" class="${P.tg===t?'on':''}">#${esc(t)}</button>`).join('')}</div>`;
     const sec=(t,l,st)=>l.length?`<div class="card pad col" ${st?`style="${st}"`:''}><b>${t} · ${l.length}</b>${l.map(x=>rowH(x,true)).join('')}</div>`:'';
     h+=sec('⚠️ Просрочено',ovr,'border:2px solid #C0392B55')+sec('☀️ Сегодня',td)+sec('📆 Ближайшие 7 дней',soon)+sec('🗓 Позже',later)+sec('📝 Без даты',und);
