@@ -8,9 +8,9 @@ async function todayView(){
     await ensurePeople();
     const [inc,sn,tm,cks]=await Promise.all([cnt('incidents',q=>q.eq('status','new')),cnt('shift_notes',q=>q.eq('day',t)),sb.from('marks').select('user_id').eq('day',t),sb.from('checkins').select('user_id').eq('day',t)]);
     const total=(S.dg.people||[]).length,absent=(tm.data||[]).length;
-    const ox=await sb.from('overtime').select('user_id,hours,note').eq('day',t).then(r=>r.data||[],()=>[]);
+    const ox=await sb.from('overtime').select('*').eq('day',t).then(r=>r.data||[],()=>[]);
     const nm=id=>shortName((S.dg.people.find(p=>p.id===id)||{}).full_name||'');
-    return {inc,sn,total,work:Math.max(0,total-absent),ok:(cks.data||[]).length,ot:ox.map(o=>`${nm(o.user_id)} +${String(+o.hours).replace('.',',')} ч${o.note?' ('+o.note+')':''}`)};
+    return {inc,sn,total,work:Math.max(0,total-absent),ok:(cks.data||[]).length,ot:ox.map(o=>`${OT_K[otKind(o)][0]} ${nm(o.user_id)} +${String(+o.hours).replace('.',',')} ч${o.note?' ('+o.note+')':''}`)};
   })().catch(()=>null):null;
   const [mk,ck,rt,ev,nw,rt2,rq,mm,ot,td]=await Promise.all([
     sb.from('marks').select('kind,note').eq('user_id',me).eq('day',t).maybeSingle(),
@@ -21,7 +21,7 @@ async function todayView(){
     sb.from('rotations').select('data').eq('day',tm).maybeSingle(),
     sb.from('requests').select('id,kind,day,day_to,status,created_at').eq('user_id',me).neq('status','cancelled').order('created_at',{ascending:false}).limit(4),
     sb.from('marks').select('day,kind').eq('user_id',me).gte('day',ms).lte('day',ym+'-31'),
-    sb.from('overtime').select('hours').eq('user_id',me).gte('day',ms).lte('day',ym+'-31'),
+    sb.from('overtime').select('*').eq('user_id',me).gte('day',ms).lte('day',ym+'-31'),
     sb.from('todos').select('*').eq('user_id',me)]);
   if(rnameP)await rnameP;
   const adm=admP?await admP:null;
@@ -46,12 +46,12 @@ async function todayView(){
    if(tl.length)h+=`<div class="card pad col" data-go="todo" style="cursor:pointer"><b>📅 Мой календарь${ov.length?` · <span style="color:#C0392B">просрочено ${ov.length}</span>`:''}${tdy.length?` · сегодня ${tdy.length}`:''}</b>${[...ov,...tdy].slice(0,4).map(li).join('')}${!ov.length&&!tdy.length&&nx?`<div class="muted">Ближайшее:</div>${li(nx)}`:''}${!op.length?'<div class="muted">🎉 Все дела сделаны</div>':''}${todoBar(dn,tl.length)}</div>`}
   // мои заявки и итоги месяца
   if((rq.data||[]).length)h+=`<div class="card pad col" data-go="req" style="cursor:pointer"><b>📨 Мои заявки</b>${rq.data.map(x=>`<div class="otr"><span>${(REQ_K[x.kind]||['','Заявка'])[0]} ${(REQ_K[x.kind]||['','Заявка'])[1]} · ${dRange(x)}</span><span class="pill" style="background:${(REQ_ST[x.status]||['','#E8DCCB'])[1]}">${(REQ_ST[x.status]||['?'])[0]}</span></div>`).join('')}</div>`;
-  {const cnt=k=>(mm.data||[]).filter(x=>x.kind===k).length,hrs=(ot.data||[]).reduce((a,x)=>a+(+x.hours||0),0),dim=new Date(+ym.slice(0,4),+ym.slice(5),0).getDate(),off=(mm.data||[]).length;
-   h+=`<div class="card pad col" data-go="sch" style="cursor:pointer"><b>📊 Мой месяц</b><div class="otr"><span>Рабочих дней по графику</span><b>${dim-off} из ${dim}</b></div><div class="otr"><span>Отгулов</span><b>${cnt('otgul')}</b></div><div class="otr"><span>Отпуск / больничный</span><b>${cnt('vac')} / ${cnt('sick')}</b></div><div class="otr"><span>Доработка</span><b>${hrs?hrs+' ч':'—'}</b></div></div>`}
+  {const cnt=k=>(mm.data||[]).filter(x=>x.kind===k).length,hd=(ot.data||[]).filter(x=>otKind(x)==='d').reduce((a,x)=>a+(+x.hours||0),0),hp=(ot.data||[]).filter(x=>otKind(x)==='p').reduce((a,x)=>a+(+x.hours||0),0),dim=new Date(+ym.slice(0,4),+ym.slice(5),0).getDate(),off=(mm.data||[]).length;
+   h+=`<div class="card pad col" data-go="sch" style="cursor:pointer"><b>📊 Мой месяц</b><div class="otr"><span>Рабочих дней по графику</span><b>${dim-off} из ${dim}</b></div><div class="otr"><span>Отгулов</span><b>${cnt('otgul')}</b></div><div class="otr"><span>Отпуск / больничный</span><b>${cnt('vac')} / ${cnt('sick')}</b></div><div class="otr"><span>⏱ Доработки</span><b>${hd?hd+' ч':'—'}</b></div><div class="otr"><span>🔥 Переработки</span><b>${hp?hp+' ч':'—'}</b></div></div>`}
   // руководителям
   if(adm){
     const row=(ic,n,v,k)=>`<div class="otr" data-go="${k}" style="cursor:pointer"><span>${ic} ${n}</span><b${v?' style="color:#C0392B"':''}>${v}</b></div>`;
-    h+=`<div class="card pad col"><b>👀 Требует внимания</b>${row('📨','Заявки на рассмотрении',b.req||0,'req')}${row('🛠','Новые поломки',b.fix||0,'fix')}${row('🚨','Новые происшествия',(adm.inc||0),'inc')}${isAdmin()?row('👥','Новые регистрации',S.pending||0,'staff'):''}${row('💬','Комментарии в смене сегодня',(adm.sn||0),'shift')}<div class="otr"><span>☀️ Подтвердили выход</span><b>${adm.ok} из ${adm.work}</b></div>${(adm.ot||[]).length?`<div style="margin-top:4px"><b>⏱ Доработки сегодня</b>${adm.ot.map(x=>`<div class="muted">· ${esc(x)}</div>`).join('')}</div>`:''}</div>`;
+    h+=`<div class="card pad col"><b>👀 Требует внимания</b>${row('📨','Заявки на рассмотрении',b.req||0,'req')}${row('🛠','Новые поломки',b.fix||0,'fix')}${row('🚨','Новые происшествия',(adm.inc||0),'inc')}${isAdmin()?row('👥','Новые регистрации',S.pending||0,'staff'):''}${row('💬','Комментарии в смене сегодня',(adm.sn||0),'shift')}<div class="otr"><span>☀️ Подтвердили выход</span><b>${adm.ok} из ${adm.work}</b></div>${(adm.ot||[]).length?`<div style="margin-top:4px"><b>⏱ Доработки и переработки сегодня</b>${adm.ot.map(x=>`<div class="muted">· ${esc(x)}</div>`).join('')}</div>`:''}</div>`;
   }else if(false){
     h+=`<div class="card pad col" data-go="dg" style="cursor:pointer"><b>📋 Задачи на сегодня и завтра · ${S.due.length}</b>${S.due.slice(0,3).map(x=>`<div class="muted">· ${esc(x.title)}</div>`).join('')}</div>`;
   }

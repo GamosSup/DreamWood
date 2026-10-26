@@ -7,34 +7,43 @@ async function planView(){
   const P=S.pl||(S.pl={m:new Date(),sel:today});
   const me=S.me.id,y=P.m.getFullYear(),mo=P.m.getMonth(),first=iso(new Date(y,mo,1)),last=iso(new Date(y,mo+1,0)),n=new Date(y,mo+1,0).getDate(),lead=(new Date(y,mo,1).getDay()+6)%7;
   S.offline=0;
-  const [tq,mk,ot,dn,pb]=await Promise.all([
+  const [tq,mk,ot,dn,pb,pf]=await Promise.all([
     sb.from('todos').select('*').eq('user_id',me).order('created_at'),
     sb.from('marks').select('day,kind,note').eq('user_id',me).gte('day',first).lte('day',last),
-    sb.from('overtime').select('day,hours,note,start_time').eq('user_id',me).gte('day',first).lte('day',last),
+    sb.from('overtime').select('*').eq('user_id',me).gte('day',first).lte('day',last),
     sb.from('day_notes').select('day,body').eq('user_id',me).gte('day',first).lte('day',last),
-    sb.from('todos').select('due,due_time,due_end,kind,note').limit(1)]);
+    sb.from('todos').select('due,due_time,due_end,kind,note').limit(1),
+    sb.from('profiles').select('day_len,team').eq('id',me).maybeSingle()]);
   try{await loadPeriods()}catch(e){}
   const all=(tq.data||[]).map(x=>({kind:'task',due:null,...x})),marks={},otd={},notes={};
   (mk.data||[]).forEach(m=>marks[m.day]=m);(ot.data||[]).forEach(o=>(otd[o.day]=otd[o.day]||[]).push(o));(dn.data||[]).forEach(d=>notes[d.day]=d.body);
-  const byDay={};all.filter(x=>x.due).forEach(x=>(byDay[x.due]=byDay[x.due]||[]).push(x));
+  const nq=t=>String(t||'').toLowerCase().replace(/ё/g,'е'),qt=nq(P.q).split(/\s+/).filter(Boolean);
+  const fl=all.filter(x=>(!P.f||P.f==='all'||x.kind===P.f)&&(!P.hd||!x.done)&&qt.every(w=>nq(x.body+' '+(x.note||'')).includes(w)));
+  const byDay={};fl.filter(x=>x.due).forEach(x=>(byDay[x.due]=byDay[x.due]||[]).push(x));
   const srt=(a,b)=>(a.done-b.done)||String(a.due_time||'99').localeCompare(String(b.due_time||'99'))||String(a.created_at).localeCompare(String(b.created_at));
   const over=x=>!x.done&&x.due&&x.due<today;
-  const overdue=all.filter(over).sort((a,b)=>a.due.localeCompare(b.due)),
-    soon=all.filter(x=>!x.done&&x.due&&x.due>=today&&x.due<=iso(new Date(Date.now()+7*864e5))).sort((a,b)=>a.due.localeCompare(b.due)||srt(a,b)),
-    undated=all.filter(x=>!x.due).sort(srt),done=all.filter(x=>x.done).length;
+  const overdue=fl.filter(over).sort((a,b)=>a.due.localeCompare(b.due)),
+    soon=fl.filter(x=>!x.done&&x.due&&x.due>=today&&x.due<=iso(new Date(Date.now()+7*864e5))).sort((a,b)=>a.due.localeCompare(b.due)||srt(a,b)),
+    undated=fl.filter(x=>!x.due).sort(srt),done=all.filter(x=>x.done).length;
   const rowH=(x,showDay)=>`<div class="plr ${x.done?'dn':''} ${over(x)?'plo':''}"><input type="checkbox" data-pt="${x.id}" ${x.done?'checked':''} aria-label="Сделано"><div class="plb" data-pe="${x.id}"><div><span class="plk" style="background:${PL_C[x.kind]||PL_C.task}"></span>${PL_K[x.kind]?.[0]||'✅'} <b>${esc(x.body)}</b></div><div class="muted">${showDay&&x.due?dayLabel(x.due)+(plT(x)?' · ':''):''}${plT(x)}${over(x)?' · просрочено':''}${x.note?`${showDay||plT(x)?' · ':''}${esc(x.note)}`:''}</div></div></div>`;
+  // итоги месяца: часы по графику, доработки, переработки
+  const dl=pf.data?.day_len||null,tm=pf.data?.team,dlen=dl||(tm==='M'?12:10),lenSet=!!dl;
+  let wd=0,wH=0,oH=0,dH=0,cO=0,cD=0;for(let d=1;d<=n;d++){const k=iso(new Date(y,mo,d)),m=marks[k],hh=dayH(k,dlen,lenSet);if(!m){wd++;wH+=hh}else if(m.kind==='otgul'){oH+=hh;cO++}else if(m.kind==='do'){dH+=hh;cD++}}
+  const otK={d:0,p:0};(ot.data||[]).forEach(r=>otK[otKind(r)]+=Number(r.hours));const base=wH+oH-dH,fh=x=>String(Math.round(x*100)/100).replace('.',',');
   let h=head('Мой календарь','Дела, дедлайны и события · видите только вы');
   h+=`<div class="gmon"><button class="btn ghost" id="pl_pm" aria-label="Прошлый месяц">←</button><div class="gmt"><b>${P.m.toLocaleDateString('ru',{month:'long',year:'numeric'})}</b><small>${all.length-done?`открыто дел: ${all.length-done}`:'всё сделано'}${overdue.length?` · просрочено: ${overdue.length}`:''}</small></div><button class="btn ghost" id="pl_nm" aria-label="Следующий месяц">→</button></div>`;
   h+=`<div class="cal">${['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map(d=>`<div class="dh">${d}</div>`).join('')}${'<div></div>'.repeat(lead)}`;
-  for(let d=1;d<=n;d++){const k=iso(new Date(y,mo,d)),m=marks[k],K=m&&KINDS[m.kind],its=byDay[k]||[],o=(otd[k]||[]).reduce((a,r)=>a+Number(r.hours),0);
+  for(let d=1;d<=n;d++){const k=iso(new Date(y,mo,d)),m=marks[k],K=m&&KINDS[m.kind],its=byDay[k]||[],oo=otd[k]||[],ob=['d','p'].map(t=>[t,oo.filter(r=>otKind(r)===t).reduce((a,r)=>a+Number(r.hours),0)]).filter(x=>x[1]);
     const dots=its.slice(0,4).map(x=>`<i class="pld ${x.done?'dn':''}" style="background:${PL_C[x.kind]||PL_C.task}"></i>`).join('');
-    h+=`<button class="day ${P.sel===k?'sel':''} ${k===today?'tdy':''}" data-k="${k}" style="${K?`background:${K[1]};`:''}">${d}<small>${K?K[0]:''}</small>${o?`<i class="otm">⏱+${String(Math.round(o*100)/100).replace('.',',')}ч</i>`:''}${dots?`<span class="pldw">${dots}</span>`:''}</button>`}
-  h+=`</div><div class="gleg"><span style="background:var(--card);border:1px solid var(--line)"><i class="pld" style="background:${PL_C.task}"></i> дело</span><span style="background:var(--card);border:1px solid var(--line)"><i class="pld" style="background:${PL_C.deadline}"></i> дедлайн</span><span style="background:var(--card);border:1px solid var(--line)"><i class="pld" style="background:${PL_C.event}"></i> событие</span><span style="background:var(--pink)"><b>⏱</b> доработка</span></div>`;
+    h+=`<button class="day ${P.sel===k?'sel':''} ${k===today?'tdy':''}" data-k="${k}" style="${K?`background:${K[1]};`:''}">${d}<small>${K?K[0]:''}</small>${ob.map(([t,v])=>`<i class="otm ${t}">${OT_K[t][0]}+${String(Math.round(v*100)/100).replace('.',',')}ч</i>`).join('')}${dots?`<span class="pldw">${dots}</span>`:''}</button>`}
+  h+=`</div><div class="stat"><div style="background:var(--gold)"><b>${fh(base)}</b>часов по графику · ${wd} дн.</div><div style="background:var(--blue)"><b>${fh(base+otK.d+otK.p)}</b>всего часов</div></div><div class="stat"><div style="background:${OT_K.d[2]}"><b>${fh(otK.d)}</b>⏱ доработки</div><div style="background:${OT_K.p[2]}"><b>${fh(otK.p)}</b>🔥 переработки</div></div>${cO||cD?`<div class="muted">Отгулов: ${cO} · ДО: ${cD}</div>`:''}<div class="gleg"><span style="background:var(--card);border:1px solid var(--line)"><i class="pld" style="background:${PL_C.task}"></i> дело</span><span style="background:var(--card);border:1px solid var(--line)"><i class="pld" style="background:${PL_C.deadline}"></i> дедлайн</span><span style="background:var(--card);border:1px solid var(--line)"><i class="pld" style="background:${PL_C.event}"></i> событие</span><span style="background:#F4C6D0"><b>⏱</b> доработка</span><span style="background:#F3C29B"><b>🔥</b> переработка</span></div>`;
+  h+=`<input type="search" id="pl_s" placeholder="🔍 Поиск по моим записям" value="${esc(P.q||'')}" autocomplete="off"><div class="plf">${[['all','Все'],['task','✅ Дела'],['deadline','⏰ Дедлайны'],['event','📌 События']].map(([k,v])=>`<button data-pf="${k}" class="${(P.f||'all')===k?'on':''}">${v}</button>`).join('')}<button id="pl_hd" class="${P.hd?'on':''}">${P.hd?'Сделанные скрыты':'Скрыть сделанные'}</button></div>`;
+  if(qt.length)h+=`<div class="card pad col"><b>🔎 Найдено: ${fl.length}</b>${fl.slice().sort((a,b)=>String(a.due||'9').localeCompare(String(b.due||'9'))).map(x=>rowH(x,true)).join('')||'<div class="muted">Ничего не нашли.</div>'}</div>`;
   // выбранный день
   if(P.sel){const k=P.sel,m=marks[k],its=(byDay[k]||[]).slice().sort(srt),inMonth=k>=first&&k<=last;
     h+=`<div class="card pad col"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b style="font-size:17px">${dayLabel(k)}${k===today?' · сегодня':''}</b><button class="btn" id="pl_add" style="flex:none;min-height:38px;padding:0 14px">＋ Добавить</button></div>`;
     if(inMonth){h+=m?`<div class="pill" style="background:${KINDS[m.kind][1]};align-self:flex-start">${KINDS[m.kind][2]}${m.note?' · '+esc(m.note):''}</div>`:`<div class="muted">🕘 Рабочий день${perLabel(k)?' · '+perLabel(k):''}</div>`;
-      (otd[k]||[]).forEach(o=>h+=`<div class="pill" style="background:var(--pink);align-self:flex-start">⏱ Доработка +${String(+o.hours).replace('.',',')} ч${o.start_time?' с '+String(o.start_time).slice(0,5):''}${o.note?' · '+esc(o.note):''}</div>`);
+      (otd[k]||[]).forEach(o=>h+=`<div class="pill" style="background:${OT_K[otKind(o)][2]};align-self:flex-start">${OT_K[otKind(o)][0]} ${OT_K[otKind(o)][1]} +${String(+o.hours).replace('.',',')} ч${o.start_time?' с '+String(o.start_time).slice(0,5):''}${o.note?' · '+esc(o.note):''}</div>`);
       if(notes[k])h+=`<div class="muted">📝 Комментарий руководителям: ${esc(notes[k])}</div>`}
     h+=its.length?its.map(x=>rowH(x,false)).join(''):`<div class="muted">На этот день ничего не запланировано.</div>`;
     h+=`</div>`}
@@ -46,6 +55,8 @@ async function planView(){
   h+=`<div class="muted">🔒 Личные записи видите только вы: руководители и администратор их не видят. Выходные, отгулы и доработки подтягиваются из графика.</div>`;
   if(pb.error)h=`<div class="card pad err">⚠️ Даты и дедлайны заработают после обновления базы: нужно один раз запустить supabase/migration_2026-11-03_planner.sql. Пока можно вести дела без даты.</div>`+h;
   app.innerHTML=h;
+  {const si=$('#pl_s');si.oninput=()=>{P.q=si.value;clearTimeout(P.qt);P.qt=setTimeout(()=>{const pos=si.selectionStart;planView().then(()=>{const n=$('#pl_s');n.focus();n.setSelectionRange(pos,pos)})},350)}}
+  app.querySelectorAll('[data-pf]').forEach(b=>b.onclick=()=>{P.f=b.dataset.pf;keepScroll(planView)});$('#pl_hd').onclick=()=>{P.hd=!P.hd;keepScroll(planView)};
   $('#pl_pm').onclick=()=>{P.m=new Date(y,mo-1,1);P.sel=null;planView()};$('#pl_nm').onclick=()=>{P.m=new Date(y,mo+1,1);P.sel=null;planView()};
   app.querySelectorAll('.cal .day').forEach(b=>b.onclick=()=>{P.sel=P.sel===b.dataset.k?null:b.dataset.k;keepScroll(planView)});
   $('#pl_add')?.addEventListener('click',()=>plEdit(null,P.sel));
@@ -62,9 +73,12 @@ function plEdit(x,day){
     box.innerHTML=`<div class="mpick">${Object.entries(PL_K).map(([k,v])=>`<button data-pk="${k}" class="${f.kind===k?'on':''}" style="flex:1 1 30%;min-width:0;padding:0 6px;background:${k==='deadline'?'#F3C9C3':k==='event'?'#CFE0EE':'#F5E2A8'}"><b>${v[0]}</b> ${v[1]}</button>`).join('')}</div>
     <label>Что <input id="pl_b" value="${esc(f.body)}" placeholder="Например: сдать отчёт, заказать форму"></label>
     <label>Дата <input type="date" id="pl_d" value="${f.due||''}"></label>
+    <div class="plf"><button data-qd="0">Сегодня</button><button data-qd="1">Завтра</button><button data-qd="7">Через неделю</button><button data-qd="x">Без даты</button></div>
     <div class="two"><label>С <input type="time" id="pl_t" value="${f.due_time?String(f.due_time).slice(0,5):''}"></label><label>До <input type="time" id="pl_e" value="${f.due_end?String(f.due_end).slice(0,5):''}"></label></div>
+    ${x?'':`<div class="two"><label>Повторять <select id="pl_r"><option value="">не повторять</option><option value="1">каждый день</option><option value="7">каждую неделю</option><option value="m">каждый месяц</option></select></label><label>Сколько раз <input type="number" id="pl_rc" min="2" max="60" value="4"></label></div>`}
     <label>Заметка <textarea id="pl_n" placeholder="Детали (необязательно)">${esc(f.note||'')}</textarea></label>
     <button class="btn" id="pl_s">Сохранить</button>${x?'<button class="btn ghost" id="pl_x" style="color:#C0392B">Удалить</button>':''}<div class="err" id="pl_er"></div>`;
+    box.querySelectorAll('[data-qd]').forEach(b=>b.onclick=()=>{const v=b.dataset.qd,d=box.querySelector('#pl_d');if(v==='x')d.value='';else{const t=new Date();t.setDate(t.getDate()+(+v));d.value=iso(t)}});
     box.querySelectorAll('[data-pk]').forEach(b=>b.onclick=()=>{f.kind=b.dataset.pk;box.querySelectorAll('[data-pk]').forEach(z=>z.classList.toggle('on',z===b))});
     box.querySelector('#pl_s').onclick=async e=>{
       const body=box.querySelector('#pl_b').value.trim(),er=box.querySelector('#pl_er');
@@ -75,7 +89,9 @@ function plEdit(x,day){
       if((t||f.kind==='deadline')&&!d)return er.textContent='Укажи дату';
       const row={body,kind:f.kind,due:d,due_time:t,due_end:en,note:box.querySelector('#pl_n').value.trim()||null};
       e.target.disabled=true;
-      const r=x?await sb.from('todos').update(row).eq('id',x.id):await sb.from('todos').insert(row);
+      let rows=[row];const rp=box.querySelector('#pl_r')?.value,rc=Math.min(60,Math.max(2,+box.querySelector('#pl_rc')?.value||2));
+      if(!x&&rp&&d){rows=[];for(let i=0;i<rc;i++){const t=new Date(d+'T12:00:00');if(rp==='m')t.setMonth(t.getMonth()+i);else t.setDate(t.getDate()+i*(+rp));rows.push({...row,due:iso(t)})}}
+      const r=x?await sb.from('todos').update(row).eq('id',x.id):await sb.from('todos').insert(rows);
       if(r.error){e.target.disabled=false;return er.textContent='Не получилось: '+r.error.message}
       if(d)S.pl.sel=d;close(false);planView()};
     box.querySelector('#pl_x')?.addEventListener('click',async()=>{if(!confirm('Удалить запись?'))return;const r=await sb.from('todos').delete().eq('id',x.id);if(r.error)return alert(r.error.message);close(false);planView()});

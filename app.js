@@ -355,6 +355,19 @@ function dayModal(k){
       close(false);S.sel=null;schView()};
   },()=>{S.sel=null});
 }
+const OT_K={d:['⏱','Доработка','#F4C6D0'],p:['🔥','Переработка','#F3C29B']}; // d — добор часов (из-за мероприятий), p — переработка сверх нормы
+const otKind=o=>o&&o.kind==='p'?'p':'d';
+const nrmQ=s=>String(s||'').toLowerCase().replace(/ё/g,'е');
+function empSearchHtml(people,cur){const p=people.find(x=>x.id===cur);return `<div class="empq"><input id="empq" type="search" autocomplete="off" placeholder="🔍 Найти сотрудника: имя или фамилия" value="${esc(p?p.full_name:'')}"><div class="empl" id="empl" hidden></div></div>`}
+function empSearchBind(root,people,onPick){
+  const inp=root.querySelector('#empq'),box=root.querySelector('#empl');if(!inp)return;
+  const fill=q=>{const t=nrmQ(q).split(/\s+/).filter(Boolean),l=people.filter(p=>t.every(w=>nrmQ(p.full_name).includes(w))).slice(0,40);
+    box.innerHTML=l.map(p=>`<div data-id="${p.id}">${esc(p.full_name)}${p.team?`<small>${TN[p.team]||''}</small>`:''}</div>`).join('')||'<div class="muted" style="padding:8px">Никого не нашли</div>';box.hidden=false};
+  inp.onfocus=()=>{inp.select();fill('')};inp.oninput=()=>fill(inp.value);
+  inp.onkeydown=e=>{if(e.key==='Enter'){const f=box.querySelector('[data-id]');if(f)onPick(f.dataset.id)}};
+  box.onmousedown=e=>{const d=e.target.closest('[data-id]');if(d){e.preventDefault();onPick(d.dataset.id)}};
+  inp.onblur=()=>setTimeout(()=>{box.hidden=true},150);
+}
 const KINDS={off:['ВЫХ','#E8DCCB','Выходной'],otgul:['ОТ','#E4B5A3','Отгул'],do:['ДО','#F5E2A8','ДО'],sick:['Б','#BCC8D6','Больничный'],vac:['ОП','#C9D4B0','Отпуск']};
 // руководитель выбирает день в графике: окно с выбором (выходной, отгул, ДО, больничный, отпуск, рабочий)
 function markModal(k,after){
@@ -393,44 +406,49 @@ async function schView(){
   S.dnotes={};(dq.data||[]).forEach(x=>S.dnotes[x.day]=x.body);
   const otOk=canMng()&&(isManager()||S.viewUser!==S.me.id);
   const otRows=otr.data||[],otSum=otRows.reduce((a,r)=>a+Number(r.hours),0),fh=x=>String(Math.round(x*100)/100).replace('.',',');
+  const otKd={d:0,p:0};otRows.forEach(r=>otKd[otKind(r)]+=Number(r.hours));
   S.marks={};(data||[]).forEach(r=>S.marks[r.day]=r);
   const n=new Date(y,mo+1,0).getDate(),lead=(new Date(y,mo,1).getDay()+6)%7;
   let h=head('График',m.toLocaleDateString('ru',{month:'long',year:'numeric'}));
-  if(canMng())h+=`<label>Сотрудник<select id="who">${S.people.map(p=>`<option value="${p.id}" ${p.id===S.viewUser?'selected':''}>${esc(p.full_name)}</option>`).join('')}</select></label>`;
+  if(canMng())h+=`<div class="col" style="gap:4px"><b>Сотрудник</b>${empSearchHtml(S.people,S.viewUser)}</div>`;
   h+=`<div style="display:flex;gap:8px"><button class="btn ghost" id="pm">←</button><button class="btn ghost" id="nm">→</button></div><div class="cal">${['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map(d=>`<div class="dh">${d}</div>`).join('')}${'<div></div>'.repeat(lead)}`;
   await loadPeriods();S.lenSet=lenSet;
-  const otBy={};otRows.forEach(r=>{otBy[r.day]=(otBy[r.day]||0)+Number(r.hours)});
+  const otBy={},otDay={};otRows.forEach(r=>{otBy[r.day]=(otBy[r.day]||0)+Number(r.hours);const e=otDay[r.day]||(otDay[r.day]={d:0,p:0});e[otKind(r)]+=Number(r.hours)});
+  const otB=k=>{const e=otDay[k];return e?['d','p'].filter(t=>e[t]).map(t=>`<i class="otm ${t}">${OT_K[t][0]}+${fh(e[t])}ч</i>`).join(''):''};
   let worked=0,wH=0,oH=0,dH=0;const cnt={};
   for(let d=1;d<=n;d++){const k=iso(new Date(y,mo,d)),mk=S.marks[k],hh=dayH(k,dlen,lenSet);
     if(!mk){worked++;wH+=hh}else{cnt[mk.kind]=(cnt[mk.kind]||0)+1;if(mk.kind==='otgul')oH+=hh;if(mk.kind==='do')dH+=hh}
     const pd=S.pendDay[k];
-    h+=`<button class="day ${S.sel===k?'sel':''}" data-k="${k}" style="background:${mk?KINDS[mk.kind][1]:pd?KINDS[pd.kind]?.[1]||'var(--card)':'var(--card)'};${pd&&!mk?'border:2px dashed var(--ink);':''}">${d}<small>${mk?KINDS[mk.kind][0]:pd?'⏳ '+(KINDS[pd.kind]?.[0]||''):''}${S.dnotes[k]?' 📝':''}</small>${otBy[k]?`<i class="otm">⏱+${fh(otBy[k])}ч</i>`:''}</button>`}
+    h+=`<button class="day ${S.sel===k?'sel':''}" data-k="${k}" style="background:${mk?KINDS[mk.kind][1]:pd?KINDS[pd.kind]?.[1]||'var(--card)':'var(--card)'};${pd&&!mk?'border:2px dashed var(--ink);':''}">${d}<small>${mk?KINDS[mk.kind][0]:pd?'⏳ '+(KINDS[pd.kind]?.[0]||''):''}${S.dnotes[k]?' 📝':''}</small>${otB(k)}</button>`}
   const cOt=cnt.otgul||0,cDo=cnt.do||0,base=wH+oH-dH;
   const pers=(S.periods||[]).filter(p=>p.date_to>=first&&p.date_from<=last);
   h+=`</div><div class="stat"><div style="background:var(--sage)"><b>${worked}</b>рабочих дней</div><div style="background:var(--gold)"><b>${fh(base)}</b>часов по графику</div></div>
-  <div class="stat"><div style="background:var(--pink)"><b>${fh(otSum)}</b>доработки</div><div style="background:var(--blue)"><b>${fh(base+otSum)}</b>всего часов</div></div>
-  <div class="card pad col"><b>Как посчитано</b><div class="otr"><span>Рабочих дней ${worked}</span><b>${fh(wH)} ч</b></div><div class="otr"><span>Отгулы ${cOt} (как отработанные)</span><b>+${fh(oH)} ч</b></div><div class="otr"><span>ДО ${cDo} (неоплачиваемый)</span><b>−${fh(dH)} ч</b></div>${otSum?`<div class="otr"><span>Доработки</span><b>+${fh(otSum)} ч</b></div>`:''}<div class="otr"><span><b>Итого</b></span><b>${fh(base+otSum)} ч</b></div>
+  <div class="stat"><div style="background:${OT_K.d[2]}"><b>${fh(otKd.d)}</b>⏱ доработки</div><div style="background:${OT_K.p[2]}"><b>${fh(otKd.p)}</b>🔥 переработки</div></div>
+  <div class="stat"><div style="background:var(--blue)"><b>${fh(base+otSum)}</b>всего часов</div><div style="background:var(--card);border:1px solid var(--line)"><b>${cOt} · ${cDo}</b>отгулы · ДО</div></div>
+  <div class="card pad col"><b>Как посчитано</b><div class="otr"><span>Рабочих дней ${worked}</span><b>${fh(wH)} ч</b></div><div class="otr"><span>Отгулы ${cOt} (как отработанные)</span><b>+${fh(oH)} ч</b></div><div class="otr"><span>ДО ${cDo} (неоплачиваемый)</span><b>−${fh(dH)} ч</b></div>${cnt.sick?`<div class="otr"><span>Больничный ${cnt.sick} дн.</span><b>0 ч</b></div>`:''}${cnt.vac?`<div class="otr"><span>Отпуск ${cnt.vac} дн.</span><b>0 ч</b></div>`:''}${otKd.d?`<div class="otr"><span>⏱ Доработки</span><b>+${fh(otKd.d)} ч</b></div>`:''}${otKd.p?`<div class="otr"><span>🔥 Переработки</span><b>+${fh(otKd.p)} ч</b></div>`:''}<div class="otr"><span><b>Итого</b></span><b>${fh(base+otSum)} ч</b></div>
   ${!lenSet&&pers.length?`<div class="muted">Смены в этом месяце:${pers.map(p=>`<br>• ${dayLabel(p.date_from)} — ${dayLabel(p.date_to)}: ${String(p.start_time).slice(0,5)}–${String(p.end_time).slice(0,5)}${p.break_min?', перерыв '+(p.break_min%60?p.break_min+' мин':p.break_min/60+' ч'):''} (${String(p.hours).replace('.',',')} ч)${p.note?' · '+esc(p.note):''}`).join('')}</div>`:''}
   ${isManager()?`<label>Длина рабочего дня<select id="dlen"><option value="" ${lenSet?'':'selected'}>По графику смен${pers.length?'':' (10 ч)'}</option>${[8,10,12].map(v=>`<option value="${v}" ${lenSet&&v===dlen?'selected':''}>${v} ч${v===8?' (5/2)':v===10?' (4/3, с учётом обеда)':' (сменный 12 ч)'}</option>`).join('')}</select></label><div class="muted">${lenSet?'У сотрудника личная длина дня, периоды смен на него не действуют.':'Считается по графику смен выше. Выбери число, чтобы задать личную длину дня.'}</div>`:`<div class="muted">${lenSet?`Длина дня: ${dlen} ч. `:''}Выходные, больничные и отпуск в часы не входят.</div>`}</div>`;
   const dl=Object.keys({...S.marks,...S.dnotes,...otBy}).sort();
-  if(dl.length)h+=`<div class="card pad col"><b>📋 Что и когда</b>${dl.map(k=>{const mk=S.marks[k];return `<div class="otr" style="align-items:flex-start"><span><b>${dayLabel(k)}</b>${mk?` · <span class="pill" style="background:${KINDS[mk.kind][1]}">${KINDS[mk.kind][2]}</span>${mk.note?` ${esc(mk.note)}`:''}`:''}${otBy[k]?`${mk?'<br>':' · '}<span class="pill" style="background:var(--pink)">⏱ +${fh(otBy[k])} ч</span> ${esc(otRows.filter(r=>r.day===k).map(r=>r.note).filter(Boolean).join(', '))}`:''}${S.dnotes[k]?`<br><span class="muted">📝 ${esc(S.dnotes[k])}</span>`:''}</span></div>`}).join('')}</div>`;
+  if(dl.length)h+=`<div class="card pad col"><b>📋 Что и когда</b>${dl.map(k=>{const mk=S.marks[k];return `<div class="otr" style="align-items:flex-start"><span><b>${dayLabel(k)}</b>${mk?` · <span class="pill" style="background:${KINDS[mk.kind][1]}">${KINDS[mk.kind][2]}</span>${mk.note?` ${esc(mk.note)}`:''}`:''}${otDay[k]?`${mk?'<br>':' · '}${otRows.filter(r=>r.day===k).map(r=>`<span class="pill" style="background:${OT_K[otKind(r)][2]}">${OT_K[otKind(r)][0]} +${fh(+r.hours)} ч</span>${r.note?' '+esc(r.note):''}`).join(' ')}`:''}${S.dnotes[k]?`<br><span class="muted">📝 ${esc(S.dnotes[k])}</span>`:''}</span></div>`}).join('')}</div>`;
   const defd=S.sel||(iso(new Date()).slice(0,7)===first.slice(0,7)?iso(new Date()):first);
-  h+=`<div class="card pad col"><b>⏱ Доработки</b>${otRows.length?otRows.map(r=>`<div class="otr"><span><b>${dayLabel(r.day)}</b> · с ${esc(String(r.start_time||'—').slice(0,5))} · ${fh(+r.hours)} ч${r.note?' · '+esc(r.note):''}</span>${otOk?`<button class="x" data-od="${r.id}" aria-label="Удалить">✕</button>`:''}</div>`).join(''):'<div class="muted">В этом месяце доработок нет</div>'}
-  ${otOk?`<div class="col" style="border-top:1px solid var(--line);padding-top:10px"><div class="muted">Добавить доработку для выбранного сотрудника</div><input type="date" id="otd" value="${defd}"><div class="two"><label>С какого времени<input type="time" id="ots" value="20:00"></label><label>Сколько часов<input type="number" id="oth" step="0.5" min="0.5" placeholder="2"></label></div><input id="otn" placeholder="Комментарий (необязательно)"><button class="btn" id="otadd">Добавить</button></div>`:''}</div>`;
+  h+=`<div class="card pad col"><b>⏱ Доработки и 🔥 переработки</b>${otRows.length?otRows.map(r=>`<div class="otr"><span><b>${dayLabel(r.day)}</b> · ${OT_K[otKind(r)][0]} ${OT_K[otKind(r)][1].toLowerCase()} · с ${esc(String(r.start_time||'—').slice(0,5))} · ${fh(+r.hours)} ч${r.note?' · '+esc(r.note):''}</span>${otOk?`<button class="x" data-od="${r.id}" aria-label="Удалить">✕</button>`:''}</div>`).join(''):'<div class="muted">В этом месяце доработок и переработок нет</div>'}
+  ${otOk?`<div class="col" style="border-top:1px solid var(--line);padding-top:10px"><div class="muted">Добавить для выбранного сотрудника</div><label>Вид<select id="otk"><option value="d">⏱ Доработка: добор часов (мероприятия)</option><option value="p">🔥 Переработка: сверх нормы</option></select></label><input type="date" id="otd" value="${defd}"><div class="two"><label>С какого времени<input type="time" id="ots" value="20:00"></label><label>Сколько часов<input type="number" id="oth" step="0.5" min="0.5" placeholder="2"></label></div><input id="otn" placeholder="Комментарий (необязательно)"><button class="btn" id="otadd">Добавить</button></div>`:''}</div>`;
   if(selfMode)h+=`<div class="muted">Нажми на дату: можно отправить заявку на отгул, ДО, больничный или отпуск и оставить комментарий. ⏳ — отправлено на согласование руководителю.</div>`;
   app.innerHTML=h;
   $('#dlen')?.addEventListener('change',async e=>{const v=e.target.value?+e.target.value:null;e.target.disabled=true;
     const a=await sb.from('profiles').update({day_len:v}).eq('id',S.viewUser);if(a.error)return alert(a.error.message);
     if(vr.data)await sb.from('roster').update({day_len:v}).eq('id',vr.data.id);schView()});
-  $('#who')?.addEventListener('change',e=>{S.viewUser=e.target.value;S.sel=null;schView()});
+  if(canMng())empSearchBind(app,S.people,id=>{S.viewUser=id;S.sel=null;schView()});
   $('#pm').onclick=()=>{S.month=new Date(y,mo-1,1);S.sel=null;schView()};$('#nm').onclick=()=>{S.month=new Date(y,mo+1,1);S.sel=null;schView()};
   app.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{S.sel=b.dataset.k;S.pick=S.marks[S.sel]?.kind||'';if(selfMode)dayModal(S.sel);else markModal(S.sel,schView)});
   $('#otadd')?.addEventListener('click',async()=>{
     const day=$('#otd').value,hours=parseFloat(String($('#oth').value).replace(',','.'));
     if(!day||!(hours>0))return alert('Укажи дату и сколько часов (больше нуля)');
-    const r=await sb.from('overtime').insert({user_id:S.viewUser,day,start_time:$('#ots').value||null,hours,note:$('#otn').value.trim()||null,created_by:S.me.id});
+    const row={user_id:S.viewUser,day,start_time:$('#ots').value||null,hours,note:$('#otn').value.trim()||null,created_by:S.me.id},kd=$('#otk').value;
+    let r=await sb.from('overtime').insert({...row,kind:kd});
+    if(r.error&&/kind/i.test(r.error.message||'')){r=await sb.from('overtime').insert(row);if(!r.error&&kd==='p')alert('Сохранено как доработка: чтобы различать переработки, нужно обновить базу (supabase/migration_2026-11-03_planner.sql).')}
     if(r.error)return alert('Не удалось добавить: '+r.error.message);schView()});
-  app.querySelectorAll('[data-od]').forEach(b=>b.onclick=async()=>{if(!confirm('Удалить эту доработку?'))return;const r=await sb.from('overtime').delete().eq('id',b.dataset.od);if(r.error)alert(r.error.message);schView()});
+  app.querySelectorAll('[data-od]').forEach(b=>b.onclick=async()=>{if(!confirm('Удалить эту запись?'))return;const r=await sb.from('overtime').delete().eq('id',b.dataset.od);if(r.error)alert(r.error.message);schView()});
 }
 
 
@@ -481,7 +499,7 @@ async function staffView(){
       <label>Это сотрудник из списка:<select data-rs="${p.id}"><option value="">— не привязывать —</option>${opts.map(({r,sc})=>`<option value="${r.id}" ${sc>=3&&r===opts[0].r?'selected':''}>${sc>0?'★ ':''}${esc(r.full_name)}${r.team?' · '+TN[r.team]:''}${r.pre_role?' · '+esc(r.pre_position||'руководитель'):''}</option>`).join('')}</select></label>
       <div class="two"><button class="btn" data-ok="${p.id}">Одобрить</button>${p.status==='rejected'?'':`<button class="btn ghost" data-no="${p.id}">Отклонить</button>`}</div></div>`}).join(''):'<div class="muted">Новых заявок нет</div>'}<div class="muted">★ — похоже по имени и фамилии. Табельный номер присваивается автоматически при одобрении.</div></div>`;
   const adm=isAdmin(),lockRole=p=>!adm&&(p.role==='manager'||p.role==='admin'),roleOpts=p=>Object.entries(ROLE_RU).filter(([k])=>adm?k!=='admin'||p.role==='admin':k==='employee'||k==='lead');
-  h+=`<div class="card pad col"><b>👥 Команда · ${ap.length}</b><div class="muted">Имя (первое слово идёт в приветствие), табельный номер и должность${adm?'. Роли руководителей и удаление — только у админа':''}</div>${ap.map(p=>`<div class="col" style="border-top:1px solid var(--line);padding-top:10px;gap:6px"><div class="prow"><input class="pn" data-pn="${p.id}" value="${esc(p.full_name||'')}" placeholder="Имя Фамилия"><input class="pt" data-pt="${p.id}" value="${esc(p.tab_no||'')}" placeholder="№"><button class="btn" style="padding:0 14px" data-sp="${p.id}" aria-label="Сохранить">💾</button></div>
+  h+=`<div class="card pad col"><b>👥 Команда · ${ap.length}</b><input type="search" id="stq" placeholder="🔍 Найти сотрудника: имя или фамилия" autocomplete="off"><div class="muted">Имя (первое слово идёт в приветствие), табельный номер и должность${adm?'. Роли руководителей и удаление — только у админа':''}</div>${ap.map(p=>`<div class="col" style="border-top:1px solid var(--line);padding-top:10px;gap:6px"><div class="prow"><input class="pn" data-pn="${p.id}" value="${esc(p.full_name||'')}" placeholder="Имя Фамилия"><input class="pt" data-pt="${p.id}" value="${esc(p.tab_no||'')}" placeholder="№"><button class="btn" style="padding:0 14px" data-sp="${p.id}" aria-label="Сохранить">💾</button></div>
     <input data-ps="${p.id}" value="${esc(p.position||'')}" placeholder="Должность (например, супервайзер)">
     <label style="flex-direction:row;align-items:center;gap:8px;font-weight:600">Команда <select class="rl" data-tm="${p.id}"><option value="">— без команды —</option>${Object.entries(TN).map(([k,v])=>`<option value="${k}" ${p.team===k?'selected':''}>${v}</option>`).join('')}</select></label>
     <div class="muted">${p.id===S.me.id||lockRole(p)||p.role==='admin'?`<b>${roleLbl(p)}</b>`:`<select class="rl" data-rl="${p.id}">${roleOpts(p).map(([k,v])=>`<option value="${k}" ${p.role===k?'selected':''}>${v}</option>`).join('')}</select>`}${rl.get(p.id)?' · в списке: '+esc(rl.get(p.id)):''}${p.phone?' · '+esc(p.phone):''} · с ${dt(p.created_at)}</div>
@@ -500,6 +518,8 @@ async function staffView(){
     const r=await sb.from('profiles').update({team:sel.value||null}).eq('id',sel.dataset.tm);if(r.error){alert('Не удалось сменить команду: '+r.error.message);return staffView()}
     const x=ap.find(y=>y.id===sel.dataset.tm);if(x)x.team=sel.value||null;S.people=[];S.dg.people=[];
     sel.style.outline='2px solid var(--sage)';setTimeout(()=>sel.style.outline='',900)});
+  $('#stq')?.addEventListener('input',e=>{const t=nrmQ(e.target.value).split(/\s+/).filter(Boolean);
+    app.querySelectorAll('[data-ps]').forEach(i=>{const b=i.closest('.col');if(!b)return;const txt=nrmQ(b.textContent+' '+[...b.querySelectorAll('input')].map(x=>x.value).join(' '));b.style.display=t.every(w=>txt.includes(w))?'':'none'})});
   app.querySelectorAll('[data-sp]').forEach(b=>b.onclick=async()=>{const id=b.dataset.sp,full_name=app.querySelector(`[data-pn="${id}"]`).value.trim(),tab_no=app.querySelector(`[data-pt="${id}"]`).value.trim()||null,position=app.querySelector(`[data-ps="${id}"]`).value.trim()||null;
     const r=await sb.from('profiles').update({full_name,tab_no,position}).eq('id',id);if(r.error)return alert('Не удалось сохранить: '+r.error.message);
     if(id===S.me.id){S.me.full_name=full_name;S.me.tab_no=tab_no;S.me.position=position}S.people=[];b.textContent='✅';setTimeout(()=>staffView(),600)});
