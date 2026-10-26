@@ -172,7 +172,8 @@ async function siteBlock(){
   const links=`<div class="card pad col"><b>🧭 Для ответов гостям</b><div class="muted">Официальный сайт парка: быстрые ссылки</div><div class="sitel">${SITE_LINKS.map(([ic,n,u])=>`<a href="${SITE+u}" target="_blank" rel="noopener">${ic} ${n}</a>`).join('')}</div><div class="muted">Телефоны для гостей: <a href="tel:88005504326">8 800 550-43-26</a> · консьерж <a href="tel:88004442417">8 800 444-24-17</a></div></div>`;
   box.innerHTML=links;
   let d=null;
-  try{const c=new AbortController(),t=setTimeout(()=>c.abort(),9000);const r=await fetch('/api/site',{signal:c.signal});clearTimeout(t);if(r.ok){d=await r.json();lsSet('dw_site',JSON.stringify({t:Date.now(),d}))}}catch(e){}
+  try{const c0=JSON.parse(lsGet('dw_site'));if(c0&&Date.now()-c0.t<6*3600e3)d=c0.d}catch(e){}
+  if(!d)try{const c=new AbortController(),t=setTimeout(()=>c.abort(),9000);const r=await fetch('/api/site',{signal:c.signal});clearTimeout(t);if(r.ok){d=await r.json();lsSet('dw_site',JSON.stringify({t:Date.now(),d}))}}catch(e){}
   if(!d||!(d.items||[]).length){try{const c=JSON.parse(lsGet('dw_site'));if(c)d=c.d}catch(e){}}
   if(!document.getElementById('sitebox')||!d||!(d.items||[]).length)return;
   const e=x=>esc(x);
