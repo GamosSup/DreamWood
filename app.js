@@ -3,7 +3,19 @@ const cfg=window.APP_CONFIG;
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 // Все запросы идут через свой домен (/sb), чтобы сайт открывался, даже если supabase.co заблокирован; при сбое сети — запасной прямой путь
 const SB_PROXY=location.origin+'/sb';
-const sb=supabase.createClient(/^https?:$/.test(location.protocol)&&!/\.(test|localhost)$|^localhost$|^127\./.test(location.hostname)?SB_PROXY:cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY,{auth:{storageKey:'sb-bvlwpfmtcdgfsomvwqrp-auth-token'},global:{fetch:(u,o)=>fetch(u,o).catch(e=>{const s=String(u&&u.url||u);if(s.startsWith(SB_PROXY))return fetch(cfg.SUPABASE_URL+s.slice(SB_PROXY.length),o);throw e})}});
+// запросы к базе: основной путь — свой домен; если он молчит дольше 6 с (или упал), параллельно пробуем прямой путь, берём тот, что ответил первым
+function sbFetch(u,o){
+  const s=String(u&&u.url||u),direct=s.startsWith(SB_PROXY)?cfg.SUPABASE_URL+s.slice(SB_PROXY.length):null,m=String((o&&o.method)||(u&&u.method)||'GET').toUpperCase();
+  const safe=m==='GET'||m==='HEAD'||/\/auth\/v1\/(token|user|logout)/.test(s);
+  const a=fetch(u,o);if(!direct)return a;
+  return new Promise((res,rej)=>{let fin=0,fails=0,started=1,t=null;
+    const win=r=>{if(!fin){fin=1;clearTimeout(t);res(r)}};
+    const start2=()=>{if(started>1||fin)return;started=2;fetch(direct,o).then(win,lose)};
+    const lose=e=>{fails++;if(fails===1&&started===1)return start2();if(fails>=started&&!fin){fin=1;clearTimeout(t);rej(e)}};
+    a.then(win,lose);if(safe)t=setTimeout(start2,6000);
+  });
+}
+const sb=supabase.createClient(/^https?:$/.test(location.protocol)&&!/\.(test|localhost)$|^localhost$|^127\./.test(location.hostname)?SB_PROXY:cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY,{auth:{storageKey:'sb-bvlwpfmtcdgfsomvwqrp-auth-token'},global:{fetch:sbFetch}});
 const THEMES={autumn:['🍂','Осень'],winter:['❄️','Зима'],spring:['🌸','Весна'],summer:['☀️','Лето']};
 const getTheme=()=>{try{return localStorage.getItem('dw-theme')||'autumn-warm'}catch(e){return 'autumn-warm'}};
 function applyTheme(t){document.documentElement.dataset.theme=t;try{localStorage.setItem('dw-theme',t)}catch(e){}
@@ -83,6 +95,7 @@ function authView(mode,err,ok){
   <label>Пароль${reg?' (придумай сам, не короче 6 знаков)':''}<input id="pw" type="password" autocomplete="${reg?'new-password':'current-password'}"></label>
   <div class="err">${esc(err||'')}</div>${ok?`<div class="card pad" style="background:var(--sage)">${esc(ok)}</div>`:''}
   <button class="btn" id="go">${reg?'Отправить заявку':'Войти в приключение'}</button>
+  <div class="muted" style="text-align:center">Не открывается или не входит? <a href="/diag">Проверить связь</a></div>
   ${reg?'<div class="muted">Номер телефона — твой логин, почта не обязательна и нужна только для связи: мы ничего на неё не отправляем. Руководитель подтвердит доступ. Пароль знаешь только ты.</div>':'<div class="muted">Нет аккаунта? Открой «Регистрацию»: руководитель подтвердит заявку. Забыл пароль — напиши руководителю, он задаст новый.</div>'}`;
   $('#tin').onclick=()=>authView('in');$('#tup').onclick=()=>authView('up');
   $('#go').onclick=async()=>{

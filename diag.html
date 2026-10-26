@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Проверка связи — Дримвуд</title>
+<style>body{font:16px/1.4 system-ui,sans-serif;background:#F6EEE4;color:#3B2A35;margin:0;padding:16px;max-width:560px;margin:auto}h1{font-size:24px;margin:8px 0}.r{display:flex;gap:10px;padding:10px 12px;background:#fff;border-radius:14px;margin:8px 0;align-items:flex-start}.r b{flex:1}.r small{display:block;color:#7a6a5a;font-weight:400}.ok{color:#2e7d4f}.no{color:#b3261e}button{font:inherit;font-weight:700;border:0;border-radius:14px;background:#3B2A35;color:#fff;min-height:48px;padding:0 18px;margin:6px 6px 6px 0}a{color:#3B2A35}pre{white-space:pre-wrap;background:#fff;border-radius:12px;padding:10px;font-size:12px}</style></head><body>
+<h1>🔎 Проверка связи</h1><div>Нажми «Проверить» и подожди около 15 секунд. Потом отправь Игорю скриншот или отчёт.</div>
+<button id="go">Проверить</button><button id="cp" hidden>Скопировать отчёт</button><a href="/">← В приложение</a>
+<div id="out"></div><pre id="rep" hidden></pre>
+<script>
+const K='sb_publishable_S7nnUv3hs2bBZDhYhEFYew_j_S6s1sO',D='https://bvlwpfmtcdgfsomvwqrp.supabase.co';
+const T=[
+ ['Сайт dreamwood.pages.dev','/v/sbjs?d='+Date.now(),{},'Скрипт приложения грузится с нашего сайта'],
+ ['База через сайт (основной путь)','/sb/auth/v1/health?d='+Date.now(),{headers:{apikey:K}},'Через dreamwood.pages.dev/sb'],
+ ['База напрямую (запасной путь)',D+'/auth/v1/health',{headers:{apikey:K}},'Напрямую supabase.co'],
+ ['Шрифты','/v/fonts?d='+Date.now(),{},'Необязательно: без них приложение работает'],
+ ['Файлы и фото (Google Диск)','/api/link',{},'Ждём ответ 401 — это нормально, значит сервер на связи']
+];
+const out=document.getElementById('out'),rep=document.getElementById('rep');
+function row(n,s,d,t){return `<div class="r"><span>${s}</span><b>${n}<small>${d}</small></b><span>${t}</span></div>`}
+document.getElementById('go').onclick=async()=>{
+  out.innerHTML='';const lines=[new Date().toISOString(),navigator.userAgent,'online='+navigator.onLine,'conn='+(navigator.connection?navigator.connection.effectiveType+' '+navigator.connection.downlink+'Mbps':'?'),''];
+  for(const [n,u,o,d] of T){
+    const t0=performance.now();let st,det='';
+    try{const c=new AbortController(),tm=setTimeout(()=>c.abort(),12000);const r=await fetch(u,{...o,signal:c.signal,cache:'no-store'});clearTimeout(tm);const b=await r.text();st=(r.ok||r.status===401)?'✅':'⚠️';det=' HTTP '+r.status+', '+(b.length/1024).toFixed(0)+' КБ'}
+    catch(e){st='❌';det=' '+(e.name==='AbortError'?'нет ответа 12 с':'ошибка соединения')}
+    const ms=Math.round(performance.now()-t0);
+    out.insertAdjacentHTML('beforeend',row(n,st,d+det,ms+' мс'));lines.push(st+' '+n+det+' '+ms+' ms');
+  }
+  rep.textContent=lines.join('\n');rep.hidden=false;document.getElementById('cp').hidden=false;
+};
+document.getElementById('cp').onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(rep.textContent).then(()=>{document.getElementById('cp').textContent='Скопировано ✅'})};
+</script></body></html>
