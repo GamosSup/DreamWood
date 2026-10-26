@@ -25,7 +25,7 @@ function build(){
     {sel:'nav [data-tab=today]',t:'Домой',d:'Последний шаг: вернись на главный экран «Сегодня».',tap:1}
   ];
   if(typeof isManager==='function'&&isManager())L.push({sel:'#td_alert',t:'Кнопка «Тревога»',d:'Она только у руководителей: одним нажатием предупреждает всех сотрудников со звуком и вибрацией. Сейчас не нажимай, это просто знакомство.',btn:'Понятно'});
-  if(typeof canMng==='function'&&canMng())L.push({sel:['nav [data-tab=grid]','[data-go=grid]'],t:'График и сводка',d:'Для руководителей: все сотрудники по дням, часы, переработки и выгрузка в Excel. Найдёшь в «Ещё».',btn:'Понятно'});
+  if(typeof canMng==='function'&&canMng())L.push({sel:['nav [data-tab=grid]','[data-go=grid]'],t:'График и сводка',d:'Для руководителей: все сотрудники по дням, часы, доработки и выгрузка в Excel. Найдёшь в «Ещё».',btn:'Понятно'});
   L.push({done:1});
   return L;
 }

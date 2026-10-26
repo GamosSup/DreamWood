@@ -315,3 +315,4 @@ html.themeswap,html.themeswap *{transition:background-color .35s ease,color .35s
 
 /* v40: отметка переработки в календаре */
 .day .otm{font-style:normal;font-size:9px;font-weight:800;background:var(--pink);border-radius:6px;padding:0 4px;margin-top:1px;line-height:1.3}
+.gc .otb{position:absolute;left:0;bottom:0;font-size:8px;line-height:1;padding:1px 2px;border-radius:0 4px 0 0;background:var(--pink);color:var(--ink);font-weight:800}

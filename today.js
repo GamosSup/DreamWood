@@ -43,7 +43,7 @@ async function todayView(){
   // мои заявки и итоги месяца
   if((rq.data||[]).length)h+=`<div class="card pad col" data-go="req" style="cursor:pointer"><b>📨 Мои заявки</b>${rq.data.map(x=>`<div class="otr"><span>${(REQ_K[x.kind]||['','Заявка'])[0]} ${(REQ_K[x.kind]||['','Заявка'])[1]} · ${dRange(x)}</span><span class="pill" style="background:${(REQ_ST[x.status]||['','#E8DCCB'])[1]}">${(REQ_ST[x.status]||['?'])[0]}</span></div>`).join('')}</div>`;
   {const cnt=k=>(mm.data||[]).filter(x=>x.kind===k).length,hrs=(ot.data||[]).reduce((a,x)=>a+(+x.hours||0),0),dim=new Date(+ym.slice(0,4),+ym.slice(5),0).getDate(),off=(mm.data||[]).length;
-   h+=`<div class="card pad col" data-go="sch" style="cursor:pointer"><b>📊 Мой месяц</b><div class="otr"><span>Рабочих дней по графику</span><b>${dim-off} из ${dim}</b></div><div class="otr"><span>Отгулов</span><b>${cnt('otgul')}</b></div><div class="otr"><span>Отпуск / больничный</span><b>${cnt('vac')} / ${cnt('sick')}</b></div><div class="otr"><span>Переработка</span><b>${hrs?hrs+' ч':'—'}</b></div></div>`}
+   h+=`<div class="card pad col" data-go="sch" style="cursor:pointer"><b>📊 Мой месяц</b><div class="otr"><span>Рабочих дней по графику</span><b>${dim-off} из ${dim}</b></div><div class="otr"><span>Отгулов</span><b>${cnt('otgul')}</b></div><div class="otr"><span>Отпуск / больничный</span><b>${cnt('vac')} / ${cnt('sick')}</b></div><div class="otr"><span>Доработка</span><b>${hrs?hrs+' ч':'—'}</b></div></div>`}
   // руководителям
   if(adm){
     const row=(ic,n,v,k)=>`<div class="otr" data-go="${k}" style="cursor:pointer"><span>${ic} ${n}</span><b${v?' style="color:#C0392B"':''}>${v}</b></div>`;
