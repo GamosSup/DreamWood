@@ -312,3 +312,6 @@ body.hasal{padding-top:46px}
 html.themeswap,html.themeswap *{transition:background-color .35s ease,color .35s ease,border-color .35s ease,box-shadow .35s ease!important}
 
 .extra{margin-top:4px;padding:7px 10px;border-radius:12px;background:#F5E2A8;font-weight:700;font-size:14px}
+
+/* v40: отметка переработки в календаре */
+.day .otm{font-style:normal;font-size:9px;font-weight:800;background:var(--pink);border-radius:6px;padding:0 4px;margin-top:1px;line-height:1.3}
