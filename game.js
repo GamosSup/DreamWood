@@ -450,8 +450,11 @@ function gmPetTab(box){
       return `<button class="gop${on?' on':''}${ok?'':' lk'}" data-k="${k}" data-v="${esc(id)}" ${ok?'':'disabled'}><span class="gopv">${v}</span><span class="gopn">${esc(n)}</span>${ok?'':`<span class="gopl">🔒 ${esc(gmReqName(req))}</span>`}</button>`;
     };
     box.innerHTML=`<div class="petpv2">${gmStage(me,150,cfg)}</div>
+    <div class="card pad col"><b>🏷️ Имя питомца</b><div class="muted">Оно видно под питомцем в профиле, а если надеть «Бейдж парка» (раздел «Грудь»), то и на бейджике.</div><div style="display:flex;gap:8px"><input id="pn_i" maxlength="16" placeholder="Как его зовут?" value="${esc((me.cos||{}).pname||'')}" style="flex:1;min-width:0"><button class="btn" id="pn_s" style="flex:none">Сохранить</button></div>${cfg.ch==='c_badge'?'':'<button class="btn ghost" id="pn_b">🪪 Надеть бейдж с именем</button>'}</div>
     <div class="card pad col"><b>Вид</b><div class="muted">Это твой питомец. Выбирай всё, что нравится, а результат виден в карточке вверху. Новые вещи открываются за достижения и события. Фон берётся из раздела «Мой образ».</div><div class="gops">${PET_SP.filter(x=>!x[3]||gmHas(me,x[3])).map(([k,n])=>`<button class="gop${cfg.sp===k?' on':''}" data-sp="${k}"><span class="gopv">${gmPet({},78,{cfg:{...cfg,sp:k,bc:cfg.bc===petBcOf(cfg.sp)?petBcOf(k):cfg.bc},vb:GM_PETCROP,bg:''})}</span><span class="gopn">${n}</span></button>`).join('')}</div></div>`+
     PET_G.map(([k,ttl,L,kind,crop])=>`<div class="card pad col"><b>${ttl}</b><div class="gops">${L.map(it=>tile(k,kind,crop,it)).join('')}</div></div>`).join('');
+    box.querySelector('#pn_s').onclick=async()=>{if(await gmSaveCos({pname:box.querySelector('#pn_i').value.trim()})){draw();window.scrollTo(0,keep)}};
+    const pb=box.querySelector('#pn_b');if(pb)pb.onclick=async()=>{if(await gmPetSave({...cfg,ch:'c_badge'})){draw();window.scrollTo(0,keep)}};
     box.querySelectorAll('.gop[data-k]:not([disabled])').forEach(b=>b.onclick=async()=>{if(await gmPetSave({...cfg,[b.dataset.k]:b.dataset.v})){draw();window.scrollTo(0,keep)}});
     box.querySelectorAll('.gop[data-sp]').forEach(b=>b.onclick=async()=>{const sp=b.dataset.sp;if(sp===cfg.sp)return;if(await gmPetSave({...cfg,sp,bc:cfg.bc===petBcOf(cfg.sp)?petBcOf(sp):cfg.bc})){draw();window.scrollTo(0,keep)}});
   };
