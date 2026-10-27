@@ -89,6 +89,8 @@ const GM_ACH=[
  {c:'spec:admin_server',g:'skill',t:5,ic:'sword',n:'Админ на сервере',d:'Особый значок. Выдаёт админ, ничего лишнего не просит',b:500,man:1,secret:1,title:'Админ на сервере'},
  {c:'spec:whipcarrot',g:'skill',t:5,ic:'whipgb',n:'Кнут и пряник',d:'Для работы с командой 💙',b:0,man:1,secret:1,title:'Кнут и пряник'},
  {c:'spec:finished',g:'skill',t:5,ic:'🏆',n:'Прошёл игру',d:'Дошёл до конца: прошёл Дримвуд целиком',b:0,man:1,secret:1,title:'Прошёл игру'},
+ {c:'spec:alpha',g:'skill',t:5,ic:'🐺',n:'Альфа',d:'Один за всех, оклад за одного',b:100,man:1,title:'Альфа'},
+ {c:'spec:ropes_all',g:'skill',t:5,ic:'🏔️',n:'Все три маршрута лагеря',d:'Открыты все три маршрута верёвочного лагеря: Семейный, Мастер и Герой',b:150,man:1,title:'Покоритель лагеря'},
  {c:'spec:curly',g:'skill',t:5,ic:'🌀',n:'Кучерявая причёска',d:'Особый подарок: кучерявая причёска для питомца',b:0,man:1,secret:1,title:'Кучерявый'}
 ];
 const GM_BY=Object.fromEntries(GM_ACH.map(a=>[a.c,a]));
