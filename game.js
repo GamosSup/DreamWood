@@ -108,7 +108,7 @@ function gmDef(a){ // a: {c,l} из выданных
 // req: код достижения; 'adm*' — любой допуск; 'evt*' — любое мероприятие
 const GM_FRAMES=[['','Без рамки',null],['f_leaf','Росток','chk1'],['f_sky','Небо','day20'],['f_sun','Солнце','hab7'],['f_rose','Роза','thx10'],['f_gold','Золото','chk500'],['f_pass','Допуск','adm*'],['f_spark','Искры','chk1000'],['f_aurora','Северное сияние','got50'],['f_fire','Огненный ореол','chk3000'],['f_diamond','Алмазная','spec:admin_server']];
 const GM_NAMES=[['','Обычный',null],['n_green','Зелёный','hab1'],['n_blue','Синий','thx1'],['n_amber','Янтарный','day20'],['n_rose','Розовый','got10'],['n_grad','Градиент','chk500'],['n_shine','Блеск','chk1000'],['n_rainbow','Радужный','spec:admin_server']];
-const GM_BGS=[['','Без фона',null],['bg_forest','Осенний лес','week1'],['bg_water','Вода','ot1'],['bg_mount','Горы','day100'],['bg_sky','Небо с облаками','todo25'],['bg_dome','Купол','ment1'],['bg_night','Звёздная ночь','got50'],['bg_event','Праздничный','evt*']];
+const GM_BGS=[['','Без фона',null],['bg_forest','Осенний лес','week1'],['bg_water','Вода','ot1'],['bg_mount','Горы','day100'],['bg_sky','Небо с облаками','todo25'],['bg_dome','Купол','ment1'],['bg_night','Звёздная ночь','got50'],['bg_event','Праздничный','evt*'],['bg_meadow','Летний луг',null],['bg_sunset','Закат над парком',null],['bg_snow','Зимняя сказка',null],['bg_candy','Конфетная',null],['bg_deep','Глубина',null],['bg_aurora','Северное сияние',null]];
 const GM_COSL={frame:['Рамка вокруг фото',GM_FRAMES],name:['Цвет имени',GM_NAMES],bg:['Фон за фото',GM_BGS]};
 
 // ---------- данные ----------
@@ -232,9 +232,10 @@ function gmAbout(row,own){
   if(!mo&&!bio&&!fav)return own?`<div class="gabout muted">Здесь может быть рассказ о тебе: девиз, чем занимаешься, что любишь. Заполни во вкладке «Мой образ».</div>`:'';
   return `<div class="gabout">${mo?`<div class="gmotto">«${esc(mo)}»</div>`:''}${bio?`<div class="gbio">${esc(bio)}</div>`:''}${fav?`<div class="gfav">❤️ Люблю: ${esc(fav)}</div>`:''}</div>`;
 }
-const gmStage=row=>{
-  if(typeof petCfg==='function'&&petCfg(row))return `<div class="pstage">${gmPet(row,176)}</div>`;
-  return `<div class="pstage"><img src="stickers/mascot-hi.webp" alt="" width="120" height="120" style="object-fit:contain"></div>`;
+const gmStage=(row,sz=190)=>{
+  const c=row.cos||{},pn=(c.pname||'').trim();
+  if(typeof petCfg==='function'&&petCfg(row))return `<div class="pscene ${c.bg||'bg_default'}"><i class="psk a"></i><i class="psk b"></i><i class="psk c"></i><div class="pfloor"></div>${gmPet(row,sz,{bg:''})}${pn?`<div class="pnm">${esc(pn)}</div>`:''}</div>`;
+  return `<div class="pscene ${c.bg||'bg_default'}"><img src="stickers/mascot-hi.webp" alt="" width="120" height="120" style="object-fit:contain"></div>`;
 };
 function gmHero(row){
   const L=gmLv(row.xp),cos=gmCos(row);
@@ -245,7 +246,7 @@ function gmHero(row){
     <div class="gmcnt"><span>🏅 Достижений: <b>${gmRealN(row)}</b> из ${gmCatTotal(row)}</span><span>🎰 Билетов: <b id="gx_hdr">${typeof gxS!=='undefined'&&gxS.info?gxS.info.tickets:'…'}</b></span></div>
     ${gmAbout(row,true)}
     ${row.lvl_text?`<div class="muted" style="margin-top:8px">Всего очков: <b>${row.xp}</b></div>`:`<div class="pgb" style="margin-top:12px"><div class="pg" style="width:${L.pct}%"></div></div><div class="muted" style="margin-top:6px">${row.xp} очков${L.hi?` · до уровня ${L.n+1} осталось <b>${L.left}</b>`:' · максимальный уровень, ты легенда'}</div>`}</div>
-  ${gmShelf(row,{own:1}).replace(/^/,'<div class="card pad shelfc">')+'</div>'}`;
+  ${gmShelf(row,{own:1}).replace(/^/,'<div class="card pad shelfc">')+'</div>'}${gmThanksBlock(row.id)}`;
 }
 async function gameView(){
   S.offline=0;
@@ -301,7 +302,7 @@ async function gmSaveCos(patch){
   const r=await sb.rpc('set_my_cos',{p:cur});
   if(r.error){toast('Не сохранилось: '+r.error.message,3500);return false}
   me.cos=cur;try{localStorage.setItem('dw:gm:'+S.me.id,JSON.stringify({rows:S.gm.rows}))}catch(e){}
-  toast('Сохранено ✨',1400);{const h=$('.gmh');if(h){const nx=h.nextElementSibling;if(nx&&nx.classList.contains('shelfc'))nx.remove();h.outerHTML=gmHero(me)}}return true;
+  toast('Сохранено ✨',1400);{const h=$('.gmh');if(h){const nx=h.nextElementSibling;if(nx&&nx.classList.contains('shelfc')){const n2=nx.nextElementSibling;nx.remove();if(n2&&n2.classList.contains('gthx'))n2.remove()}h.outerHTML=gmHero(me)}}return true;
 }
 function gmLookTab(box){
   const me=gmMe();let cur={...(me.cos||{})};
@@ -322,7 +323,7 @@ function gmLookTab(box){
     `<div class="card pad col"><b>Значок рядом с именем</b><div class="muted">Один любимый из заработанных.</div><div class="gops"><button class="gop${cur.badge?'':' on'}" data-k="badge" data-v=""><span class="gopv">—</span><span class="gopn">Без значка</span></button>${earned.map(d=>`<button class="gop${cur.badge===d.c?' on':''}" data-k="badge" data-v="${esc(d.c)}"><span class="gopv">${gmIc(d.ic,26)}</span><span class="gopn">${esc(d.n)}</span></button>`).join('')}</div></div>
     <div class="card pad col"><b>Титул под именем</b><div class="muted">Короткая подпись из заработанного.</div><div class="gops"><button class="gop${cur.title?'':' on'}" data-k="title" data-v=""><span class="gopv">—</span><span class="gopn">Без титула</span></button>${earned.filter(d=>d.title).map(d=>`<button class="gop${cur.title===d.c?' on':''}" data-k="title" data-v="${esc(d.c)}"><span class="gopn" style="font-weight:800">${esc(d.title)}</span></button>`).join('')}</div></div>`;
     box.querySelectorAll('.gop:not([disabled])').forEach(b=>b.onclick=()=>save({[b.dataset.k]:b.dataset.v}));
-    const sv=box.querySelector('#ab_s');if(sv)sv.onclick=()=>save({motto:box.querySelector('#ab_m').value.trim(),bio:box.querySelector('#ab_b').value.trim(),fav:box.querySelector('#ab_f').value.trim()});
+    const sv=box.querySelector('#ab_s');if(sv)sv.onclick=()=>save({pname:box.querySelector('#ab_p').value.trim(),motto:box.querySelector('#ab_m').value.trim(),bio:box.querySelector('#ab_b').value.trim(),fav:box.querySelector('#ab_f').value.trim()});
   };
   paint();
 }

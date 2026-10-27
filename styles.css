@@ -784,3 +784,25 @@ html[data-dark="1"] .alcard.brfcard{background:#3a2f22;color:#f3e6d3}
 /* v91: содержимое окон не сжимается, а прокручивается */
 .sheet .sb>*{flex-shrink:0}
 .shelfc,.gmh{overflow:visible}
+/* v92: сцена за питомцем, кубки допусков, имя питомца */
+.pscene{position:relative;margin:12px 0 6px;border-radius:22px;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-height:270px;padding:22px 0 14px;background:var(--bgv)}
+.pscene.bg_default{--bgv:linear-gradient(#BFE6FF 0 52%,#CFEFA6 52% 100%)}
+.pscene .drm{background:transparent!important;position:relative;z-index:2;animation:none}
+.pfloor{position:absolute;left:0;right:0;bottom:0;height:34%;background:radial-gradient(ellipse at 50% 0,rgba(255,255,255,.28),transparent 70%);z-index:1}
+.pscene .pnm{position:relative;z-index:3;margin-top:4px;padding:5px 16px;border-radius:999px;background:rgba(255,255,255,.88);color:#3B2A35;font-weight:800;font-size:15px;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.psk{position:absolute;z-index:1;border-radius:50%;background:rgba(255,255,255,.7)}
+.psk.a{width:70px;height:26px;left:10%;top:16%;filter:blur(1px)}.psk.b{width:90px;height:30px;right:8%;top:26%;filter:blur(1px)}.psk.c{width:46px;height:18px;left:62%;top:9%;filter:blur(1px)}
+.pscene.bg_night .psk,.pscene.bg_deep .psk{opacity:.12}
+.bg_meadow{--bgv:linear-gradient(#9FD8FF 0 50%,#8FD16A 50% 78%,#5FAE45 78%)}
+.bg_sunset{--bgv:linear-gradient(#FFB36B,#F0647D 45%,#6B4A9E 80%)}
+.bg_snow{--bgv:linear-gradient(#C9DDF5 0 58%,#F4F8FF 58%)}
+.bg_candy{--bgv:radial-gradient(circle at 20% 25%,#FFD6E8 0 18%,transparent 19%),radial-gradient(circle at 80% 60%,#D9F0FF 0 22%,transparent 23%),linear-gradient(135deg,#FFB7D5,#C9A8FF)}
+.bg_deep{--bgv:radial-gradient(circle at 25% 20%,rgba(255,255,255,.35) 0 4px,transparent 5px),radial-gradient(circle at 75% 40%,rgba(255,255,255,.3) 0 6px,transparent 7px),linear-gradient(#5FD1E3,#0F4C81 70%,#0A2A4A)}
+.bg_aurora{--bgv:radial-gradient(ellipse at 30% 30%,rgba(90,255,190,.55),transparent 55%),radial-gradient(ellipse at 75% 20%,rgba(150,110,255,.55),transparent 55%),linear-gradient(#0B1130,#1D2B5C)}
+.trofs{display:grid;grid-template-columns:repeat(auto-fill,minmax(98px,1fr));gap:10px}
+.trf{display:flex;flex-direction:column;align-items:center;text-align:center;gap:2px;padding:8px 4px;border-radius:16px;background:linear-gradient(#FFF6DA,#FFEBC0);border:1.5px solid #F0D28A}
+.trf.hero{background:linear-gradient(#FFF2C2,#FFD98A);border-color:#E8B54A}
+.trf b{font-size:12.5px;line-height:1.15;color:#3B2A35}.trf small{font-size:11px;color:#8A5A18;font-weight:700}
+.trc{position:relative;width:60px;height:66px}.trc svg{width:100%;height:100%;display:block}
+.tri{position:absolute;left:0;right:0;top:9px;text-align:center;font-size:22px;line-height:1}
+.gthx .shc{padding:8px 10px;border-radius:12px;background:rgba(127,127,127,.1)}

@@ -171,6 +171,11 @@ function petHandItem(h){
   return PET_HX[h]||'';
 }
 // сам зверёк. opt: cfg — настройки, vb — кадр, bg — фон, sz — ширина
+function petBadgeName(s,c,opt){
+  const n=String(opt.pn||'').trim().slice(0,16);if(!n||c.ch!=='c_badge'||!s)return s;
+  const e=n.replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])),fs=Math.max(7,Math.min(13,Math.floor(56/(n.length*.66))));
+  return s.replace('>ДРИМВУД<','>'+e+'<').replace('font-size="13"','font-size="'+fs+'"');
+}
 function petSvg(c,opt={}){
   const id='pt'+(++PET_N)+'_';
   const sp=c.sp,bcItem=PET_BC.find(x=>x[0]===c.bc)||PET_BC[0],bcv=bcItem[3];
@@ -204,14 +209,14 @@ function petSvg(c,opt={}){
    `<ellipse cx="160" cy="150" rx="104" ry="90" fill="${F}" stroke="${D}" stroke-width="3.4"/><ellipse cx="116" cy="96" rx="42" ry="20" fill="#fff" opacity=".2" transform="rotate(-20 116 96)"/>`+
    `<ellipse cx="160" cy="196" rx="48" ry="33" fill="${muz}"/><circle cx="84" cy="196" r="16" fill="#FF8FA3" opacity=".42"/><circle cx="236" cy="196" r="16" fill="#FF8FA3" opacity=".42"/>`+pat+
    `<g class="pey">`+petEye(118,148,c.ex,id,c.gz,0)+petEye(202,148,c.ex,id,c.gz,1)+`</g>`+nose+petMouth(c.mo)+
-   petHair(c.hr,F,hD,id)+gear.nk+gear.ch+hand+gear.gl+gear.hat+(sp==='potato'&&!c.ha?`<path d="M158 70Q148 34 176 22Q168 44 172 70Z" fill="#6DBB48" stroke="#3E7B2E" stroke-width="3" stroke-linejoin="round"/><ellipse cx="186" cy="34" rx="16" ry="9" transform="rotate(-28 186 34)" fill="#7ED957" stroke="#3E7B2E" stroke-width="3"/>`:'')+(c.cm?`<g class="cmw"><image href="stickers/mascot-hi.webp" x="188" y="282" width="132" height="132"/></g>`:'');
+   petHair(c.hr,F,hD,id)+gear.nk+petBadgeName(gear.ch,c,opt)+hand+gear.gl+gear.hat+(sp==='potato'&&!c.ha?`<path d="M158 70Q148 34 176 22Q168 44 172 70Z" fill="#6DBB48" stroke="#3E7B2E" stroke-width="3" stroke-linejoin="round"/><ellipse cx="186" cy="34" rx="16" ry="9" transform="rotate(-28 186 34)" fill="#7ED957" stroke="#3E7B2E" stroke-width="3"/>`:'')+(c.cm?`<g class="cmw"><image href="stickers/mascot-hi.webp" x="188" y="282" width="132" height="132"/></g>`:'');
   return `<svg viewBox="${vb.join(' ')}" width="100%" height="100%" aria-hidden="true">${body}</svg>`;
 }
 // готовый блок с питомцем человека (или с заданной настройкой). bg — класс фона
 function gmPet(row,sz=160,opt={}){
   const c=opt.cfg||petCfg(row);if(!c)return '';
   const bg=opt.bg===undefined?(gmCos(row).bg||''):opt.bg,vb=opt.vb||PET_VB;
-  return `<div class="drm ${bg}${opt.anim||sz>=90?' pan':''}${c.bc==='c_ghost'?' pgh':c.bc==='c_goldsuit'?' pgs':''}" style="width:${sz}px;height:${Math.round(sz*vb[3]/vb[2])}px">${petSvg(c,{vb})}</div>`;
+  return `<div class="drm ${bg}${opt.anim||sz>=90?' pan':''}${c.bc==='c_ghost'?' pgh':c.bc==='c_goldsuit'?' pgs':''}" style="width:${sz}px;height:${Math.round(sz*vb[3]/vb[2])}px">${petSvg(c,{vb,pn:opt.pn===undefined?(row.cos||{}).pname:opt.pn})}</div>`;
 }
 
 // ---- оживление питомца: моргает, смотрит по сторонам, следит за пальцем, прыгает от нажатия ----
