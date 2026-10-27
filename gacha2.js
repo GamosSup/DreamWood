@@ -108,7 +108,8 @@ Object.assign(PET_BX,{
 
 // ---------- единорог «Медиа» и личные наборы супервайзеров ----------
 PET_SP.push(['unicorn','Единорог «Медиа»','#F1E6FB','spec:media']);
-PET_BC.push(['c_unicorn','Единорожья',null,'#F1E6FB']);
+PET_SP.push(['potato','Картофелина','#C99A5B','spec:pet_potato'],['leopard','Леопард','#E8B04A','spec:pet_leopard']);
+PET_BC.push(['c_unicorn','Единорожья',null,'#F1E6FB'],['c_potato','Картофельная',null,'#C99A5B'],['c_leopard','Леопардовая',null,'#E8B04A']);
 const GXP=[ // личные вещи: [код, вид, название, нужный значок, значение]
  ['c_masha','bc','Кофейный рассвет','spec:skin_masha','masha'],['f_masha','frame','Рамка Маши','spec:skin_masha'],['n_masha','name','Имя Маши','spec:skin_masha'],['bg_masha','bg','Фон Маши','spec:skin_masha'],['h_masha','ha','Корона из латте-арта','spec:skin_masha'],
  ['c_kris','bc','Неоновый бит','spec:skin_kristina','kris'],['f_kris','frame','Рамка Кристины','spec:skin_kristina'],['n_kris','name','Имя Кристины','spec:skin_kristina'],['bg_kris','bg','Фон Кристины','spec:skin_kristina'],['h_kris','ha','Неон-наушники','spec:skin_kristina']
@@ -124,6 +125,9 @@ Object.assign(PET_GEAR,{
   GXP.forEach(([id,k,n,req,v])=>{if(k==='bc')PET_BC.push([id,n,req,v]);else if(L[k])L[k].push([id,n,req])});
   const sp=(c,n,d,ic)=>{const a={c,g:'skill',t:5,ic,n,d,b:0,man:1,secret:1,title:n};GM_ACH.push(a);GM_BY[c]=a};
   sp('spec:media','Единорог «Медиа»','Его смогли приручить только супервайзеры. Он любит кофе, наушники и музыку','🦄');
+  sp('spec:pet_potato','Картофелина','Подарок Артуру: картошка с глазами, лучший друг во всём парке','🥔');
+  sp('spec:pet_leopard','Леопард','Подарок Тане: единственный в своём роде питомец','🐆');
+  sp('spec:edinstvennaya','Единственная','Таких больше нет. Статус Тани','👑');
   sp('spec:skin_masha','Кофейный рассвет','Личный набор Маши: такого нет больше ни у кого','☕');
   sp('spec:skin_kristina','Неоновый бит','Личный набор Кристины: такого нет больше ни у кого','🎧');
 }

@@ -102,6 +102,8 @@ function petEars(sp,F,D,inn){
   const st=`fill="${F}" stroke="${D}" stroke-width="3.2" stroke-linejoin="round"`;
   if(sp==='fox')return m(`<path d="M70 124L38 4L140 72Z" ${st}/><path d="M74 104L56 38L116 76Z" fill="${inn}"/>`);
   if(sp==='bear')return m(`<circle cx="88" cy="84" r="40" ${st}/><circle cx="88" cy="86" r="22" fill="${inn}"/>`);
+  if(sp==='potato')return m(`<ellipse cx="72" cy="128" rx="22" ry="17" transform="rotate(-24 72 128)" ${st}/>`);
+  if(sp==='leopard')return m(`<circle cx="92" cy="86" r="32" ${st}/><circle cx="92" cy="90" r="17" fill="#3A2A22"/>`);
   if(sp==='unicorn')return m(`<path d="M66 122L48 50L118 92Z" ${st}/><path d="M72 108L60 66L102 92Z" fill="${inn}"/>`)+`<path d="M144 84L160 -30L176 84Z" fill="#F6C945" stroke="#9A6D0A" stroke-width="3.2" stroke-linejoin="round"/><path d="M148 62L172 52M150 44L170 34M152 26L168 18M146 80L174 70" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".85"/>`;
   if(sp==='bunny')return m(`<ellipse cx="106" cy="14" rx="28" ry="64" transform="rotate(-12 106 14)" ${st}/><ellipse cx="106" cy="20" rx="14" ry="46" transform="rotate(-12 106 20)" fill="${inn}"/>`);
   return m(`<path d="M64 120L8 96L42 152Z" ${st}/><path d="M112 78L98 12L146 66Z" fill="#F5E6B3" stroke="${D}" stroke-width="3.2" stroke-linejoin="round"/>`);
@@ -111,6 +113,8 @@ function petTail(sp,F,D,bellyc){
   if(sp==='fox')return `<path d="M112 394Q8 414 8 300Q8 238 58 232Q40 290 78 332Q98 352 130 352Z" ${st}/><path d="M8 300Q8 240 58 232Q42 262 48 286Q24 284 8 300Z" fill="#FFF6E8" stroke="${D}" stroke-width="2"/>`;
   if(sp==='bear')return `<circle cx="96" cy="392" r="22" ${st}/>`;
   if(sp==='bunny')return `<circle cx="94" cy="394" r="25" fill="#fff" stroke="${D}" stroke-width="3"/>`;
+  if(sp==='potato')return '';
+  if(sp==='leopard')return `<path d="M112 392Q30 410 24 330Q20 290 52 272" fill="none" stroke="${D}" stroke-width="32" stroke-linecap="round"/><path d="M112 392Q30 410 24 330Q20 290 52 272" fill="none" stroke="${F}" stroke-width="25" stroke-linecap="round"/><path d="M40 380Q30 362 28 346M26 318Q24 304 32 292" stroke="#2A1B12" stroke-width="8" stroke-linecap="round" fill="none"/>`;
   if(sp==='unicorn')return ['#FF5E7E','#FFB347','#FFE45E','#4FC98F','#52A7FF','#B07CFF'].map((c,i)=>`<path d="M112 396Q${40-i*3} ${410+i*4} ${34-i*2} ${340-i*4}Q${28-i*2} ${300-i*3} ${60-i*2} ${280+i*3}" fill="none" stroke="${c}" stroke-width="${30-i*4.4}" stroke-linecap="round"/>`).join('');
   return `<path d="M112 392Q32 406 24 336Q20 302 46 292" fill="none" stroke="${D}" stroke-width="32" stroke-linecap="round"/><path d="M112 392Q32 406 24 336Q20 302 46 292" fill="none" stroke="${F}" stroke-width="25" stroke-linecap="round"/><path d="M46 292L20 268L70 274Z" fill="#F5E6B3" stroke="${D}" stroke-width="3" stroke-linejoin="round"/>`;
 }
@@ -185,6 +189,8 @@ function petSvg(c,opt={}){
   if(c.pt==='p_d'){const sp2=pMix(baseHex,'#ffffff',.42);pat=[[150,80,6],[176,88,8],[128,92,5],[212,94,5],[118,284,9],[204,292,11],[134,372,8],[190,366,6],[222,330,7]].map(([x,y,r])=>`<circle cx="${x}" cy="${y}" r="${r}" fill="${sp2}" opacity=".85"/>`).join('')}
   if(c.pt==='p_z')pat=`<path d="M142 68Q140 90 146 104M160 62V98M178 68Q180 90 174 104" stroke="${D}" stroke-width="7" fill="none" stroke-linecap="round" opacity=".75"/><path d="M98 290Q118 296 124 316M96 330Q116 334 122 352M222 290Q202 296 196 316M224 330Q204 334 198 352" stroke="${D}" stroke-width="7" fill="none" stroke-linecap="round" opacity=".6"/>`;
   if(bcv==='night'||bcv==='galaxy')pat+=[[100,90,3],[220,80,2.5],[84,230,2.5],[250,150,3],[120,300,3],[206,280,2.5],[150,380,3],[186,358,2],[70,150,2.5],[236,112,2]].map(([x,y,r])=>`<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" opacity=".9"/>`).join('');
+  if(sp==='potato')pat+=[[120,84,7,4],[206,92,6,4],[150,64,5,3],[100,150,6,4],[226,150,5,3],[110,300,10,7],[212,296,9,6],[126,380,8,5],[198,372,9,6],[222,336,7,5],[98,340,6,4],[170,392,8,5]].map(([x,y,rx,ry])=>`<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="#8A5E2C" opacity=".78"/><ellipse cx="${x-1}" cy="${y-1}" rx="${rx*.5}" ry="${ry*.5}" fill="#5E3C16" opacity=".6"/>`).join('');
+  if(sp==='leopard')pat+=[[118,86,9],[204,88,8],[148,66,6],[98,150,7],[228,150,6],[110,296,12],[214,292,11],[96,350,9],[230,346,9],[128,382,10],[196,380,10],[160,262,8],[84,258,7],[238,262,7]].map(([x,y,r])=>`<circle cx="${x}" cy="${y}" r="${r}" fill="none" stroke="#2A1B12" stroke-width="${Math.max(3,r*.45)}" opacity=".85"/><circle cx="${x}" cy="${y}" r="${r*.28}" fill="#2A1B12" opacity=".85"/>`).join('');
   if(sp==='unicorn')pat+=`<rect x="112" y="316" width="96" height="34" rx="12" fill="#fff" stroke="#8E5FE0" stroke-width="3.4"/><text x="160" y="340" text-anchor="middle" font-family="Manrope,Arial,sans-serif" font-weight="800" font-size="21" fill="#8E5FE0" letter-spacing="1">МЕДИА</text>`;
   const hand=petHandItem(c.hd).replace('PETP',id+'p');
   const vb=opt.vb||PET_VB,sz=opt.sz||160;
@@ -198,7 +204,7 @@ function petSvg(c,opt={}){
    `<ellipse cx="160" cy="150" rx="104" ry="90" fill="${F}" stroke="${D}" stroke-width="3.4"/><ellipse cx="116" cy="96" rx="42" ry="20" fill="#fff" opacity=".2" transform="rotate(-20 116 96)"/>`+
    `<ellipse cx="160" cy="196" rx="48" ry="33" fill="${muz}"/><circle cx="84" cy="196" r="16" fill="#FF8FA3" opacity=".42"/><circle cx="236" cy="196" r="16" fill="#FF8FA3" opacity=".42"/>`+pat+
    petEye(118,148,c.ex,id,c.gz,0)+petEye(202,148,c.ex,id,c.gz,1)+nose+petMouth(c.mo)+
-   petHair(c.hr,F,hD,id)+gear.nk+gear.ch+hand+gear.gl+gear.hat+(c.cm?`<g class="cmw"><image href="stickers/mascot-hi.webp" x="188" y="282" width="132" height="132"/></g>`:'');
+   petHair(c.hr,F,hD,id)+gear.nk+gear.ch+hand+gear.gl+gear.hat+(sp==='potato'&&!c.ha?`<path d="M158 70Q148 34 176 22Q168 44 172 70Z" fill="#6DBB48" stroke="#3E7B2E" stroke-width="3" stroke-linejoin="round"/><ellipse cx="186" cy="34" rx="16" ry="9" transform="rotate(-28 186 34)" fill="#7ED957" stroke="#3E7B2E" stroke-width="3"/>`:'')+(c.cm?`<g class="cmw"><image href="stickers/mascot-hi.webp" x="188" y="282" width="132" height="132"/></g>`:'');
   return `<svg viewBox="${vb.join(' ')}" width="100%" height="100%" aria-hidden="true">${body}</svg>`;
 }
 // готовый блок с питомцем человека (или с заданной настройкой). bg — класс фона
