@@ -20,7 +20,7 @@ const PET_HR=[['r_0','Без причёски',null],['r_t','Хохолок',nul
 const PET_HC=[['k_br','Каштановый',null,'#5A3A22'],['k_bk','Чёрный',null,'#2A2A35'],['k_bl','Синий',null,'#2F6FD0'],['k_or','Рыжий',null,'#E8872E'],['k_pk','Розовый','thx1','#F06FA6'],['k_gr','Зелёный','hab1','#3FAE5A'],['k_pu','Фиолетовый','day20','#7B4FD1'],['k_go','Золотой','chk500','#F2C94C'],['k_wh','Белый','hab30','#F4F4F4']];
 const PET_PT=[['p_0','Без узора',null],['p_d','Веснушки-пятнышки','day1'],['p_h','Сердце на пузике','thx1'],['p_s','Звезда на пузике','chk100'],['p_z','Полоски','hab7']];
 // накладки: svg-текст строится в системе координат слоя, см. petGear
-const PET_HA=[['','Без шапки',null],['h_cap','Кепка',null],['h_party','Праздничный колпак','chk1'],['h_beanie','Зимняя шапка','day20'],['h_bow','Бантик','thx1'],['h_flower','Цветок','hab1'],['h_cowboy','Ковбойская шляпа','chk100'],['h_crown','Корона','chk1000'],['h_pumpkin','Тыква-шапка','evt*'],['h_witch','Шляпа ведьмы','evt*'],['h_horns','Рожки','evt*'],['h_diamond','Алмазная корона','spec:admin_server']];
+const PET_HA=[['','Без шапки',null],['h_cap','Кепка',null],['h_shark','Кигуруми акулы','spec:shark'],['h_party','Праздничный колпак','chk1'],['h_beanie','Зимняя шапка','day20'],['h_bow','Бантик','thx1'],['h_flower','Цветок','hab1'],['h_cowboy','Ковбойская шляпа','chk100'],['h_crown','Корона','chk1000'],['h_pumpkin','Тыква-шапка','evt*'],['h_witch','Шляпа ведьмы','evt*'],['h_horns','Рожки','evt*'],['h_diamond','Алмазная корона','spec:admin_server']];
 const PET_GL=[['','Без очков',null],['g_round','Круглые очки',null],['g_sun','Тёмные очки','day1'],['g_heart','Очки-сердечки','thx10']];
 const PET_NK=[['','Без ничего',null],['n_scarf','Шарф',null],['n_bow','Бабочка','day20'],['n_medal','Медаль','ot10']];
 const PET_CH=[['','Ничего',null],['c_badge','Бейдж парка',null],['c_tee','Футболка Дримвуда','chk100'],['c_star','Звезда-значок','got10'],['c_heart','Сердце','got50']];
@@ -110,6 +110,10 @@ function petBack(b,sp,F,D,W){
   if(b==='b_wings'){const w=`<path d="M104 268Q-6 216 10 138Q64 160 104 244Z" fill="rgba(190,232,255,.82)" stroke="#6AA9E0" stroke-width="3" stroke-linejoin="round"/><path d="M96 276Q30 292 28 340Q78 338 108 296Z" fill="rgba(190,232,255,.82)" stroke="#6AA9E0" stroke-width="3" stroke-linejoin="round"/>`;o+=`<g>${w}</g><g transform="translate(320 0) scale(-1 1)">${w}</g>`}
   return o;
 }
+// особая вещь: кигуруми акулы (капюшон с плавником и зубами рисуется прямо в координатах головы; тело, хвост и ушки меняются в petSvg)
+const PET_SUIT='#7C9FBF',PET_SUITD='#3E5F80',PET_SUITB='#EAF3FA';
+const PET_SHARK_HOOD=`<path d="M150 70Q158 14 204 -8Q192 34 196 72Z" fill="${PET_SUIT}" stroke="${PET_SUITD}" stroke-width="3.4" stroke-linejoin="round"/><path d="M58 150L14 196L68 190Z" fill="${PET_SUIT}" stroke="${PET_SUITD}" stroke-width="3.4" stroke-linejoin="round"/><path d="M262 150L306 196L252 190Z" fill="${PET_SUIT}" stroke="${PET_SUITD}" stroke-width="3.4" stroke-linejoin="round"/><path d="M58 176Q44 76 160 54Q276 76 262 176Q252 124 218 108Q160 90 102 108Q68 124 58 176Z" fill="${PET_SUIT}" stroke="${PET_SUITD}" stroke-width="3.4" stroke-linejoin="round"/><path d="M92 114Q160 94 228 114L222 120Q160 102 98 120Z" fill="${PET_SUITB}"/><path d="M100 118L108 132L118 120L128 134L138 122L148 135L158 122L168 135L178 122L188 134L198 120L208 132L218 118" fill="${PET_SUITB}" stroke="${PET_SUITD}" stroke-width="2.2" stroke-linejoin="round" opacity=".95"/><circle cx="118" cy="80" r="9" fill="#1E2A3A"/><circle cx="202" cy="80" r="9" fill="#1E2A3A"/><circle cx="121" cy="77" r="3" fill="#fff"/><circle cx="205" cy="77" r="3" fill="#fff"/><path d="M130 70Q160 62 190 70" stroke="${PET_SUITD}" stroke-width="2.4" fill="none" opacity=".5"/>`;
+const PET_SHARK_TAIL=`<path d="M118 396Q46 402 22 330Q50 340 66 322Q70 366 124 364Z" fill="${PET_SUIT}" stroke="${PET_SUITD}" stroke-width="3.4" stroke-linejoin="round"/><path d="M22 330Q8 300 30 280Q38 306 66 322Z" fill="${PET_SUIT}" stroke="${PET_SUITD}" stroke-width="3.4" stroke-linejoin="round"/>`;
 // накладки: готовые рисунки, подогнанные под размеры зверька
 const petT=(x,y,s,ox,oy,g)=>`<g transform="translate(${x} ${y}) scale(${s}) translate(${-ox} ${-oy})">${g}</g>`;
 const PET_GEAR={
@@ -139,7 +143,7 @@ function petGear(c,face){ // face: {eyesY}
   if(g==='g_round')gl=`<g fill="rgba(255,255,255,.2)" stroke="#2B2B3A" stroke-width="5.5"><circle cx="118" cy="148" r="35"/><circle cx="202" cy="148" r="35"/></g><path d="M153 146Q160 138 167 146M83 142L58 130M237 142L262 130" stroke="#2B2B3A" stroke-width="5.5" fill="none" stroke-linecap="round"/>`;
   if(g==='g_sun')gl=`<path d="M82 128Q82 116 96 116H134Q148 116 146 140Q142 182 112 182Q80 178 82 128Z" fill="#1E1F2B" stroke="#000" stroke-width="3.4"/><path d="M174 140Q172 116 186 116H224Q238 116 238 128Q240 178 208 182Q178 182 174 140Z" fill="#1E1F2B" stroke="#000" stroke-width="3.4"/><path d="M144 134H176" stroke="#000" stroke-width="6"/><path d="M92 130L112 124M184 130L204 124" stroke="#fff" stroke-opacity=".6" stroke-width="4.4" stroke-linecap="round"/>`;
   if(g==='g_heart')gl=`${petHrt(118,150,3.2,'#FF5C9A')}${petHrt(202,150,3.2,'#FF5C9A')}<path d="M153 142Q160 134 167 142" stroke="#B02A63" stroke-width="5" fill="none" stroke-linecap="round"/>`;
-  return {hat:id?petT(160,104,1.34,180,205,PET_GEAR[c.ha]):'',gl,nk:c.nk?petT(160,236,1.3,184,352,PET_GEAR[c.nk]):'',ch:c.ch?petT(160,322,1.12,184,410,PET_GEAR[c.ch]):''};
+  return {hat:c.ha==='h_shark'?PET_SHARK_HOOD:id?petT(160,104,1.34,180,205,PET_GEAR[c.ha]):'',gl,nk:c.nk?petT(160,236,1.3,184,352,PET_GEAR[c.nk]):'',ch:c.ch?petT(160,322,1.12,184,410,PET_GEAR[c.ch]):''};
 }
 function petHandItem(h){
   if(h==='d_balloon')return `<path d="M240 352Q270 270 290 176" stroke="#7A5C8F" stroke-width="3" fill="none"/><ellipse cx="292" cy="130" rx="30" ry="42" fill="url(#PETP)" stroke="#B0176A" stroke-width="3"/><ellipse cx="282" cy="114" rx="8" ry="13" fill="#fff" opacity=".5" transform="rotate(20 282 114)"/><path d="M286 172L292 180L298 172Z" fill="#E5226F"/>`;
@@ -158,6 +162,7 @@ function petSvg(c,opt={}){
   const muz=sp==='bear'?pMix(baseHex,'#FFE9C7',.65):sp==='dragon'?belly:(solid?pMix(bcv,'#ffffff',.82):belly);
   const inn='#F7C6CF',hD=pMix(hcv,'#000000',.45);
   const gear=petGear(c);
+  const SU=c.ha==='h_shark',Fb=SU?PET_SUIT:F,Dk=SU?PET_SUITD:D;
   const nose=sp==='bunny'?`<ellipse cx="160" cy="176" rx="10" ry="7.5" fill="#F48FB1" stroke="${PET_INK}" stroke-width="2.4"/>`:sp==='dragon'?`<circle cx="150" cy="176" r="4" fill="${PET_INK}" opacity=".7"/><circle cx="170" cy="176" r="4" fill="${PET_INK}" opacity=".7"/>`:`<ellipse cx="160" cy="176" rx="13" ry="9" fill="#3A2530"/><ellipse cx="156" cy="173" rx="4" ry="2.4" fill="#fff" opacity=".6"/>`;
   let pat='';
   if(c.pt==='p_h')pat=petHrt(160,334,2.4,'#FF7BA5');
@@ -168,12 +173,12 @@ function petSvg(c,opt={}){
   const hand=petHandItem(c.hd).replace('PETP',id+'p');
   const vb=opt.vb||PET_VB,sz=opt.sz||160;
   const body=`<defs>${petDefs(id,solid?bcv:bcv,hcv,ecv)}</defs>`+
-   petBack(c.bk,sp,F,D,pMix(baseHex,'#ffffff',.3))+petTail(sp,F,D,belly)+petEars(sp,F,D,inn)+
-   `<path d="M160 232C100 232 88 300 90 350C92 396 120 410 160 410C200 410 228 396 230 350C232 300 220 232 160 232Z" fill="${F}" stroke="${D}" stroke-width="3.4"/>`+
-   `<ellipse cx="160" cy="338" rx="48" ry="62" fill="${belly}"/>`+
-   `<ellipse cx="94" cy="318" rx="19" ry="48" transform="rotate(14 94 318)" fill="${F}" stroke="${D}" stroke-width="3.2"/><circle cx="82" cy="362" r="19" fill="${F}" stroke="${D}" stroke-width="3.2"/>`+
-   `<ellipse cx="226" cy="318" rx="19" ry="48" transform="rotate(-14 226 318)" fill="${F}" stroke="${D}" stroke-width="3.2"/><circle cx="238" cy="362" r="19" fill="${F}" stroke="${D}" stroke-width="3.2"/>`+
-   `<ellipse cx="116" cy="410" rx="38" ry="19" fill="${F}" stroke="${D}" stroke-width="3.2"/><ellipse cx="204" cy="410" rx="38" ry="19" fill="${F}" stroke="${D}" stroke-width="3.2"/><path d="M98 414v-8M116 416v-9M134 414v-8M186 414v-8M204 416v-9M222 414v-8" stroke="${D}" stroke-width="2.6" stroke-linecap="round"/>`+
+   petBack(c.bk,sp,F,D,pMix(baseHex,'#ffffff',.3))+(SU?PET_SHARK_TAIL:petTail(sp,F,D,belly))+(SU?'':petEars(sp,F,D,inn))+
+   `<path d="M160 232C100 232 88 300 90 350C92 396 120 410 160 410C200 410 228 396 230 350C232 300 220 232 160 232Z" fill="${Fb}" stroke="${Dk}" stroke-width="3.4"/>`+
+   `<ellipse cx="160" cy="338" rx="48" ry="62" fill="${SU?PET_SUITB:belly}"/>`+
+   `<ellipse cx="94" cy="318" rx="19" ry="48" transform="rotate(14 94 318)" fill="${Fb}" stroke="${Dk}" stroke-width="3.2"/><circle cx="82" cy="362" r="19" fill="${Fb}" stroke="${Dk}" stroke-width="3.2"/>`+
+   `<ellipse cx="226" cy="318" rx="19" ry="48" transform="rotate(-14 226 318)" fill="${Fb}" stroke="${Dk}" stroke-width="3.2"/><circle cx="238" cy="362" r="19" fill="${Fb}" stroke="${Dk}" stroke-width="3.2"/>`+
+   `<ellipse cx="116" cy="410" rx="38" ry="19" fill="${Fb}" stroke="${Dk}" stroke-width="3.2"/><ellipse cx="204" cy="410" rx="38" ry="19" fill="${Fb}" stroke="${Dk}" stroke-width="3.2"/><path d="M98 414v-8M116 416v-9M134 414v-8M186 414v-8M204 416v-9M222 414v-8" stroke="${D}" stroke-width="2.6" stroke-linecap="round"/>`+
    `<ellipse cx="160" cy="150" rx="104" ry="90" fill="${F}" stroke="${D}" stroke-width="3.4"/><ellipse cx="116" cy="96" rx="42" ry="20" fill="#fff" opacity=".2" transform="rotate(-20 116 96)"/>`+
    `<ellipse cx="160" cy="196" rx="48" ry="33" fill="${muz}"/><circle cx="84" cy="196" r="16" fill="#FF8FA3" opacity=".42"/><circle cx="236" cy="196" r="16" fill="#FF8FA3" opacity=".42"/>`+pat+
    petEye(118,148,c.ex,id,c.gz,0)+petEye(202,148,c.ex,id,c.gz,1)+nose+petMouth(c.mo)+
