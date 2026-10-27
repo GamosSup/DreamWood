@@ -69,7 +69,7 @@ async function shiftView(){
   const today=iso(new Date()),day=S.sh.day||today;S.sh.day=day;
   const [L,C,N]=await Promise.all([cq('shl',()=>sb.from('shift_lists').select('*').eq('active',true).order('sort')),cq('shc'+day,()=>sb.from('shift_checks').select('*').eq('day',day).order('at')),cq('shn'+day,()=>sb.from('shift_notes').select('*').eq('day',day).order('created_at'))]);
   const notes=N.error?[]:(N.data||[]);
-  const mgr=isManager(),all=(L.data||[]).filter(l=>l.kind===S.sh.kind);
+  const mgr=isManager(),WATER_OFF=true,isWt=l=>areaOf(l.zone||l.title).k==='water',kindL=(L.data||[]).filter(l=>l.kind===S.sh.kind),all=WATER_OFF?kindL.filter(l=>!isWt(l)):kindL,waterN=WATER_OFF?kindL.filter(isWt).length:0;
   const checks=[];{const seen=new Map();(C.data||[]).forEach(c=>{const k=c.list_id+'|'+c.item;if(!seen.has(k)){seen.set(k,checks.length);checks.push(c)}else if(/::(n|vr)$/.test(c.item))checks[seen.get(k)]=c})} // общий список: пункт отмечен, если его отметил кто-то из команды
   const doneOf=l=>l.items.filter(it=>checks.some(c=>c.list_id===l.id&&c.item===it));
   const isFull=l=>l.items.length>0&&doneOf(l).length===l.items.length;
@@ -95,7 +95,7 @@ async function shiftView(){
   const isAl=S.sh.kind==='alpha_k'||S.sh.kind==='alpha_r';
   if(isAl)h+=`<div class="muted">${S.sh.kind==='alpha_k'?'Альфа хранителей: проверка локаций, журналы, Купол.':'Альфа рейнджеров: Метрополис и помощь в Лесу.'}</div>${all.map(zoneHtml).join('')||'<div class="card pad muted">Списков пока нет.</div>'}`;
   else h+=byArea(all,l=>l.zone||l.title).map(({a,items})=>{const dz=items.filter(isFull).length;
-    return `<details class="area" data-ar="${a.k}" ${S.areaOpen[a.k]?'open':''}>${areaHead(a,(dz===items.length?'✅ ':'')+'отмечено '+dz+' из '+items.length)}<div class="ab" style="background:${a.d}">${items.map(zoneHtml).join('')}</div></details>`}).join('')||'<div class="card pad muted">Списков пока нет.</div>';
+    return `<details class="area" data-ar="${a.k}" ${S.areaOpen[a.k]?'open':''}>${areaHead(a,(dz===items.length?'✅ ':'')+'отмечено '+dz+' из '+items.length)}<div class="ab" style="background:${a.d}">${items.map(zoneHtml).join('')}</div></details>`}).join('')+(waterN?`<div class="card pad" style="background:#DCEDF8;color:#1F3347;display:flex;gap:12px;align-items:center"><img src="stickers/drop.svg" alt="" width="36" height="36"><div><b>Вода</b><br>Уплыл до следующего сезона. Пока ищет купальник с подругами 👙<div style="font-size:12px;opacity:.75;margin-top:4px">Отметки в чек-листах воды закрыты, пока локации не откроются</div></div></div>`:'')||'<div class="card pad muted">Списков пока нет.</div>';
   if(mgr){
     const [ac,mk]=await Promise.all([sb.from('shift_checks').select('list_id,user_id,item').eq('day',day),sb.from('marks').select('user_id').eq('day',day)]);
     const off=new Set((mk.data||[]).map(x=>x.user_id)),tot=all.reduce((a,l)=>a+l.items.length,0),by={};
