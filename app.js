@@ -284,7 +284,8 @@ const bell=()=>`<button class="bell" aria-label="Уведомления" onclick
 const avUrl=p=>p?sb.storage.from('avatars').getPublicUrl(p).data.publicUrl:'';
 const av=(p,sz=40)=>{const u=avUrl(p&&p.avatar_url);const nm=(p&&p.full_name||'?').trim();const ini=nm.split(/\s+/).slice(0,2).map(w=>w[0]||'').join('').toUpperCase()||'?';
   const el=u?`<img class="av" src="${esc(u)}" alt="" width="${sz}" height="${sz}" loading="lazy" style="width:${sz}px;height:${sz}px">`:`<span class="av ini" style="width:${sz}px;height:${sz}px;font-size:${Math.round(sz*.4)}px">${esc(ini)}</span>`;
-  return typeof gmFrame==='function'?gmFrame(p,el):el};
+  const out=typeof gmFrame==='function'?gmFrame(p,el):el;
+  return p&&p.id&&typeof p.id==='string'&&sz>=36?out.replace(/^<(\w+)/,'<$1 data-pid="'+p.id+'"'):out};
 async function avResize(file,n=320){
   // createImageBitmap учитывает поворот из EXIF (фото с телефона не ложатся на бок); запасной путь через <img>
   let src,w,h,rel=()=>{};

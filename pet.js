@@ -64,7 +64,7 @@ function petDefs(id,bcv,hcv,ecv){
 function petEye(cx,cy,mode,id,gz,idx){
   const dx={c:0,l:-8,r:8,u:0}[gz]||0,dy={c:0,l:0,r:0,u:-11}[gz]||0;
   const white=(rx=24,ry=29)=>`<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="#fff" stroke="${PET_INK}" stroke-width="3.2"/>`;
-  const iris=(r=18,pr=9.5)=>`<circle cx="${cx+dx}" cy="${cy+2+dy}" r="${r}" fill="url(#${id}e)"/><circle cx="${cx+dx}" cy="${cy+3+dy}" r="${pr}" fill="#1B1020"/><circle cx="${cx+dx-6}" cy="${cy-6+dy}" r="6" fill="#fff"/><circle cx="${cx+dx+7}" cy="${cy+9+dy}" r="3" fill="#fff" opacity=".9"/>`;
+  const iris=(r=18,pr=9.5)=>`<g class="pir"><circle cx="${cx+dx}" cy="${cy+2+dy}" r="${r}" fill="url(#${id}e)"/><circle cx="${cx+dx}" cy="${cy+3+dy}" r="${pr}" fill="#1B1020"/><circle cx="${cx+dx-6}" cy="${cy-6+dy}" r="6" fill="#fff"/><circle cx="${cx+dx+7}" cy="${cy+9+dy}" r="3" fill="#fff" opacity=".9"/></g>`;
   const happy=`<path d="M${cx-21} ${cy+10}Q${cx} ${cy-22} ${cx+21} ${cy+10}" stroke="${PET_INK}" stroke-width="7.5" fill="none" stroke-linecap="round"/>`;
   if(mode==='x_h')return happy;
   if(mode==='x_w'&&idx===1)return happy;
@@ -203,7 +203,7 @@ function petSvg(c,opt={}){
    `<ellipse cx="116" cy="410" rx="38" ry="19" fill="${Fb}" stroke="${Dk}" stroke-width="3.2"/><ellipse cx="204" cy="410" rx="38" ry="19" fill="${Fb}" stroke="${Dk}" stroke-width="3.2"/><path d="M98 414v-8M116 416v-9M134 414v-8M186 414v-8M204 416v-9M222 414v-8" stroke="${D}" stroke-width="2.6" stroke-linecap="round"/>`+
    `<ellipse cx="160" cy="150" rx="104" ry="90" fill="${F}" stroke="${D}" stroke-width="3.4"/><ellipse cx="116" cy="96" rx="42" ry="20" fill="#fff" opacity=".2" transform="rotate(-20 116 96)"/>`+
    `<ellipse cx="160" cy="196" rx="48" ry="33" fill="${muz}"/><circle cx="84" cy="196" r="16" fill="#FF8FA3" opacity=".42"/><circle cx="236" cy="196" r="16" fill="#FF8FA3" opacity=".42"/>`+pat+
-   petEye(118,148,c.ex,id,c.gz,0)+petEye(202,148,c.ex,id,c.gz,1)+nose+petMouth(c.mo)+
+   `<g class="pey">`+petEye(118,148,c.ex,id,c.gz,0)+petEye(202,148,c.ex,id,c.gz,1)+`</g>`+nose+petMouth(c.mo)+
    petHair(c.hr,F,hD,id)+gear.nk+gear.ch+hand+gear.gl+gear.hat+(sp==='potato'&&!c.ha?`<path d="M158 70Q148 34 176 22Q168 44 172 70Z" fill="#6DBB48" stroke="#3E7B2E" stroke-width="3" stroke-linejoin="round"/><ellipse cx="186" cy="34" rx="16" ry="9" transform="rotate(-28 186 34)" fill="#7ED957" stroke="#3E7B2E" stroke-width="3"/>`:'')+(c.cm?`<g class="cmw"><image href="stickers/mascot-hi.webp" x="188" y="282" width="132" height="132"/></g>`:'');
   return `<svg viewBox="${vb.join(' ')}" width="100%" height="100%" aria-hidden="true">${body}</svg>`;
 }
@@ -211,5 +211,28 @@ function petSvg(c,opt={}){
 function gmPet(row,sz=160,opt={}){
   const c=opt.cfg||petCfg(row);if(!c)return '';
   const bg=opt.bg===undefined?(gmCos(row).bg||''):opt.bg,vb=opt.vb||PET_VB;
-  return `<div class="drm ${bg}${c.bc==='c_ghost'?' pgh':c.bc==='c_goldsuit'?' pgs':''}" style="width:${sz}px;height:${Math.round(sz*vb[3]/vb[2])}px">${petSvg(c,{vb})}</div>`;
+  return `<div class="drm ${bg}${opt.anim||sz>=90?' pan':''}${c.bc==='c_ghost'?' pgh':c.bc==='c_goldsuit'?' pgs':''}" style="width:${sz}px;height:${Math.round(sz*vb[3]/vb[2])}px">${petSvg(c,{vb})}</div>`;
 }
+
+// ---- оживление питомца: моргает, смотрит по сторонам, следит за пальцем, прыгает от нажатия ----
+(function(){
+  if(window.__panInit)return;window.__panInit=1;
+  const rm=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const all=()=>document.querySelectorAll('.drm.pan');
+  const gaze=(el,x,y)=>{el.style.setProperty('--ix',x.toFixed(1)+'px');el.style.setProperty('--iy',y.toFixed(1)+'px')};
+  let last=0;
+  const look=(cx,cy)=>{last=Date.now();all().forEach(el=>{const r=el.getBoundingClientRect();if(!r.width)return;
+    const dx=cx-(r.left+r.width/2),dy=cy-(r.top+r.height*.46),d=Math.hypot(dx,dy)||1,k=Math.min(1,d/160);gaze(el,dx/d*9*k,dy/d*8*k)})};
+  if(!rm){
+    addEventListener('pointermove',e=>look(e.clientX,e.clientY),{passive:true});
+    addEventListener('touchmove',e=>{const t=e.touches[0];t&&look(t.clientX,t.clientY)},{passive:true});
+    setInterval(()=>{if(Date.now()-last<4000)return;all().forEach(el=>{if(Math.random()<.35)gaze(el,0,0);else gaze(el,(Math.random()*2-1)*9,(Math.random()*2-1)*6)})},2600);
+  }
+  document.addEventListener('click',e=>{const el=e.target.closest&&e.target.closest('.drm.pan');if(!el||rm)return;
+    el.classList.remove('pjump');void el.offsetWidth;el.classList.add('pjump');
+    const r=el.getBoundingClientRect();look(e.clientX,e.clientY);
+    for(let i=0;i<4;i++){const h=document.createElement('span');h.className='pheart';h.textContent=['💖','✨','💛','💕'][i%4];
+      h.style.left=(r.left+r.width*(.3+Math.random()*.4))+'px';h.style.top=(r.top+r.height*.3)+'px';h.style.animationDelay=(i*90)+'ms';
+      document.body.appendChild(h);setTimeout(()=>h.remove(),1500)}
+  });
+})();

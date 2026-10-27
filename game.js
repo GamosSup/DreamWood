@@ -178,7 +178,7 @@ function gmRotName(p){
 function gmName(text,row,opt={}){
   const t=esc(text);if(!row)return t;
   const c=gmCos(row),ic=c.badge?gmBadgeIc(row,c.badge):'';
-  return `<span class="gnm${c.name?' '+c.name:''}">${t}</span>${ic?` <span class="gbd gtip" ${gmTipAttr(row,c.badge)}>${ic==='sword'||ic==='whipgb'?gmIc(ic,16):ic}</span>`:''}${opt.lv===false?'':` ${gmLvChip(row)}`}`;
+  return `<span class="gnm${c.name?' '+c.name:''}"${row.id?` data-pid="${row.id}"`:''}>${t}</span>${ic?` <span class="gbd gtip" ${gmTipAttr(row,c.badge)}>${ic==='sword'||ic==='whipgb'?gmIc(ic,16):ic}</span>`:''}${opt.lv===false?'':` ${gmLvChip(row)}`}`;
 }
 const gmTitleHtml=row=>{if(!row)return '';const c=gmCos(row);return c.title?`<div class="gmtl gtip" ${gmTipAttr(row,c.title)}>${esc(gmTitleTx(row,c.title))}</div>`:''};
 // подсказка к значку и титулу: что это и за что (при наведении и по нажатию)
@@ -227,14 +227,25 @@ const gmTab=()=>S.gmTab||'ach';
 const gmSeeAll=()=>!!gmMe()?.lvl_text; // только у владельца приложения видны и закрытые достижения; у остальных — лишь открытые
 // сколько всего достижений можно получить: открытые каталожные (без секретных и выдаваемых вручную) + всё, что уже есть
 const gmCatTotal=row=>{const got=new Set((row.ach||[]).map(a=>a.c));return GM_ACH.filter(a=>got.has(a.c)||(!a.secret&&!a.man)).length+(row.ach||[]).filter(a=>gmReal(a)&&!GM_BY[a.c]).length};
+function gmAbout(row,own){
+  const c=row.cos||{},mo=(c.motto||'').trim(),bio=(c.bio||'').trim(),fav=(c.fav||'').trim();
+  if(!mo&&!bio&&!fav)return own?`<div class="gabout muted">Здесь может быть рассказ о тебе: девиз, чем занимаешься, что любишь. Заполни во вкладке «Мой образ».</div>`:'';
+  return `<div class="gabout">${mo?`<div class="gmotto">«${esc(mo)}»</div>`:''}${bio?`<div class="gbio">${esc(bio)}</div>`:''}${fav?`<div class="gfav">❤️ Люблю: ${esc(fav)}</div>`:''}</div>`;
+}
+const gmStage=row=>{
+  if(typeof petCfg==='function'&&petCfg(row))return `<div class="pstage">${gmPet(row,176)}</div>`;
+  return `<div class="pstage"><img src="stickers/mascot-hi.webp" alt="" width="120" height="120" style="object-fit:contain"></div>`;
+};
 function gmHero(row){
   const L=gmLv(row.xp),cos=gmCos(row);
   return `<div class="card gmh"><div class="gmhr"><div class="gmav">${av(S.me,84)}<button class="avcam gmcam" aria-label="Поставить фото из галереи">📷 Фото</button></div><div style="flex:1;min-width:0">
     <div class="gmn">${gmName(S.me.full_name||'',row,{lv:false})}</div>${gmTitleHtml(row)}
-    <div style="margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">${gmLvChip(row,true)}${row.lvl_text?'':`<span><b>${esc(GM_RANKS[L.r].full)}</b><br><span class="muted">Уровень ${L.n} из 50</span></span>`}</div></div><div class="gmhp">${gmPetHead(row,62)}</div></div>
+    <div style="margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">${gmLvChip(row,true)}${row.lvl_text?'':`<span><b>${esc(GM_RANKS[L.r].full)}</b><br><span class="muted">Уровень ${L.n} из 50</span></span>`}</div></div></div>
+    ${gmStage(row)}
     <div class="gmcnt"><span>🏅 Достижений: <b>${gmRealN(row)}</b> из ${gmCatTotal(row)}</span><span>🎰 Билетов: <b id="gx_hdr">${typeof gxS!=='undefined'&&gxS.info?gxS.info.tickets:'…'}</b></span></div>
-    ${gmShelf(row,{own:1})}
-    ${row.lvl_text?`<div class="muted" style="margin-top:8px">Всего очков: <b>${row.xp}</b></div>`:`<div class="pgb" style="margin-top:12px"><div class="pg" style="width:${L.pct}%"></div></div><div class="muted" style="margin-top:6px">${row.xp} очков${L.hi?` · до уровня ${L.n+1} осталось <b>${L.left}</b>`:' · максимальный уровень, ты легенда'}</div>`}</div>`;
+    ${gmAbout(row,true)}
+    ${row.lvl_text?`<div class="muted" style="margin-top:8px">Всего очков: <b>${row.xp}</b></div>`:`<div class="pgb" style="margin-top:12px"><div class="pg" style="width:${L.pct}%"></div></div><div class="muted" style="margin-top:6px">${row.xp} очков${L.hi?` · до уровня ${L.n+1} осталось <b>${L.left}</b>`:' · максимальный уровень, ты легенда'}</div>`}</div>
+  ${gmShelf(row,{own:1}).replace(/^/,'<div class="card pad shelfc">')+'</div>'}`;
 }
 async function gameView(){
   S.offline=0;
@@ -289,7 +300,7 @@ async function gmSaveCos(patch){
   const r=await sb.rpc('set_my_cos',{p:cur});
   if(r.error){toast('Не сохранилось: '+r.error.message,3500);return false}
   me.cos=cur;try{localStorage.setItem('dw:gm:'+S.me.id,JSON.stringify({rows:S.gm.rows}))}catch(e){}
-  toast('Сохранено ✨',1400);$('.gmh')&&($('.gmh').outerHTML=gmHero(me));return true;
+  toast('Сохранено ✨',1400);{const h=$('.gmh');if(h){const nx=h.nextElementSibling;if(nx&&nx.classList.contains('shelfc'))nx.remove();h.outerHTML=gmHero(me)}}return true;
 }
 function gmLookTab(box){
   const me=gmMe();let cur={...(me.cos||{})};
@@ -305,11 +316,12 @@ function gmLookTab(box){
     return `<button class="gop${on?' on':''}${ok?'':' lk'}" data-k="${k}" data-v="${v}" ${ok?'':'disabled'}><span class="gopv">${pv}</span><span class="gopn">${esc(n)}</span>${ok?'':`<span class="gopl">🔒 ${esc(reqName(req))}</span>`}</button>`;
   };
   const paint=()=>{
-    box.innerHTML=`<div class="muted" style="margin:2px 2px 10px">Выбери, как тебя видят коллеги: в контактах, ротации, благодарностях. Это просто красота, никаких прав и бонусов.</div>`+
+    box.innerHTML=`<div class="card pad col"><b>📝 О себе</b><div class="muted">Это видят коллеги, когда открывают твой профиль.</div><label>Девиз<input id="ab_m" maxlength="80" placeholder="Например: и в дождь, и в зной с улыбкой" value="${esc(cur.motto||'')}"></label><label>Расскажи о себе<textarea id="ab_b" maxlength="400" rows="4" placeholder="Чем занимаешься в парке, чем увлекаешься">${esc(cur.bio||'')}</textarea></label><label>Что люблю<input id="ab_f" maxlength="120" placeholder="Кофе, походы, настолки" value="${esc(cur.fav||'')}"></label><button class="btn" id="ab_s">Сохранить</button></div><div class="muted" style="margin:2px 2px 10px">Выбери, как тебя видят коллеги: в контактах, ротации, благодарностях. Это просто красота, никаких прав и бонусов.</div>`+
     Object.entries(GM_COSL).map(([k,[ttl,L]])=>`<div class="card pad col"><b>${ttl}</b><div class="gops">${L.map(it=>opt(k,it)).join('')}</div></div>`).join('')+
     `<div class="card pad col"><b>Значок рядом с именем</b><div class="muted">Один любимый из заработанных.</div><div class="gops"><button class="gop${cur.badge?'':' on'}" data-k="badge" data-v=""><span class="gopv">—</span><span class="gopn">Без значка</span></button>${earned.map(d=>`<button class="gop${cur.badge===d.c?' on':''}" data-k="badge" data-v="${esc(d.c)}"><span class="gopv">${gmIc(d.ic,26)}</span><span class="gopn">${esc(d.n)}</span></button>`).join('')}</div></div>
     <div class="card pad col"><b>Титул под именем</b><div class="muted">Короткая подпись из заработанного.</div><div class="gops"><button class="gop${cur.title?'':' on'}" data-k="title" data-v=""><span class="gopv">—</span><span class="gopn">Без титула</span></button>${earned.filter(d=>d.title).map(d=>`<button class="gop${cur.title===d.c?' on':''}" data-k="title" data-v="${esc(d.c)}"><span class="gopn" style="font-weight:800">${esc(d.title)}</span></button>`).join('')}</div></div>`;
     box.querySelectorAll('.gop:not([disabled])').forEach(b=>b.onclick=()=>save({[b.dataset.k]:b.dataset.v}));
+    const sv=box.querySelector('#ab_s');if(sv)sv.onclick=()=>save({motto:box.querySelector('#ab_m').value.trim(),bio:box.querySelector('#ab_b').value.trim(),fav:box.querySelector('#ab_f').value.trim()});
   };
   paint();
 }

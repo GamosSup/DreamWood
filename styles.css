@@ -756,3 +756,22 @@ html[data-dark="1"] .alcard.brfcard{background:#3a2f22;color:#f3e6d3}
 .bdg i{font-style:normal;display:inline-flex}.bdg b{font-weight:700}
 .bdg.adm{background:#E8F6EC;border-color:#9FD5AE}.bdg.trn{background:#E6F0FF;border-color:#9DBDF0}.bdg.spc{background:#FFF1D6;border-color:#F0C46B}
 .tmr{display:flex;align-items:center;gap:12px;text-align:left;width:100%;cursor:pointer;color:var(--ink)}.tmn{display:flex;flex-direction:column;gap:2px;min-width:0}
+
+/* v88: профиль — крупный питомец, «О себе», оживление */
+.pstage{display:flex;justify-content:center;margin:12px 0 4px}
+.pstage .drm{border-radius:22px;max-width:100%}
+.gabout{margin-top:12px;padding:12px;border-radius:14px;background:rgba(127,127,127,.1);display:flex;flex-direction:column;gap:6px}
+.gmotto{font-weight:800}.gbio{white-space:pre-wrap;word-break:break-word}.gfav{opacity:.85}
+.shelfc{margin-top:10px}
+.gnm[data-pid],.avwrap[data-pid],[data-pid].av{cursor:pointer}
+.drm.pan{--ix:0px;--iy:0px;transform-origin:50% 90%}
+.drm.pan .pir{transform:translate(var(--ix),var(--iy));transition:transform .28s ease-out}
+.drm.pan .pey{transform-box:fill-box;transform-origin:50% 55%;animation:pblink 4.6s infinite}
+.drm.pan:not(.pgh):not(.pgs) svg{transform-origin:50% 92%;animation:pbreath 3.8s ease-in-out infinite}
+.drm.pan.pjump{animation:pjump .6s cubic-bezier(.3,1.6,.5,1)}
+.pheart{position:fixed;z-index:9999;pointer-events:none;font-size:22px;animation:pheart 1.3s ease-out forwards}
+@keyframes pblink{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(.06)}}
+@keyframes pbreath{0%,100%{transform:scale(1)}50%{transform:scale(1.025,.985)}}
+@keyframes pjump{0%{transform:translateY(0) scale(1)}35%{transform:translateY(-16px) scale(1.04,.96)}60%{transform:translateY(0) scale(.97,1.04)}100%{transform:none}}
+@keyframes pheart{0%{opacity:0;transform:translateY(0) scale(.6)}20%{opacity:1}100%{opacity:0;transform:translateY(-70px) scale(1.2)}}
+@media (prefers-reduced-motion:reduce){.drm.pan .pey,.drm.pan svg{animation:none!important}}

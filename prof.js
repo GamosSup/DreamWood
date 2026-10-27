@@ -15,15 +15,17 @@ function gmProfile(id){
   const L=gmLv(row.xp);
   const real=(row.ach||[]).filter(a=>gmReal(a)&&!/^(adm|trn|spec|evt):/.test(a.c)).map(a=>gmDef(a));
   dgxSheet(esc(row.full_name||'Профиль'),(box)=>{
+    const pet=typeof petCfg==='function'&&petCfg(row);
     box.innerHTML=`<div class="card gmh"><div class="gmhr"><div class="gmav">${av(row,84)}</div><div style="flex:1;min-width:0"><div class="gmn">${gmName(row.full_name||'',row,{lv:false})}</div>${gmTitleHtml(row)}
       <div style="margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">${gmLvChip(row,true)}${row.lvl_text?'':`<span><b>${esc(GM_RANKS[L.r].full)}</b><br><span class="muted">Уровень ${L.n} из 50</span></span>`}</div></div></div>
-      <div class="gmcnt"><span>🏅 Достижений: <b>${gmRealN(row)}</b></span><span>⭐ Очков: <b>${row.xp}</b></span></div></div>
-    ${typeof petCfg==='function'&&petCfg(row)?`<div class="card pad" style="display:flex;justify-content:center">${gmPet(row,150)}</div>`:''}
-    ${gmShelf(row)}
+      ${pet?`<div class="pstage">${gmPet(row,190)}</div>`:''}
+      <div class="gmcnt"><span>🏅 Достижений: <b>${gmRealN(row)}</b></span><span>⭐ Очков: <b>${row.xp}</b></span></div>
+      ${gmAbout(row,false)}</div>
+    <div class="card pad shelfc">${gmShelf(row)}</div>
     ${real.length?`<div class="shelf"><div class="shl">🏅 Достижения · ${real.length}</div><div class="bdgs">${real.map(d=>`<span class="bdg" title="${esc(d.d||'')}"><i>${gmIc(d.ic,18)}</i><b>${esc(d.n)}</b></span>`).join('')}</div></div>`:''}`;
   },()=>{});
 }
-document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-pid]');if(b&&!e.target.closest('.gtip'))gmProfile(b.dataset.pid)});
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-pid]');if(!b||e.target.closest('.gtip,button:not(.tmr),a,label,select,input,textarea,.avcam'))return;if(b.closest('.dgxs,.dgx-sheet')&&b.classList.contains('gmav'))return;if(S.gm&&S.gm.by[b.dataset.pid])gmProfile(b.dataset.pid)});
 function gmTeamTab(box){
   const rows=(S.gm.rows||[]).filter(r=>r.full_name&&r.full_name!=='Тест Системы').slice().sort((a,b)=>String(a.full_name).localeCompare(String(b.full_name),'ru'));
   const paint=q=>{
