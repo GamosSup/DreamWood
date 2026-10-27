@@ -90,22 +90,36 @@ function gmSceneDecor(bg){
 })();
 
 // ---- «О Дримвуде»: сводка по парку и приложению ----
+function gmParkNow(){
+  try{
+    const now=new Date(),k=iso(now),pk=parkOpen(k);
+    if(!pk)return {t:'Отдыхает 😴',s:'парк сегодня не работает',c:'big'};
+    const hm=v=>String(v).slice(0,5),cur=now.getHours()*60+now.getMinutes(),f=v=>{const m=String(v).split(':');return +m[0]*60+(+m[1]||0)};
+    const st=f(pk.start_time),en=f(pk.end_time);
+    if(cur>=st&&cur<en)return {t:'Открыт 🎡',s:'до '+hm(pk.end_time),c:'big'};
+    if(cur<st)return {t:'Отдыхает 😴',s:'откроется в '+hm(pk.start_time),c:'big'};
+    return {t:'Отдыхает 😴',s:'до завтра',c:'big'};
+  }catch(e){return {t:'Отдыхает 😴',s:'график парка не задан',c:'big'}}
+}
 function gmAboutPark(){
   if(document.querySelector('.ov'))return;
   const rows=((S.gm&&S.gm.rows)||[]).filter(r=>r.full_name&&r.full_name!=='Тест Системы');
   const adm=rows.reduce((n,r)=>n+(r.ach||[]).filter(a=>String(a.c).startsWith('adm:')).length,0);
   const achs=rows.reduce((n,r)=>n+(r.ach||[]).filter(a=>!String(a.c).startsWith('gx:')).length,0);
-  let today='';try{const k=iso(new Date());const pk=parkOpen(k),pl=perLabel(k);today=pl||(pk?'':'')}catch(e){}
-  const zones=Object.keys(STEPC||{}).filter(z=>z.length<=14&&!/Ротация|Метро|^Пс$|^Ос$/.test(z));
   const ver=(document.querySelector('script[src*="app.js"]')||{src:''}).src.split('?v=')[1]||'';
   const me=typeof gmMe==='function'?gmMe():null,got=me&&(me.ach||[]).some(a=>a.c==='love');
-  dgxSheet('О Дримвуде',(box)=>{
-    box.innerHTML=`<div class="card pad"><div class="abt"><div class="abl">${dwLogo({big:1})}</div><h3>Парк Дримвуд</h3><div class="muted">Mriya Resort &amp; Spa · наша команда</div></div></div>
-    <div class="card pad col"><b>📊 Сводка</b><div class="abg"><div><b>${rows.length||'—'}</b><span>человек в команде</span></div><div><b>${adm}</b><span>допусков выдано</span></div><div><b>${achs}</b><span>достижений получено</span></div><div><b>${today?today.split(',')[0].split(' · ')[0]:'—'}</b><span>${today?'часы парка сегодня':'график парка сегодня'}</span></div></div>
-    ${zones.length?`<div class="muted" style="text-align:center">Наши зоны и аттракционы</div><div class="abz">${zones.map(z=>`<span>${esc(z)}</span>`).join('')}</div>`:''}</div>
+  dgxSheet('О Дримвуде',async(box)=>{
+    try{if(!S.periods)await loadPeriods()}catch(e){}
+    const st=gmParkNow();
+    let pages=[];try{const r=await sb.from('kb_pages').select('*').eq('category','Аттракционы').order('title');pages=r.data||[]}catch(e){}
+    const zones=Object.keys(STEPC||{}).filter(z=>z.length<=14&&!/Ротация|Метро|^Пс$|^Ос$/.test(z));
+    box.innerHTML=`<div class="card pad"><div class="abt"><div class="abl">${dwLogo({big:1})}</div><div class="muted">Mriya Resort &amp; Spa · наша команда</div></div></div>
+    <div class="card pad col"><b>📊 Сводка</b><div class="abg"><div><b>${rows.length||'—'}</b><span>человек в команде</span></div><div><b>${adm}</b><span>допусков выдано</span></div><div><b>${achs}</b><span>достижений получено</span></div><div><b class="big">${st.t}</b><span>${st.s}</span></div></div>
+    ${pages.length?`<div class="muted" style="text-align:center">Аттракционы. Нажми, чтобы открыть инструкцию из базы знаний</div><div class="abz">${pages.map(p=>`<button data-kbp="${p.id}">${esc(p.title)}</button>`).join('')}</div>`:zones.length?`<div class="muted" style="text-align:center">Наши зоны и аттракционы</div><div class="abz">${zones.map(z=>`<span>${esc(z)}</span>`).join('')}</div>`:''}</div>
     <div class="card pad col"><div class="abl2"><b>💌 Создано с любовью</b>Это приложение создал любящий всех старший специалист Шубчик И.А. для всей команды Дримвуда. Работайте легко, берегите друг друга и не забывайте говорить спасибо 💛</div>
       <div class="abl2" style="background:linear-gradient(135deg,#E6F4D0,#C9E9F4)"><b>🏅 «От старшего спеца с любовью»</b>${got?'Достижение уже у тебя ✅':'Достижение получено: 500 опыта и 10 билетов в награду'}</div></div>
     <div class="muted" style="text-align:center">Версия приложения ${esc(ver)}</div>`;
+    box.querySelectorAll('[data-kbp]').forEach(b=>b.onclick=()=>{const pg=pages.find(x=>x.id==b.dataset.kbp);if(pg&&window.kbOpen)kbOpen(pg)});
     if(!got&&window.gmClaim)setTimeout(()=>gmClaim('love'),400);
   },()=>{});
 }
