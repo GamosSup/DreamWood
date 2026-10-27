@@ -685,3 +685,11 @@ html[data-dark="1"] .alcard.brfcard{background:#3a2f22;color:#f3e6d3}
 .gxrc small{font-size:9px;opacity:.7}
 .gxdaily .gxres .gxdays{margin:6px 0}
 @media(max-width:380px){.gxd small{font-size:8px}.gxd b{font-size:11px}}
+
+/* v76: «Последний» — дикая подсветка */
+.lvx.lvz{position:relative;color:#fff;background:linear-gradient(100deg,#FF2E63,#FFD23F,#2EFFB0,#2EA8FF,#B455FF,#FF2E63);background-size:200% 100%;animation:gmrb 2.2s linear infinite,lvzp 1.3s ease-in-out infinite;text-shadow:0 0 6px rgba(255,255,255,.95),0 1px 2px rgba(0,0,0,.5);letter-spacing:.6px;border:1.5px solid rgba(255,255,255,.9);z-index:1}
+.lvx.lvz::before{content:'';position:absolute;inset:-5px;border-radius:999px;background:inherit;background-size:inherit;filter:blur(9px);opacity:.85;z-index:-1;animation:gmrb 2.2s linear infinite}
+.lvx.lvz::after{content:'✦';position:absolute;right:-7px;top:-9px;font-size:13px;color:#fff;text-shadow:0 0 6px #FFD23F,0 0 12px #FF2E63;animation:lvzs 1.6s ease-in-out infinite}
+@keyframes lvzp{0%,100%{box-shadow:0 0 8px 2px rgba(255,46,99,.8),0 0 18px 4px rgba(180,85,255,.6)}50%{box-shadow:0 0 14px 5px rgba(255,210,63,.95),0 0 30px 10px rgba(46,168,255,.7)}}
+@keyframes lvzs{0%,100%{transform:scale(.6) rotate(0);opacity:.5}50%{transform:scale(1.25) rotate(90deg);opacity:1}}
+@media(prefers-reduced-motion:reduce){.lvx.lvz,.lvx.lvz::before,.lvx.lvz::after{animation:none}}

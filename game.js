@@ -33,7 +33,7 @@ const gmRankSvg=(r,sz=22)=>`<svg viewBox="0 0 32 32" width="${sz}" height="${sz}
 // «Невозможный»: подпись вместо числа
 const gmLvChip=(row,big)=>{
   if(!row)return '';
-  if(row.lvl_text)return `<span class="lvx${big?' big':''}" title="Уровень: ${esc(row.lvl_text)}">${esc(row.lvl_text)}</span>`;
+  if(row.lvl_text)return `<span class="lvx${/^последний$/i.test(row.lvl_text.trim())?' lvz':''}${big?' big':''}" title="Уровень: ${esc(row.lvl_text)}">${esc(row.lvl_text)}</span>`;
   const L=gmLv(row.xp);
   return `<span class="lvb${big?' big':''}" style="--rc:${GM_RANKS[L.r].c}" title="${esc(GM_RANKS[L.r].full)} · уровень ${L.n}">${gmRankSvg(L.r,big?30:20)}<b>${L.n}</b></span>`;
 };
@@ -43,7 +43,8 @@ const GM_SWORD=`<svg viewBox="0 0 64 64" width="100%" height="100%" aria-hidden=
 <g transform="rotate(45 32 32)"><path d="M32 2L39 12V41L32 47L25 41V12Z" fill="url(#gmsw)" stroke="#0B6F85" stroke-width="1.6" stroke-linejoin="round"/><path d="M32 2L39 12V41L32 47Z" fill="#0B6F85" fill-opacity=".22"/><path d="M32 6V43" stroke="#fff" stroke-opacity=".75" stroke-width="1.6" stroke-linecap="round"/>
 <path d="M17 47Q32 40 47 47L44.5 52Q32 47 19.5 52Z" fill="#3B4066" stroke="#1F2342" stroke-width="1.4" stroke-linejoin="round"/><rect x="29.2" y="50" width="5.6" height="9" rx="2.4" fill="#7A4A8C" stroke="#3E2450" stroke-width="1.2"/><circle cx="32" cy="61" r="3" fill="#5EEAD4" stroke="#0B6F85" stroke-width="1.2"/></g>
 <path class="gmsp" d="M13 14l1.6 3.6L18 19l-3.4 1.4L13 24l-1.6-3.6L8 19l3.4-1.4z" fill="#fff"/><path class="gmsp b" d="M52 40l1.1 2.5 2.4 1-2.4 1L52 47l-1.1-2.5-2.4-1 2.4-1z" fill="#CFFAF3"/></svg>`;
-const gmIc=(ic,sz=28)=>ic==='sword'?`<span class="gmsw" style="width:${sz}px;height:${sz}px">${GM_SWORD}</span>`:`<span style="font-size:${Math.round(sz*.82)}px;line-height:1">${ic}</span>`;
+const GM_WHIP=`<svg viewBox="0 0 32 32" width="100%" height="100%" aria-hidden="true"><g stroke="#7A4A22" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round" fill="#D9954F"><circle cx="11" cy="7.4" r="4.3"/><path d="M7.2 12.2h7.6l5 2.4-1.5 3.2-3.8-1.7 2.6 9.6-3.4 1.4-2.6-6.6-2.6 6.6-3.4-1.4 2.6-9.6-3.8 1.7-1.5-3.2z"/></g><circle cx="9.6" cy="6.8" r=".9" fill="#fff"/><circle cx="12.6" cy="6.8" r=".9" fill="#fff"/><path d="M9.3 9.2q1.7 1.6 3.4 0" stroke="#fff" stroke-width="1" fill="none" stroke-linecap="round"/><circle cx="11" cy="15.2" r=".9" fill="#E5484D"/><circle cx="11" cy="18.4" r=".9" fill="#52A7FF"/><path d="M19 29.5l5.2-8" stroke="#4A2C16" stroke-width="3.2" stroke-linecap="round"/><path d="M24.4 21.4C31 18 24.5 11.5 28.8 6.4" stroke="#2D1D14" stroke-width="1.7" fill="none" stroke-linecap="round"/><path d="M28.8 6.4l1.6-1.2" stroke="#E5484D" stroke-width="1.6" stroke-linecap="round"/></svg>`;
+const gmIc=(ic,sz=28)=>ic==='whipgb'?`<span class="gmsw" style="display:inline-block;width:${sz}px;height:${sz}px;vertical-align:middle">${GM_WHIP}</span>`:ic==='sword'?`<span class="gmsw" style="width:${sz}px;height:${sz}px">${GM_SWORD}</span>`:`<span style="font-size:${Math.round(sz*.82)}px;line-height:1">${ic}</span>`;
 
 // ---------- достижения ----------
 const GM_GR=[['work','✅','Работа'],['days','☀️','Смены'],['hab','🔁','Привычки и дела'],['team','💛','Команда'],['park','🎡','Помощь парку'],['know','📚','Знания'],['fun','🎲','Весёлое'],['skill','🎟️','Допуски, обучения, события']];
@@ -85,7 +86,9 @@ const GM_ACH=[
  {c:'trn:rescue',g:'skill',t:4,ic:'🛟',n:'Спасатель-матрос',d:'Пройдено обучение, значок выдаёт руководитель',b:200,man:1,title:'Спасатель-матрос'},
  {c:'trn:cash',g:'skill',t:3,ic:'💳',n:'Кассовая дисциплина',d:'Пройдено обучение, значок выдаёт руководитель',b:150,man:1,title:'Кассовая дисциплина'},
  {c:'spec:shark',g:'skill',t:5,ic:'🦈',n:'Кигуруми акулы',d:'Особый подарок: костюм акулы для питомца',b:0,man:1,secret:1,title:'Акула-супервайзер'},
- {c:'spec:admin_server',g:'skill',t:5,ic:'sword',n:'Админ на сервере',d:'Особый значок. Выдаёт админ, ничего лишнего не просит',b:500,man:1,secret:1,title:'Админ на сервере'}
+ {c:'spec:admin_server',g:'skill',t:5,ic:'sword',n:'Админ на сервере',d:'Особый значок. Выдаёт админ, ничего лишнего не просит',b:500,man:1,secret:1,title:'Админ на сервере'},
+ {c:'spec:whipcarrot',g:'skill',t:5,ic:'whipgb',n:'Кнут и пряник',d:'Для работы с командой 💙',b:0,man:1,secret:1,title:'Кнут и пряник'},
+ {c:'spec:finished',g:'skill',t:5,ic:'🏆',n:'Прошёл игру',d:'Дошёл до конца: прошёл Дримвуд целиком',b:0,man:1,secret:1,title:'Прошёл игру'}
 ];
 const GM_BY=Object.fromEntries(GM_ACH.map(a=>[a.c,a]));
 // выданные вручную коды без записи в каталоге: допуски, события, особые
@@ -172,7 +175,7 @@ function gmRotName(p){
 function gmName(text,row,opt={}){
   const t=esc(text);if(!row)return t;
   const c=gmCos(row),ic=c.badge?gmBadgeIc(row,c.badge):'';
-  return `<span class="gnm${c.name?' '+c.name:''}">${t}</span>${ic?` <span class="gbd gtip" ${gmTipAttr(row,c.badge)}>${ic==='sword'?gmIc('sword',16):ic}</span>`:''}${opt.lv===false?'':` ${gmLvChip(row)}`}`;
+  return `<span class="gnm${c.name?' '+c.name:''}">${t}</span>${ic?` <span class="gbd gtip" ${gmTipAttr(row,c.badge)}>${ic==='sword'||ic==='whipgb'?gmIc(ic,16):ic}</span>`:''}${opt.lv===false?'':` ${gmLvChip(row)}`}`;
 }
 const gmTitleHtml=row=>{if(!row)return '';const c=gmCos(row);return c.title?`<div class="gmtl gtip" ${gmTipAttr(row,c.title)}>${esc(gmTitleTx(row,c.title))}</div>`:''};
 // подсказка к значку и титулу: что это и за что (при наведении и по нажатию)
