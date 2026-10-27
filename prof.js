@@ -100,7 +100,7 @@ function gmAboutPark(){
   const ver=(document.querySelector('script[src*="app.js"]')||{src:''}).src.split('?v=')[1]||'';
   const me=typeof gmMe==='function'?gmMe():null,got=me&&(me.ach||[]).some(a=>a.c==='love');
   dgxSheet('О Дримвуде',(box)=>{
-    box.innerHTML=`<div class="card pad"><div class="abt"><img class="abl" src="stickers/logo.webp" alt="Дримвуд"><h3>Парк Дримвуд</h3><div class="muted">Mriya Resort &amp; Spa · наша команда</div></div></div>
+    box.innerHTML=`<div class="card pad"><div class="abt"><div class="abl">${dwLogo({big:1})}</div><h3>Парк Дримвуд</h3><div class="muted">Mriya Resort &amp; Spa · наша команда</div></div></div>
     <div class="card pad col"><b>📊 Сводка</b><div class="abg"><div><b>${rows.length||'—'}</b><span>человек в команде</span></div><div><b>${adm}</b><span>допусков выдано</span></div><div><b>${achs}</b><span>достижений получено</span></div><div><b>${today?today.split(',')[0].split(' · ')[0]:'—'}</b><span>${today?'часы парка сегодня':'график парка сегодня'}</span></div></div>
     ${zones.length?`<div class="muted" style="text-align:center">Наши зоны и аттракционы</div><div class="abz">${zones.map(z=>`<span>${esc(z)}</span>`).join('')}</div>`:''}</div>
     <div class="card pad col"><div class="abl2"><b>💌 Создано с любовью</b>Это приложение создал любящий всех старший специалист Шубчик И.А. для всей команды Дримвуда. Работайте легко, берегите друг друга и не забывайте говорить спасибо 💛</div>

@@ -147,7 +147,7 @@ function authView(mode,err,ok){
   nav.hidden=true;const reg=mode==='up';
   // оболочка (логотип, заголовок и переключатель «Вход / Регистрация») рисуется один раз; при переключении меняется только форма — страница не перезагружается
   if(!$('#authform')){
-    app.innerHTML=`<div style="margin-top:24px"><div class="authhd"><img class="alogo" src="stickers/logo.webp" alt="Дримвуд — парк чудес и приключений"><img class="amas" src="stickers/mascot-hi.webp" alt=""></div><h1>Чудеса начинаются здесь</h1><p class="muted">Приложение команды парка: ротации, график, афиша и новости.</p></div>
+    app.innerHTML=`<div style="margin-top:24px"><div class="authhd"><span class="alogo">${dwLogo({big:1})}</span><img class="amas" src="stickers/mascot-hi.webp" alt=""></div><h1>Чудеса начинаются здесь</h1><p class="muted">Приложение команды парка: ротации, график, афиша и новости.</p></div>
     <div class="seg"><button id="tin">Вход</button><button id="tup">Регистрация</button></div>
     <div id="authform"></div>`;
     $('#tin').onclick=()=>authView('in');$('#tup').onclick=()=>authView('up');
@@ -327,7 +327,7 @@ function avChoose(){
   inp.click();
 }
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('.avcam,.gmav');if(b){e.preventDefault();avChoose()}});
-const head=(h,sub)=>`<div class="top"><div class="brand"><img class="lg" src="stickers/logo.webp" alt="Дримвуд"><div class="hi">Привет, ${esc(firstName())}! 👋</div></div><div class="topr"><button class="avb" aria-label="Мой профиль" onclick="S.gmTab=null;go('game')">${av(S.me,40)}</button>${bell()}</div></div>${S.offline?`<div class="banner" style="background:#E6CC8F;color:#3B2A35;font-size:14px">📴 Нет сети — показаны сохранённые данные (от ${new Date(S.offline).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'})}). Менять что-либо пока нельзя.</div>`:''}${sub?`<div class="muted">${sub}</div>`:''}<h1>${h}</h1>`;
+const head=(h,sub)=>`<div class="top"><div class="brand"><span class="lg">${dwLogo()}</span><div class="hi">Привет, ${esc(firstName())}! 👋</div></div><div class="topr"><button class="avb" aria-label="Мой профиль" onclick="S.gmTab=null;go('game')">${av(S.me,40)}</button>${bell()}</div></div>${S.offline?`<div class="banner" style="background:#E6CC8F;color:#3B2A35;font-size:14px">📴 Нет сети — показаны сохранённые данные (от ${new Date(S.offline).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'})}). Менять что-либо пока нельзя.</div>`:''}${sub?`<div class="muted">${sub}</div>`:''}<h1>${h}</h1>`;
 const NI={brief:'📣',ach:'🏅',mentor:'🌱',thanks:'💛',news:'📰',rotation:'🔄',afisha:'🎟️',signup:'🧑‍💼',task:'📋',request:'📨',incident:'🚨',shift:'💬',checkin:'☀️',repair:'🛠',feedback:'💡'};
 const ago=d=>{const m=Math.round((Date.now()-new Date(d))/6e4);return m<1?'только что':m<60?m+' мин назад':m<1440?Math.floor(m/60)+' ч назад':new Date(d).toLocaleDateString('ru',{day:'numeric',month:'short'})};
 // две закреплённые плашки для руководителей: сколько вышло на смену и сколько локаций открыто (вместо уведомления на каждого сотрудника)
