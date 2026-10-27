@@ -772,9 +772,7 @@ async function settingsView(){
   $('#out').onclick=()=>sb.auth.signOut().then(()=>{clearCache();S.me=null;S.unread=0;boot()});
 }
 sb.auth.onAuthStateChange(ev=>{if(ev==='SIGNED_OUT'&&S.me&&S.tab){S.me=null;S.tab='today';clearCache();authView('in','Сессия закончилась — войди заново')}});
-if('serviceWorker'in navigator){const had=!!navigator.serviceWorker.controller;navigator.serviceWorker.register('sw.js');
-  // вышла новая версия: один раз перезагружаем страницу, когда нет открытых окон ввода, чтобы все сразу работали на свежем коде
-  let rl=0;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!had||rl)return;rl=1;const go=()=>{if(document.querySelector('.ov,.dgs,textarea:focus,input:focus'))return setTimeout(go,4000);location.reload()};setTimeout(go,300)})}
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
 function openLink(l){if(!l)return;if(l==='alert'){window.alertCheck&&alertCheck();return}if(String(l).startsWith('checkin:'))return openBell();if(String(l).startsWith('rot:')){S.day=l.slice(4);go('rot')}else go(l)}
 if('serviceWorker'in navigator)navigator.serviceWorker.addEventListener('message',e=>{if(e.data&&e.data.go&&S.me)openLink(e.data.go)});
 boot();
