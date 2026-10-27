@@ -22,7 +22,7 @@ function build(){
     {t:'Чек-листы',d:'Отмечай пункты по ходу дела: каждая отметка приносит очки. Коллеги видят, кто и во сколько открыл или закрыл локацию, и ты видишь их отметки.',btn:'Понятно'},
     {sel:'nav [data-tab=more]',skipIfNone:1,t:'Снова «Ещё»',d:'Теперь самое интересное. Открой меню ещё раз!',tap:1},
     {sel:['[data-go=game]','nav [data-tab=game]'],t:'Мой профиль',d:'Здесь живёт твой прогресс: уровень, значки и твой личный питомец. Заходи!',tap:1},
-    {sel:'[data-gt=pet]',t:'Мой питомец',d:'У каждого в Дримвуде есть свой зверёк. Нажми «Мой питомец»!',tap:1},
+    {sel:'[data-gt=pet]',t:'Мой питомец',d:'У каждого в парке Дримвуд есть свой зверёк. Нажми «Мой питомец»!',tap:1},
     {sel:['.petch','.petpv'],t:'Познакомься с питомцем',d:'Нажми на зверька, который тебе нравится: лисёнок, мишка, зайка или дракончик. Потом его можно одеть как угодно: шапки, очки, плащи, цвет шерсти и даже улыбку. Новые вещи приходят за достижения и события парка.',tap:1},
     {sel:'[data-gt=ach]',t:'Достижения',d:'Нажми «Достижения»: тут все твои значки. Новые приходят сами, и я лично прибегу тебя поздравить!',tap:1},
     {sel:'nav [data-tab=more]',skipIfNone:1,t:'Последнее «Ещё»',d:'Осталось включить уведомления. Открой меню!',tap:1},
@@ -102,7 +102,7 @@ function start(){
   function reward(){
     cancelAnimationFrame(rafId);dim.style.clipPath='';ring.hidden=true;fin.hidden=true;bub.hidden=true;ov.querySelector('.thud').hidden=true;
     const conf=Array.from({length:28},(_,k)=>`<i style="left:${(k*37%100)}%;animation-delay:${(k%9)*0.18}s;animation-duration:${2.4+(k%5)*0.4}s">${['🎉','⭐','🎃','🍂','✨','👻','🦇','🎊'][k%8]}</i>`).join('');
-    const win=document.createElement('div');win.className='twin';win.innerHTML=`<div class="tconf">${conf}</div><div class="tcard">${petPic()}<h2>Квест пройден! 🏆</h2><p>Собрано ⭐ <b>${stars}</b> из ${total}. Теперь ты настоящий дримвудовец и знаешь, где что искать. Если что-то забудешь, квест можно пройти ещё раз в «Ещё → Настройки».</p><button class="btn" id="t_fin">Вперёд, в парк!</button></div>`;
+    const win=document.createElement('div');win.className='twin';win.innerHTML=`<div class="tconf">${conf}</div><div class="tcard">${petPic()}<h2>Квест пройден! 🏆</h2><p>Собрано ⭐ <b>${stars}</b> из ${total}. Теперь ты настоящий участник команды Дримвуд и знаешь, где что искать. Если что-то забудешь, квест можно пройти ещё раз в «Ещё → Настройки».</p><button class="btn" id="t_fin">Вперёд, в парк!</button></div>`;
     ov.appendChild(win);win.querySelector('#t_fin').onclick=close;mark();
   }
   rafId=requestAnimationFrame(frame);

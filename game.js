@@ -81,7 +81,7 @@ const GM_ACH=[
  {c:'dark',g:'fun',t:1,ic:'🌙',n:'Тёмная сторона',d:'Включи тёмную тему в настройках',b:10,claim:1},
  {c:'love',g:'fun',t:3,ic:'💌',n:'От старшего спеца с любовью',d:'Нажми на логотип Дримвуд и узнай, кто сделал это приложение. Награда: 500 опыта и 10 билетов',b:500,claim:1,title:'С любовью'},
  // выдаёт руководитель: стандартные обучения (остальное — допуски на аттракционы, события, особые значки)
- {c:'evt:parad',g:'skill',t:4,ic:'🎃',n:'Парад кошмаров',d:'Ты вступил в Парад кошмаров: событие Дримвуда, когда мы все стали дримвудовыми',b:150,man:1,title:'Участник Парада кошмаров'},
+ {c:'evt:parad',g:'skill',t:4,ic:'🎃',n:'Парад кошмаров',d:'Ты вступил в Парад кошмаров: событие парка Дримвуд, когда вся команда стала зверятами',b:150,man:1,title:'Участник Парада кошмаров'},
  {c:'trn:electro',g:'skill',t:4,ic:'⚡',n:'Электробезопасность',d:'Пройдено обучение, значок выдаёт руководитель',b:200,man:1,title:'Электробезопасность'},
  {c:'trn:verkholaz',g:'skill',t:4,ic:'🧗',n:'Верхолаз',d:'Пройдено обучение, значок выдаёт руководитель',b:200,man:1,title:'Верхолаз'},
  {c:'trn:rescue',g:'skill',t:4,ic:'🛟',n:'Спасатель-матрос',d:'Пройдено обучение, значок выдаёт руководитель',b:200,man:1,title:'Спасатель-матрос'},
@@ -474,8 +474,8 @@ function gmPetPopup(tries=0){
   S.gmPetShown=1;try{localStorage.setItem(key,String(n+1));localStorage.setItem(ek,'1')}catch(e){}
   dgxSheet('🎃 Событие',(box,paint,close)=>{
     const has=!!cfg0;
-    box.innerHTML=`<div class="evt"><div class="evb">🦇 🎃 🦇</div><div class="evk">Событие в парке</div><div class="evh">Парад кошмаров</div><div class="evs">Теперь мы — дримвудовые!</div>
-      <div class="evp">${has?'Парад начался, и твой зверёк уже в строю. Загляни в профиль: там можно сменить наряд, причёску, цвет и взгляд.':'В парке начался парад: вся команда превращается в дримвудовых зверят. Выбери себе питомца, того, кто нравится больше всех. Потом его можно одеть и раскрасить как угодно.'}</div>
+    box.innerHTML=`<div class="evt"><div class="evb">🦇 🎃 🦇</div><div class="evk">Событие в парке</div><div class="evh">Парад кошмаров</div><div class="evs">Теперь мы — команда Дримвуд!</div>
+      <div class="evp">${has?'Парад начался, и твой зверёк уже в строю. Загляни в профиль: там можно сменить наряд, причёску, цвет и взгляд.':'В парке начался парад: вся команда превращается в зверят парка Дримвуд. Выбери себе питомца, того, кто нравится больше всех. Потом его можно одеть и раскрасить как угодно.'}</div>
       ${has?`<div style="display:flex;justify-content:center">${gmPet(me,150,{cfg:cfg0,bg:''})}</div><button class="btn" id="ev_go">🐾 К моему питомцу</button>`:gmPetChooser(0,92)}
       <div class="evp" style="font-size:12px;opacity:.8">Новые вещи и рамки приходят за достижения и события парка.</div>
       <button class="btn ghost evx" id="ev_x">${has?'Круто!':'Выберу позже'}</button></div>`;
@@ -517,9 +517,9 @@ function gmParadePopup(tries=0){
   const phase1=()=>{
     ev.innerHTML=`<div class="evtf">${flo}</div><div class="evtc">
       <div class="evtk">С ХЭЛЛОУИНОМ, ${esc(gmFirst()).toUpperCase()}!</div>
-      <h1 class="evtt">Парад кошмаров</h1><div class="evts">Теперь мы — дримвудовые 🎃</div>
+      <h1 class="evtt">Парад кошмаров</h1><div class="evts">Теперь мы — команда Дримвуд 🎃</div>
       <div class="evtpar">${parade}</div>
-      <div class="evtsay"><img src="stickers/mascot-hi.webp" alt="" width="64" height="64"><div class="dsb">Поздравляю с Хэллоуином! В Дримвуде начался Парад кошмаров: теперь все мы дримвудовые, и у каждого есть <b>свой питомец</b>.${has?' Твой уже ждёт тебя в параде!':' Выбери того, с кем зашагаешь в параде!'}</div></div>
+      <div class="evtsay"><img src="stickers/mascot-hi.webp" alt="" width="64" height="64"><div class="dsb">Поздравляю с Хэллоуином! В парке Дримвуд начался Парад кошмаров: теперь все мы одна команда, и у каждого есть <b>свой питомец</b>.${has?' Твой уже ждёт тебя в параде!':' Выбери того, с кем зашагаешь в параде!'}</div></div>
       ${kit}
       ${has?`<div class="evtbig" style="margin-top:2px">${gmPet({},150,{cfg:{...petCfg(me),ha:'h_witch'},vb:[0,-70,320,500],bg:''})}</div><button class="btn evtgo" id="ev_dress">Примерить костюмы 🎃</button><button class="tskip" id="ev_x">Спасибо, потом!</button>`
       :`<div class="petch evtch">${PET_SP.filter(x=>!x[3]||gmHas(gmMe(),x[3])).map(([k,nm])=>`<button class="petc" data-sp="${k}"><span class="petcv">${gmPet({},84,{cfg:{...PET_DEF,sp:k,bc:petBcOf(k)},vb:GM_PETCROP,bg:''})}</span><b>${nm}</b><span class="evtg">${GM_PTAG[k]}</span></button>`).join('')}</div>
@@ -538,7 +538,7 @@ function gmParadePopup(tries=0){
   };
   const phase2=()=>{
     const c=petCfg(gmMe())||{...PET_DEF,sp:pick,bc:petBcOf(pick)};
-    ev.querySelector('.evtc').innerHTML=`<div class="evtk">ТЫ В ПАРАДЕ!</div><h1 class="evtt" style="font-size:30px">Добро пожаловать, дримвудовец</h1>
+    ev.querySelector('.evtc').innerHTML=`<div class="evtk">ТЫ В ПАРАДЕ!</div><h1 class="evtt" style="font-size:30px">Добро пожаловать в команду Дримвуд</h1>
       <div class="evtbig">${gmPet({},180,{cfg:{...c,ha:'h_witch'},vb:[0,-70,320,500],bg:''})}</div>
       <div class="evtsay"><img src="stickers/mascot-hi.webp" alt="" width="64" height="64"><div class="dsb">Ура, ${esc(gmFirst())}! Теперь вы с питомцем в команде. Праздничные костюмы уже открыты: шляпа ведьмы, рожки, тыква и крылья летучей мыши. Примерь их!</div></div>
       <button class="btn evtgo" id="ev_dress">Одеть питомца 🎃</button><button class="tskip" id="ev_x2">Позже</button>`;
