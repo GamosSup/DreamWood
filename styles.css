@@ -923,3 +923,11 @@ html[data-dark="1"][data-theme="winter-cold"] svg.dwl{--lgd:#2B3A8F}html[data-da
 /* v101: плашки значков — всегда тёмный текст на светлом фоне (Хэллоуин/тёмная тема) */
 .bdg,.bdg b,.bdg i{color:#3B2A16}
 .bdg:not(.adm):not(.trn):not(.spc){background:#FFF3DC;border-color:#F0D9A8}
+/* v102: контраст мелкого текста в тёмной/Хэллоуин-темах */
+html[data-dark="1"] .zcard,html[data-dark="1"] .zcard .zb{color:var(--ink)}
+html[data-dark="1"] .zcard .muted,html[data-dark="1"] .zt{color:var(--muted)}
+html[data-dark="1"] .zcard .axis span{color:var(--muted)}
+html[data-dark="1"] .av.ini{color:var(--ink)}
+html[data-dark="1"] .dayph .phh{color:#5A3E30}html[data-dark="1"] .dayph .pht{color:#3B2A35}
+html[data-dark="1"] .wd.we small,html[data-dark="1"] .plr.plo .plb b{color:#FF8E84}
+html[data-dark="1"] .gmt small{color:var(--ink);opacity:.9}
