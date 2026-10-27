@@ -781,3 +781,6 @@ html[data-dark="1"] .alcard.brfcard{background:#3a2f22;color:#f3e6d3}
 .tabs.gmtabs button{flex:none;white-space:nowrap;scroll-snap-align:center;padding:0 14px}
 /* v90: на ПК вкладки профиля переносятся на вторую строку, ничего не прячется за прокруткой */
 @media (min-width:700px){.tabs.gmtabs{flex-wrap:wrap;overflow:visible;margin-left:0;margin-right:0;padding:0}.tabs.gmtabs button{padding:0 16px}}
+/* v91: содержимое окон не сжимается, а прокручивается */
+.sheet .sb>*{flex-shrink:0}
+.shelfc,.gmh{overflow:visible}
