@@ -325,7 +325,7 @@ function avChoose(){
 }
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('.avcam,.gmav');if(b){e.preventDefault();avChoose()}});
 const head=(h,sub)=>`<div class="top"><div class="brand"><img class="lg" src="stickers/logo.webp" alt="Дримвуд"><div class="hi">Привет, ${esc(firstName())}! 👋</div></div><div class="topr"><button class="avb" aria-label="Мой профиль" onclick="go('set')">${av(S.me,40)}</button>${bell()}</div></div>${S.offline?`<div class="banner" style="background:#E6CC8F;color:#3B2A35;font-size:14px">📴 Нет сети — показаны сохранённые данные (от ${new Date(S.offline).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'})}). Менять что-либо пока нельзя.</div>`:''}${sub?`<div class="muted">${sub}</div>`:''}<h1>${h}</h1>`;
-const NI={ach:'🏅',mentor:'🌱',thanks:'💛',news:'📰',rotation:'🔄',afisha:'🎟️',signup:'🧑‍💼',task:'📋',request:'📨',incident:'🚨',shift:'💬',checkin:'☀️',repair:'🛠',feedback:'💡'};
+const NI={brief:'📣',ach:'🏅',mentor:'🌱',thanks:'💛',news:'📰',rotation:'🔄',afisha:'🎟️',signup:'🧑‍💼',task:'📋',request:'📨',incident:'🚨',shift:'💬',checkin:'☀️',repair:'🛠',feedback:'💡'};
 const ago=d=>{const m=Math.round((Date.now()-new Date(d))/6e4);return m<1?'только что':m<60?m+' мин назад':m<1440?Math.floor(m/60)+' ч назад':new Date(d).toLocaleDateString('ru',{day:'numeric',month:'short'})};
 async function openBell(){
   const [n,r,ckq]=await Promise.all([sb.from('notifications').select('*').order('created_at',{ascending:false}).limit(50),sb.from('notif_reads').select('notif_id').eq('user_id',S.me.id),sb.from('checkins').select('day,at').eq('user_id',S.me.id).order('day',{ascending:false}).limit(40)]);

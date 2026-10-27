@@ -33,7 +33,7 @@ async function todayView(){
   const rot=rt.data?.data,mine=rot&&window.myShift?myShift(rot):[],K=mk.data&&KINDS[mk.data.kind];
   const b=S.act||{};
   let h=head('Сегодня',dayLabel(t));
-  h+=alertCard();h+='<div id="pushbn"></div>';
+  h+=alertCard();h+=window.briefCard?briefCard():'';h+=window.briefBox?briefBox():'';h+='<div id="pushbn"></div>';
   {const dj=new Date().getDate()%2===0,tx=dj?dayJoke():dayPhrase();
    h+=`<div class="card pad dayph" id="td_ph" role="button" tabindex="0" aria-label="Ещё один совет"><div style="flex:1;min-width:0"><div class="phh" id="td_pht">${dj?'🌟 Совет Дримми':'✨ Фраза дня'}</div><div class="pht" id="td_phx">${esc(tx)}</div></div><img src="stickers/mascot-hi.webp" alt="" width="64" height="64"></div>`}
   // статус дня
@@ -80,7 +80,7 @@ async function todayView(){
   app.innerHTML=h;
   $('#td_fb').onclick=()=>fbForm();dayNotesBind();
   {const ph=$('#td_ph');if(ph){const next=()=>{const x=$('#td_phx'),cur=x.textContent;const j=dayJoke(cur);$('#td_pht').textContent='🌟 Совет Дримми';x.textContent=j;ph.classList.remove('flip');void ph.offsetWidth;ph.classList.add('flip')};ph.onclick=next;ph.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();next()}}}}
-  $('#td_alert')?.addEventListener('click',alertSheet);window.pushBanner&&pushBanner();
+  $('#td_alert')?.addEventListener('click',alertSheet);$('#td_brief')?.addEventListener('click',()=>briefSheet());window.briefMount&&briefMount();window.pushBanner&&pushBanner();
   app.querySelectorAll('[data-go]').forEach(c=>c.onclick=()=>go(c.dataset.go));
   $('#td_fix').onclick=()=>{go('fix');setTimeout(()=>{if(window.fixForm)fixForm()},350)};
   $('#td_ck')&&($('#td_ck').onclick=async e=>{e.target.disabled=true;const r=await sb.rpc('checkin_confirm');if(r.error){e.target.disabled=false;return alert(r.error.message)}refreshUnread();todayView()});

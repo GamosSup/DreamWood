@@ -572,3 +572,18 @@ html[data-dark="1"] .gnm.n_shine{background-image:linear-gradient(100deg,#E0B84A
 .gmav{display:flex;flex-direction:column;align-items:center;gap:6px;flex:none}
 .gmcam{border:0;border-radius:99px;padding:5px 12px;font-size:12px;font-weight:800;background:var(--ink);color:var(--card);cursor:pointer}
 .gmcam:disabled{opacity:.6}
+/* v65: бриф на сегодня */
+.alcard.brfcard{border-color:#B07A2A;background:#FBF0D8;color:#5A3D0E;margin-top:8px}
+.brf{background:linear-gradient(135deg,#FFF6E0,#FBE3C6);border:2px solid #E6B96B;color:#3B2A35}
+.brh{display:flex;align-items:center;gap:8px;font-size:16px}
+.bri+.bri{border-top:1px dashed #D9B56B;padding-top:10px;margin-top:2px}
+.brm{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:6px}
+.brm .pill{padding:3px 10px;font-size:12px}.brt{background:#C9D4B0}.brt.all{background:#F6D27A}.brl{background:#fff}
+.brb{white-space:pre-wrap;line-height:1.45;font-size:15px}
+.brx{margin-left:auto;border:0;background:none;font-size:16px;opacity:.6;cursor:pointer}
+.brchips{display:flex;flex-wrap:wrap;gap:6px}.brchips .chip{padding:5px 10px;border-radius:99px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);font-size:12.5px;font-weight:700}
+html[data-dark="1"] .brf{background:#3a2f22;color:#f3e6d3;border-color:#8A6A2E}
+html[data-dark="1"] .alcard.brfcard{background:#3a2f22;color:#f3e6d3}
+.brteams{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.brteams button{padding:12px 8px;border-radius:14px;border:2px solid var(--line);background:var(--card);color:var(--ink);font-weight:800;font-size:15px}
+.brteams button.on{background:var(--ink);color:var(--card);border-color:var(--ink)}
