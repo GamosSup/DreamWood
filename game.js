@@ -261,6 +261,7 @@ async function gameView(){
   h+=`<button class="btn ghost" id="gm_set" style="margin-top:-4px">⚙️ Настройки приложения</button>`;
   const tabs=[['ach','🏅 Достижения'],['pet','🐾 Мой питомец'],['gx','🎰 Автомат'],['look','🎨 Мой образ'],['team','👥 Коллеги'],['lv','📈 Уровни'],...(isManager()?[['mng','🎖 Выдать']]:[])];
   h+=`<div class="tabs gmtabs">${tabs.map(([k,n])=>`<button data-gt="${k}" class="${gmTab()===k?'on':''}" style="background:var(--tab)">${n}</button>`).join('')}</div><div id="gm_body"></div>`;
+  setTimeout(()=>{const o=document.querySelector('.gmtabs .on');if(o&&o.scrollIntoView)o.scrollIntoView({inline:'center',block:'nearest'})},0);
   app.innerHTML=h;
   app.querySelectorAll('[data-gt]').forEach(b=>b.onclick=()=>{S.gmTab=b.dataset.gt;app.querySelectorAll('[data-gt]').forEach(x=>x.classList.toggle('on',x===b));gmPaint()});
   $('#gm_set').onclick=()=>go('set');

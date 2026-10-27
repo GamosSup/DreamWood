@@ -775,3 +775,7 @@ html[data-dark="1"] .alcard.brfcard{background:#3a2f22;color:#f3e6d3}
 @keyframes pjump{0%{transform:translateY(0) scale(1)}35%{transform:translateY(-16px) scale(1.04,.96)}60%{transform:translateY(0) scale(.97,1.04)}100%{transform:none}}
 @keyframes pheart{0%{opacity:0;transform:translateY(0) scale(.6)}20%{opacity:1}100%{opacity:0;transform:translateY(-70px) scale(1.2)}}
 @media (prefers-reduced-motion:reduce){.drm.pan .pey,.drm.pan svg{animation:none!important}}
+/* v89: вкладки профиля в одну прокручиваемую строку, не обрезаются */
+.tabs.gmtabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity;margin-left:-4px;margin-right:-4px;padding:2px 4px}
+.tabs.gmtabs::-webkit-scrollbar{display:none}
+.tabs.gmtabs button{flex:none;white-space:nowrap;scroll-snap-align:center;padding:0 14px}
