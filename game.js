@@ -33,7 +33,7 @@ const gmRankSvg=(r,sz=22)=>`<svg viewBox="0 0 32 32" width="${sz}" height="${sz}
 // «Невозможный»: подпись вместо числа
 const gmLvChip=(row,big)=>{
   if(!row)return '';
-  if(row.lvl_text)return `<span class="lvx${/^последний$/i.test(row.lvl_text.trim())?' lvz':/^супер/i.test(row.lvl_text.trim())?' lvs':''}${big?' big':''}" title="Уровень: ${esc(row.lvl_text)}">${esc(row.lvl_text)}</span>`;
+  if(row.lvl_text)return `<span class="lvx${/^последний$/i.test(row.lvl_text.trim())?' lvz':/^супер/i.test(row.lvl_text.trim())?' lvs':(/^невозможный$/i.test(row.lvl_text.trim())?'':' lvg')}${/любов/i.test(row.lvl_text)?' lvh':''}${big?' big':''}" title="Уровень: ${esc(row.lvl_text)}">${esc(row.lvl_text)}</span>`;
   const L=gmLv(row.xp);
   return `<span class="lvb${big?' big':''}" style="--rc:${GM_RANKS[L.r].c}" title="${esc(GM_RANKS[L.r].full)} · уровень ${L.n}">${gmRankSvg(L.r,big?30:20)}<b>${L.n}</b></span>`;
 };

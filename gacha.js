@@ -167,6 +167,7 @@ async function gmGachaTab(box){
   let inf;try{inf=await gxInfo()}catch(e){
     box.innerHTML=`<div class="card pad col"><b>Автомат ещё не подключён 🎰</b><div class="muted">${/does not exist|function|schema|gacha/i.test(String(e.message||e))?'В базе нужно один раз запустить обновление. Админ знает.':esc(e.message||e)}</div></div>`;return;
   }
+  try{if(typeof ensurePeople==='function')await ensurePeople()}catch(e){}
   const rows=GXI.length,have=GXI.filter(x=>gxOwn(x[0])).length;
   const paint=()=>{
     const byR=[1,2,3,4,5,6].map(r=>({r,L:GXI.filter(x=>x[1]===r)}));
@@ -177,12 +178,31 @@ async function gmGachaTab(box){
      ${(inf.gold||0)>0?`<button class="btn gxgold" id="gx_gold">🏅 Золотая крутка · 1 🏅</button><div class="muted" style="text-align:center">Золотая: эпическая 45%, мифическая 30%, легендарная 24%, тайна 1%.</div>`:''}
      <div class="muted" style="text-align:center">Гарантия редкого или выше: через <b>${left}</b> ${((x)=>x%10===1&&x!==11?'крутку':x%10>=2&&x%10<=4&&(x<12||x>14)?'крутки':'круток')(left)}.</div></div>
     <div class="card pad col"><b>Ежедневная награда</b>${gxCells(inf.streak||0,inf.claimed)}<div class="muted">${inf.claimed?'Сегодняшняя награда получена. Приходи завтра!':'Заходи в приложение каждый день и получай билеты.'} На 7-й день подряд будет золотой билет. Пропустишь день: серия начнётся заново.${inf.streak?` Сейчас серия: <b>${inf.streak}</b>.`:''}</div></div>
+    <div class="card pad col"><b>Передать билеты коллеге</b><div class="muted">Можно подарить свои билеты для круток. Золотые не передаются.</div>
+     <select id="gx_to"><option value="">— кому —</option>${(S.dg&&S.dg.people||[]).filter(p=>p.id!==S.me.id).slice().sort((a,b)=>String(a.full_name).localeCompare(String(b.full_name),'ru')).map(p=>`<option value="${p.id}">${esc(p.full_name)}</option>`).join('')}</select>
+     <div class="two"><input id="gx_n" type="number" min="1" max="${Math.max(1,inf.tickets)}" value="1" inputmode="numeric" aria-label="Сколько билетов"><button class="btn" id="gx_give" ${inf.tickets>0?'':'disabled'}>Передать</button></div><div class="err" id="gx_ge"></div>
+     ${(inf.gifts&&inf.gifts.length)?`<div class="muted">${inf.gifts.map(g=>g.in?`🎁 ${esc(g.from||'Коллега')} передал(а) тебе ${g.n} 🎟`:`➡️ Ты передал(а) ${esc(g.to||'коллеге')} ${g.n} 🎟`).join('<br>')}</div>`:''}</div>
     ${(inf.recent&&inf.recent.length)?`<div class="card pad col"><b>Последние выпадения</b><div class="gxrec">${inf.recent.map(x=>`<div class="gxrc" title="${esc((GX_BY[x.code]||{}).n||'')}"><i class="gxdot" style="background:${gxRc(x.rarity)}"></i><span>${gxPrev(x.code,46)}</span>${x.dup?'<small>дубль</small>':''}${x.gold?'<small>🏅</small>':''}</div>`).join('')}</div></div>`:''}
     <div class="card pad col"><b>Как получить билеты</b><div class="muted">Один билет за каждое полученное достижение и по одному за каждые полчаса доработки или переработки. Ещё билеты дают ежедневные награды. Билеты за всё, что уже есть, засчитаны сами.</div></div>
     <div class="card pad col"><b>Шансы</b><div class="gxodds">${byR.map(({r,L})=>`<div class="otr"><span><i class="gxdot" style="background:${gxRc(r)}"></i> ${GX_R[r][0]}</span><span><b>${gxPct(r)}</b> · ${L.filter(x=>gxOwn(x[0])).length}/${L.length}</span></div>`).join('')}</div><div class="muted">Если выпал дубль, часть билетов возвращается: редкая и эпическая +1, мифическая +2, легендарная +3, тайна +5. Обычные дубли ничего не возвращают.</div></div>
     <div class="card pad col"><b>Коллекция · ${have} из ${rows}</b><div class="muted">Нажми на вещь, которая у тебя есть, чтобы надеть.</div></div>
     ${byR.map(({r,L})=>`<details class="area gmg" ${r<=2?'open':''}><summary class="ah" style="background:var(--tab)"><span class="ahn"><i class="gxdot" style="background:${gxRc(r)}"></i> ${GX_R[r][0]}</span><span class="pill" style="background:#FFFDF9;align-self:center">${L.filter(x=>gxOwn(x[0])).length} / ${L.length}</span></summary><div class="gops" style="padding:8px">${L.map(([id,,k,n])=>{const ow=gxOwn(id),secret=r===6;return `<button class="gop gxit${ow?'':' lk'}" data-i="${id}"><span class="gopv">${ow?gxPrev(id,78):'<span style="font-size:30px;opacity:.5">?</span>'}</span><span class="gopn">${ow||!secret?esc(n):'???'}</span>${ow?'':'<span class="gopl">пока нет</span>'}</button>`}).join('')}</div></details>`).join('')}`;
     box.querySelector('#gx_pull').onclick=()=>pull(false);
+    const gv=box.querySelector('#gx_give');
+    if(gv)gv.onclick=async()=>{
+      const to=box.querySelector('#gx_to').value,n=parseInt(box.querySelector('#gx_n').value,10),er=box.querySelector('#gx_ge');
+      if(!to)return er.textContent='Выбери, кому передать';
+      if(!(n>=1))return er.textContent='Укажи число билетов';
+      if(n>inf.tickets)return er.textContent='У тебя только '+inf.tickets;
+      const who=box.querySelector('#gx_to').selectedOptions[0].textContent;
+      if(!confirm(`Передать ${n} билетов: ${who}?`))return;
+      gv.disabled=true;er.textContent='';
+      const r=await sb.rpc('gacha_gift',{p_to:to,p_n:n,p_req:gxReq()});
+      if(r.error){gv.disabled=false;return er.textContent=r.error.message}
+      toast(`Передано ${n} 🎟: ${who}`,2600);
+      try{inf=await gxInfo()}catch(e){inf={...inf,tickets:r.data.tickets}}
+      const hd=document.getElementById('gx_hdr');if(hd)hd.textContent=inf.tickets;paint();
+    };
     const g=box.querySelector('#gx_gold');if(g)g.onclick=()=>pull(true);
     box.querySelectorAll('.gxit').forEach(b=>b.onclick=async()=>{
       const id=b.dataset.i;

@@ -701,3 +701,10 @@ html[data-dark="1"] .alcard.brfcard{background:#3a2f22;color:#f3e6d3}
 @keyframes lvsp{0%,100%{box-shadow:0 0 8px 2px rgba(255,79,154,.75),0 0 16px 4px rgba(255,179,71,.55)}50%{box-shadow:0 0 14px 4px rgba(255,224,102,.95),0 0 26px 8px rgba(255,138,208,.7)}}
 @media(prefers-reduced-motion:reduce){.lvx.lvs,.lvx.lvs::before,.lvx.lvs::after{animation:none}}
 .lvx{white-space:nowrap}
+
+/* v78: светящиеся подписи уровня (кроме «Невозможный», «Последний», «супер…») и передача билетов */
+.lvx.lvg{position:relative;border:1.5px solid rgba(255,255,255,.85);text-shadow:0 0 6px rgba(255,255,255,.9),0 1px 2px rgba(0,0,0,.45);animation:gmrb 3.2s linear infinite,lvgp 1.8s ease-in-out infinite}
+@keyframes lvgp{0%,100%{box-shadow:0 0 8px 1px rgba(255,94,126,.75),0 0 16px 3px rgba(255,179,71,.5)}50%{box-shadow:0 0 14px 4px rgba(176,124,255,.85),0 0 26px 8px rgba(82,167,255,.55)}}
+.lvx.lvh::after{content:'♥';position:absolute;right:-6px;top:-8px;font-size:12px;color:#fff;text-shadow:0 0 6px #FF5E7E,0 0 12px #FF5E7E;animation:lvzs 1.6s ease-in-out infinite}
+@media(prefers-reduced-motion:reduce){.lvx.lvg,.lvx.lvh::after{animation:none}}
+#gx_n{min-width:0}
