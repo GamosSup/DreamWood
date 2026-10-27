@@ -416,7 +416,7 @@ function gmPetHead(row,sz){
 const gmPetSw=v=>(typeof PET_GRAD!=='undefined'&&PET_GRAD[v])?`linear-gradient(135deg,${PET_GRAD[v].s.join(',')})`:v==='gold'?'linear-gradient(135deg,#FFF0B0,#EDBE46 50%,#B8821C)':v==='rainbow'?'linear-gradient(135deg,#FF6B8B,#FFB347,#7BDB8A,#52A7FF,#B07CFF)':v==='night'?'radial-gradient(circle at 35% 30%,#4C5CC8,#1B2262)':v;
 async function gmPetSave(cfg){return gmSaveCos({pet:petEnc(cfg)})}
 function gmPetChooser(onPick,sz=104){
-  return `<div class="petch">${PET_SP.map(([k,n,c])=>`<button class="petc" data-sp="${k}"><span class="petcv">${gmPet({},sz,{cfg:{...PET_DEF,sp:k,bc:petBcOf(k)},vb:GM_PETCROP,bg:''})}</span><b>${n}</b></button>`).join('')}</div>`;
+  return `<div class="petch">${PET_SP.filter(x=>!x[3]||gmHas(gmMe(),x[3])).map(([k,n,c])=>`<button class="petc" data-sp="${k}"><span class="petcv">${gmPet({},sz,{cfg:{...PET_DEF,sp:k,bc:petBcOf(k)},vb:GM_PETCROP,bg:''})}</span><b>${n}</b></button>`).join('')}</div>`;
 }
 function gmPetTab(box){
   const me=gmMe();
@@ -476,7 +476,7 @@ const GM_PCOS=[
  {sp:'bear',ha:'h_pumpkin',mo:'m_g',ex:'x_o'},
  {sp:'bunny',ha:'h_horns',mo:'m_t',bk:'b_bat',ex:'x_w'},
  {sp:'dragon',bk:'b_bat',ha:'h_crown',gl:'g_sun',mo:'m_g'}];
-const GM_PTAG={fox:'хитрый и шустрый',bear:'добряк и силач',bunny:'ловкая и быстрая',dragon:'огнедышащий, но добрый'};
+const GM_PTAG={fox:'хитрый и шустрый',bear:'добряк и силач',bunny:'ловкая и быстрая',dragon:'огнедышащий, но добрый',unicorn:'приручить его смогли только супервайзеры; любит кофе, наушники и музыку'};
 function gmPopups(){if(gmParadeOn())gmParadePopup();else gmPetPopup()}
 // приветственное окно ивента: у всех при первом заходе после обновления (новички видят его сразу после обучения)
 function gmParadePopup(tries=0){
@@ -503,7 +503,7 @@ function gmParadePopup(tries=0){
       <div class="evtsay"><img src="stickers/mascot-hi.webp" alt="" width="64" height="64"><div class="dsb">Поздравляю с Хэллоуином! В Дримвуде начался Парад кошмаров: теперь все мы дримвудовые, и у каждого есть <b>свой питомец</b>.${has?' Твой уже ждёт тебя в параде!':' Выбери того, с кем зашагаешь в параде!'}</div></div>
       ${kit}
       ${has?`<div class="evtbig" style="margin-top:2px">${gmPet({},150,{cfg:{...petCfg(me),ha:'h_witch'},vb:[0,-70,320,500],bg:''})}</div><button class="btn evtgo" id="ev_dress">Примерить костюмы 🎃</button><button class="tskip" id="ev_x">Спасибо, потом!</button>`
-      :`<div class="petch evtch">${PET_SP.map(([k,nm])=>`<button class="petc" data-sp="${k}"><span class="petcv">${gmPet({},84,{cfg:{...PET_DEF,sp:k,bc:petBcOf(k)},vb:GM_PETCROP,bg:''})}</span><b>${nm}</b><span class="evtg">${GM_PTAG[k]}</span></button>`).join('')}</div>
+      :`<div class="petch evtch">${PET_SP.filter(x=>!x[3]||gmHas(gmMe(),x[3])).map(([k,nm])=>`<button class="petc" data-sp="${k}"><span class="petcv">${gmPet({},84,{cfg:{...PET_DEF,sp:k,bc:petBcOf(k)},vb:GM_PETCROP,bg:''})}</span><b>${nm}</b><span class="evtg">${GM_PTAG[k]}</span></button>`).join('')}</div>
       <button class="btn evtgo" id="ev_go" disabled>Выбери питомца</button><button class="tskip" id="ev_x">Выберу позже</button>`}
       </div>`;
     ev.querySelector('#ev_x').onclick=close;

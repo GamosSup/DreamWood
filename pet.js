@@ -38,7 +38,7 @@ const petDec=s=>{const c={...PET_DEF};String(s||'').split(';').forEach(p=>{const
 // конфигурация человека с проверкой, что вещи у него открыты
 function petCfg(row){
   const c=petDec(row?.cos?.pet),o={...PET_DEF};
-  if(!PET_SP.some(x=>x[0]===c.sp))return null;
+  if(!PET_SP.some(x=>x[0]===c.sp&&(!x[3]||gmHas(row,x[3]))))return null;
   o.sp=c.sp;
   PET_G.forEach(([k,,L])=>{const it=L.find(x=>x[0]===c[k]);if(it&&gmHas(row,it[2]))o[k]=it[0]});
   if(!o.bc)o.bc=PET_BC.find(x=>x[3]===PET_SP.find(s=>s[0]===o.sp)[2])?.[0]||'c_or';
@@ -102,6 +102,7 @@ function petEars(sp,F,D,inn){
   const st=`fill="${F}" stroke="${D}" stroke-width="3.2" stroke-linejoin="round"`;
   if(sp==='fox')return m(`<path d="M70 124L38 4L140 72Z" ${st}/><path d="M74 104L56 38L116 76Z" fill="${inn}"/>`);
   if(sp==='bear')return m(`<circle cx="88" cy="84" r="40" ${st}/><circle cx="88" cy="86" r="22" fill="${inn}"/>`);
+  if(sp==='unicorn')return m(`<path d="M66 122L48 50L118 92Z" ${st}/><path d="M72 108L60 66L102 92Z" fill="${inn}"/>`)+`<path d="M144 84L160 -30L176 84Z" fill="#F6C945" stroke="#9A6D0A" stroke-width="3.2" stroke-linejoin="round"/><path d="M148 62L172 52M150 44L170 34M152 26L168 18M146 80L174 70" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".85"/>`;
   if(sp==='bunny')return m(`<ellipse cx="106" cy="14" rx="28" ry="64" transform="rotate(-12 106 14)" ${st}/><ellipse cx="106" cy="20" rx="14" ry="46" transform="rotate(-12 106 20)" fill="${inn}"/>`);
   return m(`<path d="M64 120L8 96L42 152Z" ${st}/><path d="M112 78L98 12L146 66Z" fill="#F5E6B3" stroke="${D}" stroke-width="3.2" stroke-linejoin="round"/>`);
 }
@@ -110,10 +111,12 @@ function petTail(sp,F,D,bellyc){
   if(sp==='fox')return `<path d="M112 394Q8 414 8 300Q8 238 58 232Q40 290 78 332Q98 352 130 352Z" ${st}/><path d="M8 300Q8 240 58 232Q42 262 48 286Q24 284 8 300Z" fill="#FFF6E8" stroke="${D}" stroke-width="2"/>`;
   if(sp==='bear')return `<circle cx="96" cy="392" r="22" ${st}/>`;
   if(sp==='bunny')return `<circle cx="94" cy="394" r="25" fill="#fff" stroke="${D}" stroke-width="3"/>`;
+  if(sp==='unicorn')return ['#FF5E7E','#FFB347','#FFE45E','#4FC98F','#52A7FF','#B07CFF'].map((c,i)=>`<path d="M112 396Q${40-i*3} ${410+i*4} ${34-i*2} ${340-i*4}Q${28-i*2} ${300-i*3} ${60-i*2} ${280+i*3}" fill="none" stroke="${c}" stroke-width="${30-i*4.4}" stroke-linecap="round"/>`).join('');
   return `<path d="M112 392Q32 406 24 336Q20 302 46 292" fill="none" stroke="${D}" stroke-width="32" stroke-linecap="round"/><path d="M112 392Q32 406 24 336Q20 302 46 292" fill="none" stroke="${F}" stroke-width="25" stroke-linecap="round"/><path d="M46 292L20 268L70 274Z" fill="#F5E6B3" stroke="${D}" stroke-width="3" stroke-linejoin="round"/>`;
 }
 function petBack(b,sp,F,D,W){
   let o='';
+  if(sp==='unicorn'){const mn=['#FF5E7E','#FFB347','#FFE45E','#4FC98F','#52A7FF','#B07CFF'].map((c,i)=>{const w=`<path d="M${96-i*3} ${96+i*6}Q${20-i*4} ${150+i*8} ${40-i*2} ${260+i*4}Q${60-i*2} ${310+i*2} ${112-i*4} ${300-i*6}" fill="none" stroke="${c}" stroke-width="${26-i*3.6}" stroke-linecap="round"/>`;return `<g>${w}</g><g transform="translate(320 0) scale(-1 1)">${w}</g>`}).join('');o+=mn}
   if(sp==='dragon'){const w=`<path d="M100 262Q4 236 12 150Q56 176 96 236Z" fill="${W}" stroke="${D}" stroke-width="3.2" stroke-linejoin="round"/><path d="M60 218Q40 196 30 170" stroke="${D}" stroke-width="2.4" fill="none"/>`;o+=`<g>${w}</g><g transform="translate(320 0) scale(-1 1)">${w}</g>`}
   if(b==='b_bat'){const w=`<path d="M104 268Q-10 238 4 146Q34 178 52 160Q70 194 98 178Q100 214 108 246Z" fill="#3A2A55" stroke="#150A28" stroke-width="3.2" stroke-linejoin="round"/><path d="M52 160Q58 196 76 214M98 178Q92 204 96 230" stroke="#150A28" stroke-width="2.4" fill="none"/>`;o+=`<g>${w}</g><g transform="translate(320 0) scale(-1 1)">${w}</g>`}
   if(b==='b_cape')o+=`<path d="M100 236Q36 330 56 424Q160 446 264 424Q284 330 220 236Z" fill="#E5484D" stroke="#8E2222" stroke-width="3.2" stroke-linejoin="round"/><path d="M100 236Q70 340 80 420Q160 436 240 420Q250 340 220 236" fill="none" stroke="#B83232" stroke-width="3" opacity=".6"/>`;
@@ -182,6 +185,7 @@ function petSvg(c,opt={}){
   if(c.pt==='p_d'){const sp2=pMix(baseHex,'#ffffff',.42);pat=[[150,80,6],[176,88,8],[128,92,5],[212,94,5],[118,284,9],[204,292,11],[134,372,8],[190,366,6],[222,330,7]].map(([x,y,r])=>`<circle cx="${x}" cy="${y}" r="${r}" fill="${sp2}" opacity=".85"/>`).join('')}
   if(c.pt==='p_z')pat=`<path d="M142 68Q140 90 146 104M160 62V98M178 68Q180 90 174 104" stroke="${D}" stroke-width="7" fill="none" stroke-linecap="round" opacity=".75"/><path d="M98 290Q118 296 124 316M96 330Q116 334 122 352M222 290Q202 296 196 316M224 330Q204 334 198 352" stroke="${D}" stroke-width="7" fill="none" stroke-linecap="round" opacity=".6"/>`;
   if(bcv==='night'||bcv==='galaxy')pat+=[[100,90,3],[220,80,2.5],[84,230,2.5],[250,150,3],[120,300,3],[206,280,2.5],[150,380,3],[186,358,2],[70,150,2.5],[236,112,2]].map(([x,y,r])=>`<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" opacity=".9"/>`).join('');
+  if(sp==='unicorn')pat+=`<rect x="112" y="316" width="96" height="34" rx="12" fill="#fff" stroke="#8E5FE0" stroke-width="3.4"/><text x="160" y="340" text-anchor="middle" font-family="Manrope,Arial,sans-serif" font-weight="800" font-size="21" fill="#8E5FE0" letter-spacing="1">МЕДИА</text>`;
   const hand=petHandItem(c.hd).replace('PETP',id+'p');
   const vb=opt.vb||PET_VB,sz=opt.sz||160;
   const body=`<defs>${petDefs(id,solid?bcv:bcv,hcv,ecv)}</defs>`+

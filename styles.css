@@ -656,7 +656,7 @@ html[data-dark="1"] .alcard.brfcard{background:#3a2f22;color:#f3e6d3}
 .gxdup{font-size:14px}
 .gxbt{display:flex;flex-direction:column;gap:8px;width:100%;margin-top:8px}
 .gxres.r6{box-shadow:0 0 0 4px #fff,0 0 0 8px #B07CFF,0 0 50px #FFB347}
-@media(prefers-reduced-motion:reduce){.f_lava::after,.f_sak::after,.f_royal::after,.f_rainbow::after,.f_neon::after,.f_circuit::after,.f_pixel::after,.gnm.n_aur,.gnm.n_royal,.pgh svg,.pgs svg,.cmw,#gx_m .gxb,#gx_m.spin,#gx_m.spin #gx_cr,#gx_m.spin .gxb{animation:none}}
+@media(prefers-reduced-motion:reduce){.f_orbit::after,.f_plasma::after,.f_quasar::after,.f_gelato::after,.f_masha::after,.f_kris::after,.gnm.n_nova,.gnm.n_stellar,.gnm.n_masha,.f_lava::after,.f_sak::after,.f_royal::after,.f_rainbow::after,.f_neon::after,.f_circuit::after,.f_pixel::after,.gnm.n_aur,.gnm.n_royal,.pgh svg,.pgs svg,.cmw,#gx_m .gxb,#gx_m.spin,#gx_m.spin #gx_cr,#gx_m.spin .gxb{animation:none}}
 /* v71: пункты чек-листа с числом и «работают / не работают» — аккуратно на телефоне */
 .shv{display:flex;flex-direction:column;gap:10px;padding:12px 0;border-top:1px solid #0001}
 .shvt{font-weight:800;font-size:16px}
@@ -718,3 +718,34 @@ html[data-dark="1"] .alcard.brfcard{background:#3a2f22;color:#f3e6d3}
 .lvx.lvz::after{content:'✦ ✦';right:-14px;top:-12px;font-size:14px;letter-spacing:6px;text-shadow:0 0 8px #FFD23F,0 0 16px #FF2E63,0 0 26px #2EA8FF}
 @keyframes lvzp2{0%,100%{box-shadow:0 0 12px 4px rgba(255,46,99,.95),0 0 28px 10px rgba(180,85,255,.8),0 0 46px 16px rgba(46,168,255,.45);transform:scale(1)}50%{box-shadow:0 0 18px 7px rgba(255,210,63,1),0 0 40px 16px rgba(46,255,176,.75),0 0 64px 24px rgba(255,46,99,.5);transform:scale(1.05)}}
 @media(prefers-reduced-motion:reduce){.lvx.lvz,.lvx.lvz::before,.lvx.lvz::after{animation:none}}
+
+/* ===== v83: волна 1 автомата (космос и еда) и личные наборы ===== */
+.f_latte{--fr:conic-gradient(#F3E2C7,#C9A27A,#fff,#C9A27A,#F3E2C7)}
+.f_mars{--fr:conic-gradient(#E5603A,#8E2B14,#E5603A)}
+.f_star{--fr:repeating-conic-gradient(#FFE27A 0 12deg,#3B2F8F 12deg 36deg);filter:drop-shadow(0 0 4px rgba(255,226,122,.7))}
+.f_choc{--fr:conic-gradient(#6B4130,#A8744A,#3A2512,#A8744A,#6B4130)}
+.f_orbit{--fr:conic-gradient(#7AD0FF,#2B3A9F,#B07CFF,#2B3A9F,#7AD0FF);filter:drop-shadow(0 0 5px rgba(122,208,255,.7))}
+.f_espresso{--fr:conic-gradient(#2B1B12,#7B4A2E,#F3E2C7,#7B4A2E,#2B1B12);filter:drop-shadow(0 0 4px rgba(123,74,46,.7))}
+.f_plasma{--fr:conic-gradient(#FF2DAA,#7B2DFF,#2DE2FF,#7B2DFF,#FF2DAA);filter:drop-shadow(0 0 7px rgba(123,45,255,.85))}
+.f_gelato{--fr:conic-gradient(#FFB3D5,#FFF0B0,#9EE7FF,#C9B3FF,#FFB3D5);filter:drop-shadow(0 0 5px rgba(255,179,213,.8))}
+.f_quasar{--fr:conic-gradient(#fff,#FFE27A,#FF4E8B,#6C2BD9,#04051C,#6C2BD9,#FF4E8B,#FFE27A,#fff);filter:drop-shadow(0 0 8px rgba(255,226,122,.9))}
+.f_masha{--fr:conic-gradient(#5A3522,#C98A58,#FFC4D6,#FFE9A8,#C98A58,#5A3522);filter:drop-shadow(0 0 7px rgba(255,196,214,.9))}
+.f_kris{--fr:conic-gradient(#2DE2FF,#FF2DAA,#FFE45E,#FF2DAA,#2DE2FF);filter:drop-shadow(0 0 8px rgba(45,226,255,.9))}
+.f_orbit::after,.f_plasma::after,.f_quasar::after,.f_gelato::after,.f_masha::after,.f_kris::after{animation:gmspin 6s linear infinite}
+.gnm.n_latten{color:#9B6B3F;font-weight:800}.gnm.n_matchan{color:#5E8F2F;font-weight:800}.gnm.n_marsn{color:#D9532A;font-weight:800}.gnm.n_ink{color:#23224F;font-weight:800}
+.gnm.n_cometn{background:linear-gradient(100deg,#52A7FF,#B07CFF);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;font-weight:800}
+.gnm.n_caramel{background:linear-gradient(100deg,#B8741E,#F2B544);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;font-weight:800}
+.gnm.n_nova{background:linear-gradient(100deg,#FF4E8B,#FFB347,#FFE27A,#FF4E8B);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;font-weight:800;animation:gmrb 5s linear infinite}
+.gnm.n_hyper{color:#fff;font-weight:800;text-shadow:0 0 4px #7B2DFF,0 0 10px #2DE2FF,0 0 16px #7B2DFF}
+.gnm.n_stellar{background:linear-gradient(100deg,#FFF7C2,#FFB347,#FF4E8B,#B07CFF,#FFF7C2);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;font-weight:800;animation:gmrb 4s linear infinite;filter:drop-shadow(0 0 3px rgba(255,226,122,.8))}
+.gnm.n_masha{background:linear-gradient(100deg,#8A5A3C,#FF9ECD,#FFE9A8,#8A5A3C);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;font-weight:800;animation:gmrb 5s linear infinite}
+.gnm.n_kris{color:#fff;font-weight:800;text-shadow:0 0 4px #2DE2FF,0 0 10px #FF2DAA,0 0 16px #2DE2FF}
+.bg_latte{--bgv:linear-gradient(135deg,#FFF4E3,#E6C9A5)}
+.bg_dusk{--bgv:linear-gradient(160deg,#2B3A8F,#B06CC4 60%,#FFB38A)}
+.bg_marsb{--bgv:radial-gradient(circle at 70% 30%,#FFB38A 0 8%,transparent 9%),linear-gradient(160deg,#8E2B14,#E5603A)}
+.bg_cream{--bgv:linear-gradient(135deg,#FFFDF3,#FFE9C4)}
+.bg_cafe{--bgv:repeating-linear-gradient(45deg,rgba(255,255,255,.12) 0 6px,transparent 6px 12px),linear-gradient(135deg,#6B4130,#C9A27A)}
+.bg_nebula{--bgv:radial-gradient(circle at 30% 35%,rgba(255,122,200,.8),transparent 55%),radial-gradient(circle at 70% 70%,rgba(82,167,255,.7),transparent 55%),linear-gradient(135deg,#0B0B2E,#2B1B5E)}
+.bg_event{--bgv:radial-gradient(circle at 50% 50%,#000 0 22%,#FFB347 26%,#FF4E8B 40%,#2B1B5E 70%,#04051C)}
+.bg_masha{--bgv:linear-gradient(135deg,#5A3522,#C98A58 45%,#FFC4D6 75%,#FFE9A8)}
+.bg_kris{--bgv:repeating-linear-gradient(0deg,rgba(45,226,255,.3) 0 1px,transparent 1px 9px),linear-gradient(135deg,#0B1030,#7B2DFF 60%,#FF2DAA)}
