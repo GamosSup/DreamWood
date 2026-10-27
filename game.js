@@ -233,6 +233,7 @@ function gmHero(row){
     <div class="gmn">${gmName(S.me.full_name||'',row,{lv:false})}</div>${gmTitleHtml(row)}
     <div style="margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">${gmLvChip(row,true)}${row.lvl_text?'':`<span><b>${esc(GM_RANKS[L.r].full)}</b><br><span class="muted">Уровень ${L.n} из 50</span></span>`}</div></div><div class="gmhp">${gmPetHead(row,62)}</div></div>
     <div class="gmcnt"><span>🏅 Достижений: <b>${gmRealN(row)}</b> из ${gmCatTotal(row)}</span><span>🎰 Билетов: <b id="gx_hdr">${typeof gxS!=='undefined'&&gxS.info?gxS.info.tickets:'…'}</b></span></div>
+    ${gmShelf(row,{own:1})}
     ${row.lvl_text?`<div class="muted" style="margin-top:8px">Всего очков: <b>${row.xp}</b></div>`:`<div class="pgb" style="margin-top:12px"><div class="pg" style="width:${L.pct}%"></div></div><div class="muted" style="margin-top:6px">${row.xp} очков${L.hi?` · до уровня ${L.n+1} осталось <b>${L.left}</b>`:' · максимальный уровень, ты легенда'}</div>`}</div>`;
 }
 async function gameView(){
@@ -247,7 +248,7 @@ async function gameView(){
   if(!S.gmTab&&!petCfg(me))S.gmTab='pet';
   h+=gmHero(me);
   h+=`<button class="btn ghost" id="gm_set" style="margin-top:-4px">⚙️ Настройки приложения</button>`;
-  const tabs=[['ach','🏅 Достижения'],['pet','🐾 Мой питомец'],['gx','🎰 Автомат'],['look','🎨 Мой образ'],['lv','📈 Уровни'],...(isManager()?[['mng','🎖 Выдать']]:[])];
+  const tabs=[['ach','🏅 Достижения'],['pet','🐾 Мой питомец'],['gx','🎰 Автомат'],['look','🎨 Мой образ'],['team','👥 Коллеги'],['lv','📈 Уровни'],...(isManager()?[['mng','🎖 Выдать']]:[])];
   h+=`<div class="tabs gmtabs">${tabs.map(([k,n])=>`<button data-gt="${k}" class="${gmTab()===k?'on':''}" style="background:var(--tab)">${n}</button>`).join('')}</div><div id="gm_body"></div>`;
   app.innerHTML=h;
   app.querySelectorAll('[data-gt]').forEach(b=>b.onclick=()=>{S.gmTab=b.dataset.gt;app.querySelectorAll('[data-gt]').forEach(x=>x.classList.toggle('on',x===b));gmPaint()});
@@ -257,7 +258,7 @@ async function gameView(){
 }
 async function gmPaint(){
   const box=$('#gm_body');if(!box)return;const t=gmTab();
-  if(t==='ach')await gmAchTab(box);else if(t==='pet')gmPetTab(box);else if(t==='look')gmLookTab(box);else if(t==='lv')gmLvTab(box);else if(t==='gx')await gmGachaTab(box);else gmMngTab(box);
+  if(t==='ach')await gmAchTab(box);else if(t==='pet')gmPetTab(box);else if(t==='look')gmLookTab(box);else if(t==='lv')gmLvTab(box);else if(t==='gx')await gmGachaTab(box);else if(t==='team')gmTeamTab(box);else gmMngTab(box);
 }
 
 // --- достижения ---

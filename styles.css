@@ -749,3 +749,10 @@ html[data-dark="1"] .alcard.brfcard{background:#3a2f22;color:#f3e6d3}
 .bg_event{--bgv:radial-gradient(circle at 50% 50%,#000 0 22%,#FFB347 26%,#FF4E8B 40%,#2B1B5E 70%,#04051C)}
 .bg_masha{--bgv:linear-gradient(135deg,#5A3522,#C98A58 45%,#FFC4D6 75%,#FFE9A8)}
 .bg_kris{--bgv:repeating-linear-gradient(0deg,rgba(45,226,255,.3) 0 1px,transparent 1px 9px),linear-gradient(135deg,#0B1030,#7B2DFF 60%,#FF2DAA)}
+/* ===== профили коллег и витрина значков ===== */
+.shelf{margin-top:12px}.shl{font-weight:800;margin-bottom:6px}
+.bdgs{display:flex;flex-wrap:wrap;gap:6px}
+.bdg{display:inline-flex;align-items:center;gap:6px;padding:5px 10px 5px 6px;border-radius:999px;background:var(--tab,#FFF3DC);border:1.5px solid var(--line);font-size:13px;line-height:1.2}
+.bdg i{font-style:normal;display:inline-flex}.bdg b{font-weight:700}
+.bdg.adm{background:#E8F6EC;border-color:#9FD5AE}.bdg.trn{background:#E6F0FF;border-color:#9DBDF0}.bdg.spc{background:#FFF1D6;border-color:#F0C46B}
+.tmr{display:flex;align-items:center;gap:12px;text-align:left;width:100%;cursor:pointer;color:var(--ink)}.tmn{display:flex;flex-direction:column;gap:2px;min-width:0}
