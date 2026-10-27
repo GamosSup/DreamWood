@@ -109,7 +109,7 @@ Object.assign(PET_BX,{
 // ---------- единорог «Медиа» и личные наборы супервайзеров ----------
 PET_SP.push(['unicorn','Единорог «Медиа»','#F1E6FB','spec:media']);
 PET_SP.push(['potato','Картофелина','#C99A5B','spec:pet_potato'],['leopard','Леопард','#E8B04A','spec:pet_leopard']);
-PET_BC.push(['c_unicorn','Единорожья',null,'#F1E6FB'],['c_potato','Картофельная',null,'#C99A5B'],['c_leopard','Леопардовая',null,'#E8B04A']);
+PET_BC.push(['c_unicorn','Единорожья','spec:media','#F1E6FB'],['c_potato','Картофельная','spec:pet_potato','#C99A5B'],['c_leopard','Леопардовая','spec:pet_leopard','#E8B04A']);
 const GXP=[ // личные вещи: [код, вид, название, нужный значок, значение]
  ['c_masha','bc','Кофейный рассвет','spec:skin_masha','masha'],['f_masha','frame','Рамка Маши','spec:skin_masha'],['n_masha','name','Имя Маши','spec:skin_masha'],['bg_masha','bg','Фон Маши','spec:skin_masha'],['h_masha','ha','Корона из латте-арта','spec:skin_masha'],
  ['c_kris','bc','Неоновый бит','spec:skin_kristina','kris'],['f_kris','frame','Рамка Кристины','spec:skin_kristina'],['n_kris','name','Имя Кристины','spec:skin_kristina'],['bg_kris','bg','Фон Кристины','spec:skin_kristina'],['h_kris','ha','Неон-наушники','spec:skin_kristina']
