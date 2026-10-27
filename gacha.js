@@ -198,6 +198,7 @@ async function gmGachaTab(box){
       const call=()=>sb.rpc('gacha_pull',{p_req:req,p_gold:!!gold});
       let r=await call();
       if(r.error&&/fetch|network|load failed|timeout/i.test(r.error.message||''))r=await call();
+      if(r.error&&/could not find|does not exist|PGRST202/i.test(r.error.message||r.error.code||'')&&!gold)r=await sb.rpc('gacha_pull'); // база ещё на старой версии: работаем по-старому
       if(r.error)throw r.error;return r.data;
     },d=>{
       inf={...inf,tickets:d.tickets,pity:d.pity,gold:d.gold_left!=null?d.gold_left:inf.gold,recent:[{code:d.code,rarity:d.rarity,dup:d.dup,gold:d.gold},...(inf.recent||[])].slice(0,8)};
