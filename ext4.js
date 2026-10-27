@@ -180,3 +180,41 @@ async function siteBlock(){
   box.innerHTML=`<div class="card pad col"><b>🌐 С сайта парка</b><div class="muted">Что сейчас видят гости: афиша и новости dreamwoodpark.com</div>${d.items.slice(0,6).map(x=>`<a class="sitei" href="${e(x.url)}" target="_blank" rel="noopener">${x.img?`<img src="${e(x.img)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:''}<span><b>${e(x.title)}</b>${x.date?`<span class="pill" style="background:var(--gold);align-self:flex-start">${e(x.date)}</span>`:''}${x.text?`<span class="muted sitet">${e(x.text)}</span>`:''}<span class="sitem">Открыть на сайте →</span></span></a>`).join('')}</div>`+links;
 }
 window.siteBlock=siteBlock;
+
+// ================= ЛИЧНЫЕ СООБЩЕНИЯ (вкладка в «Обращениях»), можно анонимно =================
+S.msg={t:'in'};
+const msgReq=()=>(window.crypto&&crypto.randomUUID)?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return (c==='x'?r:(r&3|8)).toString(16)});
+async function msgView(){
+  await ensurePeople();
+  const [ib,sn]=await Promise.all([sb.rpc('dm_inbox'),sb.from('dm').select('id,to_user,body,anon,read_at,created_at').eq('from_user',S.me.id).order('created_at',{ascending:false}).limit(100)]);
+  const inb=ib.data||[],sent=sn.data||[],unread=inb.filter(x=>!x.read);
+  let h=head('Личные сообщения','Напиши коллеге лично, можно анонимно')+subBar('ap','msg');
+  h+=`<button class="btn" id="mg_new">✉️ Написать сообщение</button><div class="tabs"><button data-mt="in" class="${S.msg.t==='in'?'on':''}">Мне · ${inb.length}${unread.length?` <i class="sbn">${unread.length}</i>`:''}</button><button data-mt="out" class="${S.msg.t==='out'?'on':''}">Я писал(а) · ${sent.length}</button></div>`;
+  if(ib.error)h+=`<div class="card pad muted">Сообщения пока не подключены: ${esc(ib.error.message)}</div>`;
+  else if(S.msg.t==='in')h+=inb.map(x=>`<div class="card pad col" style="${x.read?'':'border-left:8px solid var(--gold,#F0B429)'}"><div style="display:flex;justify-content:space-between;gap:8px"><b>${x.anon?'🕶 Аноним':esc(x.from_name||'Коллега')}</b><span class="muted">${dayLabel(iso(new Date(x.at)))}</span></div><div style="white-space:pre-wrap">${esc(x.body)}</div>${x.anon?'<div class="muted">Автор скрыт, ответить нельзя.</div>':`<button class="btn ghost" data-re="${x.from_id}">↩️ Ответить</button>`}</div>`).join('')||'<div class="card pad muted">Пока никто не писал тебе лично.</div>';
+  else h+=sent.map(x=>`<div class="card pad col"><div style="display:flex;justify-content:space-between;gap:8px"><b>Кому: ${esc(pname(x.to_user))}</b><span class="muted">${dayLabel(iso(new Date(x.created_at)))}</span></div><div style="white-space:pre-wrap">${esc(x.body)}</div><div class="muted">${x.anon?'🕶 Отправлено анонимно · ':''}${x.read_at?'✓ Прочитано':'Ещё не прочитано'}</div></div>`).join('')||'<div class="card pad muted">Ты пока никому не писал(а).</div>';
+  app.innerHTML=h;
+  $('#mg_new').onclick=()=>msgForm();
+  app.querySelectorAll('[data-mt]').forEach(b=>b.onclick=()=>{S.msg.t=b.dataset.mt;msgView()});
+  app.querySelectorAll('[data-re]').forEach(b=>b.onclick=()=>msgForm(b.dataset.re));
+  if(S.msg.t==='in'&&unread.length){sb.rpc('dm_read',{p_ids:unread.map(x=>x.id)}).then(()=>{S.msgN=0;if(typeof paintBadges==='function')paintBadges()},()=>{})}
+}
+function msgForm(to){
+  const f={to:to||'',body:'',anon:false};
+  dgxSheet('✉️ Личное сообщение',(box,paint,close)=>{
+    const people=(S.dg.people||[]).filter(p=>p.id!==S.me.id).slice().sort((a,b)=>String(a.full_name).localeCompare(String(b.full_name),'ru'));
+    box.innerHTML=`<label>Кому<select id="m_to"><option value="">— выбери —</option>${people.map(p=>`<option value="${p.id}" ${p.id===f.to?'selected':''}>${esc(p.full_name)}</option>`).join('')}</select></label>
+    <label>Сообщение<textarea id="m_body" maxlength="1500" rows="5" placeholder="Что хочешь сказать">${esc(f.body)}</textarea></label>
+    <label style="display:flex;flex-direction:row;gap:10px;align-items:center;justify-content:flex-start"><input type="checkbox" id="m_anon" ${f.anon?'checked':''} style="width:22px;height:22px;flex:none;margin:0"><span>🕶 Отправить анонимно</span></label>
+    <div class="muted">Анонимно: получатель не увидит, кто написал, и не сможет ответить. Автора видит только администратор приложения, и только если сообщение нарушает правила: оскорбления, травля, угрозы.</div>
+    <button class="btn" id="m_go">Отправить</button><div class="err" id="m_er"></div>`;
+    box.querySelector('#m_go').onclick=async e=>{
+      const to=box.querySelector('#m_to').value,body=box.querySelector('#m_body').value.trim(),anon=box.querySelector('#m_anon').checked,er=box.querySelector('#m_er');
+      if(!to)return er.textContent='Выбери, кому написать';
+      if(!body)return er.textContent='Напиши текст сообщения';
+      e.target.disabled=true;er.textContent='';
+      const r=await sb.rpc('dm_send',{p_to:to,p_body:body,p_anon:anon,p_req:msgReq()});
+      if(r.error){e.target.disabled=false;return er.textContent=r.error.message}
+      close(false);toast(anon?'Отправлено анонимно':'Отправлено',2200);S.msg.t='out';if(onTab('msg'))msgView()};
+  },()=>{});
+}

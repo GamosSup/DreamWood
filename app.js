@@ -200,14 +200,14 @@ function pendingView(){
   $('#chk').onclick=()=>boot();$('#out').onclick=()=>sb.auth.signOut().then(()=>{clearCache();S.me=null;boot()});
 }
 nav.onclick=e=>{const b=e.target.closest('button');if(b)go(b.dataset.tab)};
-const VIEWS={sch:schView,afisha:afishaView,dg:dgView,staff:staffView,set:settingsView};
+const VIEWS={msg:()=>msgView(),sch:schView,afisha:afishaView,dg:dgView,staff:staffView,set:settingsView};
 VIEWS.ap=()=>VIEWS[S.sub.ap]();VIEWS.park=()=>VIEWS[S.sub.park]();
 VIEWS.team=()=>{if(!isAdmin())S.sub.team='contacts';return VIEWS[S.sub.team]()};
-function subBar(g,cur){const L={ap:[['req','📨','Заявки'],['fix','🛠','Поломки'],['inc','🚨','Происшествия'],['wo','🗑','Списание']],park:[['news','📰','Новости'],['afisha','🎟️','Афиша']],team:[['contacts','📞','Контакты'],...(isAdmin()?[['staff','👥','Сотрудники']]:[])]}[g];if(!L||L.length<2)return '';const b=S.badges||{};
+function subBar(g,cur){const L={ap:[['req','📨','Заявки'],['fix','🛠','Поломки'],['inc','🚨','Происшествия'],['wo','🗑','Списание'],['msg','✉️','Личные']],park:[['news','📰','Новости'],['afisha','🎟️','Афиша']],team:[['contacts','📞','Контакты'],...(isAdmin()?[['staff','👥','Сотрудники']]:[])]}[g];if(!L||L.length<2)return '';const b=S.badges||{};
   return `<div class="seg subbar">${L.map(([k,ic,n])=>`<button data-sub="${k}" class="${k===cur?'on':''}">${ic} ${n}${b[k]&&k!==cur?` <i class="sbn">${b[k]}</i>`:''}</button>`).join('')}</div>`}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-sub]');if(b&&S.me)go(b.dataset.sub)});
 const MORE_TABS=['shift','park','kb','team','grid','feedback','todo','set','newbie','thanks','game'];
-const SUBG={req:'ap',fix:'ap',inc:'ap',wo:'ap',news:'park',afisha:'park',contacts:'team',staff:'team'};
+const SUBG={req:'ap',fix:'ap',inc:'ap',wo:'ap',msg:'ap',news:'park',afisha:'park',contacts:'team',staff:'team'};
 const onTab=k=>SUBG[k]?(S.tab===SUBG[k]&&S.sub[SUBG[k]]===k):S.tab===k;
 function go(t){if(SUBG[t]){S.sub[SUBG[t]]=t;t=SUBG[t]}if(!VIEWS[t]||(t==='dg'&&!isManager()))t='today';S.tab=t;S.offline=0;S.swapPending=1;document.body.dataset.tab=S.sub[t]||t;
   nav.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t||(b.dataset.tab==='more'&&MORE_TABS.includes(t))));window.scrollTo(0,0);app.scrollTop=0;
@@ -225,7 +225,7 @@ function paintBadges(){
   const c=k=>(S.nl||[]).filter(x=>x.k===k).length,B={};
   ['req','fix','inc','wo','news','afisha','staff','rot','dg','shift','set','feedback','newbie','thanks'].forEach(k=>B[k]=c(k));
   B.contacts=0;B.kb=S.kbNew||0;B.sch=S.schNew||0;
-  B.ap=B.req+B.fix+B.inc+B.wo;B.park=B.news+B.afisha;B.team=B.staff;B.today=0;B.grid=0;
+  B.msg=S.msgN||0;B.ap=B.req+B.fix+B.inc+B.wo+B.msg;B.park=B.news+B.afisha;B.team=B.staff;B.today=0;B.grid=0;
   B.more=B.shift+B.park+B.kb+B.team+B.set+B.feedback+B.newbie+B.thanks;
   S.badges=B;
   nav.querySelectorAll('button[data-tab]').forEach(btn=>{let i=btn.querySelector('i');const n=B[btn.dataset.tab]||0;
@@ -250,7 +250,7 @@ async function refreshUnread(){
   const Q=p=>Promise.resolve(p).then(x=>x,e=>({error:e,data:null,count:0})),mgr=isManager(),td=iso(new Date());
   let ks=lsGet('dw_seen_kb');if(!ks){ks=new Date().toISOString();lsSet('dw_seen_kb',ks);S.kbNew=0;ks=null}
   // все независимые запросы идут одновременно (раньше шли цепочкой — это были лишние секунды на каждом переходе)
-  const [n,r,p,dq,rq,fx,kq,mq]=await Promise.all([
+  const [n,r,p,dq,rq,fx,kq,mq,dmq]=await Promise.all([
     Q(sb.from('notifications').select('id,kind,link')),
     Q(sb.from('notif_reads').select('notif_id').eq('user_id',S.me.id)),
     Q(isAdmin()?sb.from('profiles').select('id',{count:'exact',head:true}).eq('status','pending'):{count:0}),
@@ -258,8 +258,10 @@ async function refreshUnread(){
     Q(sb.from('requests').select('id,status,peer_id').in('status',['peer','pending'])),
     Q(mgr?sb.from('repairs').select('id',{count:'exact',head:true}).eq('status','new'):{count:0}),
     Q(ks?sb.from('kb_pages').select('id,updated_by').gt('updated_at',ks):{data:[]}),
-    Q(sb.from('marks').select('day,kind').eq('user_id',S.me.id).gte('day',td).order('day'))]);
+    Q(sb.from('marks').select('day,kind').eq('user_id',S.me.id).gte('day',td).order('day')),
+    Q(sb.rpc('dm_unread'))]);
   if(!n.error&&!r.error){const seen=new Set((r.data||[]).map(x=>x.notif_id));const un=(n.data||[]).filter(x=>!seen.has(x.id));S.unread=un.length;S.nl=un.map(x=>({id:x.id,k:NLK(x.link)})).filter(x=>x.k)}
+  S.msgN=(dmq&&!dmq.error&&typeof dmq.data==='number')?dmq.data:0;
   S.ckPending=false;
   try{if(!n.error&&(n.data||[]).some(x=>x.kind==='checkin'&&x.link==='checkin:'+td)){const c=await sb.from('checkins').select('at').eq('user_id',S.me.id).eq('day',td).maybeSingle();S.ckPending=!c.data}}catch(e){}
   try{if(!mgr)throw 0;const lim=iso(new Date(Date.now()+864e5));S.due=(dq.data||[]).filter(t=>(t.assignees||[]).includes(S.me.id)&&t.deadline<=lim).sort((a,b)=>a.deadline<b.deadline?-1:1)}catch(e){S.due=[]}
