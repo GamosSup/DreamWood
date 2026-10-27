@@ -54,3 +54,37 @@ function gmTeamTab(box){
   box.innerHTML=`<div class="muted" style="margin:2px 2px 8px">Нажми на коллегу: увидишь его уровень, питомца, допуски и значки.</div><input type="search" id="tm_s" placeholder="🔍 Найти коллегу" autocomplete="off"><div id="tm_l" class="col" style="gap:8px;margin-top:8px"></div>`;
   paint('');box.querySelector('#tm_s').oninput=e=>paint(e.target.value);
 }
+
+// ---- живые сцены за питомцем: по теме фона ----
+// [символ, x%, y%, размер px, анимация, секунд, задержка, глубина параллакса]
+const SC_SPACE=[['✨',8,12,16,'tw',3,0,.3],['⭐',24,28,12,'tw',2.4,.8,.3],['✨',72,10,18,'tw',3.4,.4,.3],['⭐',88,30,12,'tw',2.8,1.2,.3],['✨',50,8,12,'tw',2.2,.2,.3],['🪐',14,46,46,'fl',7,0,1],['🌍',80,52,36,'fl',8,1,.8],['🌙',64,12,30,'fl',9,.5,.6],['🚀',40,20,26,'dr',16,0,.5],['☄️',30,6,22,'dr',11,3,.4]];
+const SC_NATURE=[['☁️',10,10,44,'dr',34,0,.3],['☁️',55,18,34,'dr',42,8,.3],['🌲',3,60,56,'sw',5,0,.7],['🌳',84,58,60,'sw',6,1,.7],['🌲',16,66,40,'sw',4.5,.5,.8],['🍄',74,80,22,'sw',3,0,1],['🦋',22,34,20,'fl',4,0,1.2],['🐦',60,22,20,'dr',18,2,.6],['🌼',90,82,20,'sw',3.5,.7,1],['🌸',8,84,20,'sw',3.8,.2,1]];
+const SC_FOREST=[['🌲',2,52,70,'sw',6,0,.7],['🌲',86,50,74,'sw',5,.8,.7],['🌳',16,64,52,'sw',5.5,.4,.8],['🌳',72,66,50,'sw',6,1.4,.8],['🍂',30,0,18,'fa',9,0,1],['🍁',60,0,18,'fa',11,3,1],['🍂',80,0,16,'fa',10,6,1],['🦉',10,28,26,'fl',5,0,.9],['🍄',44,84,22,'sw',3,0,1],['🦌',88,76,30,'sw',4,1,1],['✨',45,22,14,'tw',2.6,0,.4],['🐿️',6,80,22,'sw',3.2,0,1]];
+const SC_WATER=[['🫧',12,90,18,'ri',7,0,1],['🫧',40,92,14,'ri',9,2,1],['🫧',76,90,20,'ri',8,4,1],['🫧',58,92,12,'ri',6,1,1],['🐠',10,40,30,'dr',14,0,.8],['🐟',30,60,24,'dr',18,5,.8],['🐙',84,62,34,'fl',5,0,.9],['🐢',50,74,28,'dr',24,2,.6],['🌿',4,80,30,'sw',4,0,1],['🪸',90,84,30,'sw',5,1,1],['🦀',66,86,22,'sw',3,0,1]];
+const SC_SNOW=[['❄️',8,0,16,'fa',8,0,1],['❄️',26,0,12,'fa',10,2,1],['❄️',48,0,18,'fa',9,4,1],['❄️',68,0,12,'fa',11,1,1],['❄️',88,0,16,'fa',8,5,1],['🌲',4,56,60,'sw',6,0,.7],['🌲',86,52,66,'sw',5,1,.7],['⛄',78,74,36,'sw',4,0,1],['🎿',10,82,22,'sw',3,0,1],['☃️',22,70,1,'sw',3,0,1]];
+const SC_SUNSET=[['🌅',50,34,1,'fl',9,0,.3],['☁️',12,12,40,'dr',30,0,.3],['☁️',60,22,32,'dr',38,6,.3],['🐦',20,26,18,'dr',16,0,.6],['🐦',70,14,16,'dr',20,4,.6],['🌴',4,58,60,'sw',5,0,.7],['🌴',88,60,56,'sw',6,1,.7],['✨',34,50,12,'tw',3,0,.5]];
+const SC_CANDY=[['🍭',10,20,34,'fl',5,0,1],['🍬',82,26,28,'fl',6,1,1],['🧁',18,64,34,'fl',7,.5,.9],['🎈',72,52,38,'fl',6,.3,1.1],['🍩',88,70,30,'fl',5.5,2,.9],['💖',46,10,20,'tw',3,0,.5],['🍪',6,84,24,'sw',3,0,1],['🌈',50,40,1,'fl',10,0,.3]];
+const SC_FEST=[['🎈',10,40,38,'fl',5,0,1],['🎈',86,36,40,'fl',6,.8,1],['🎉',22,16,26,'tw',3,0,.6],['🎊',74,14,26,'tw',3.4,1,.6],['🎆',48,8,30,'tw',2.6,.5,.4],['🎡',90,66,44,'sw',6,0,.7],['🎠',6,68,40,'sw',5,0,.7],['✨',30,34,14,'tw',2.4,.2,.5]];
+const SC_MOUNT=[['🏔️',12,44,64,'fl',10,0,.4],['🏔️',80,42,56,'fl',11,1,.4],['☁️',40,12,38,'dr',36,0,.3],['🦅',60,24,22,'dr',20,0,.6],['🌲',2,64,40,'sw',5,0,.8],['🌲',90,66,38,'sw',6,1,.8],['🐐',70,80,24,'sw',3.5,0,1]];
+const GM_SCENES={bg_night:SC_SPACE,bg_aurora:SC_SPACE,bg_space:SC_SPACE,bg_default:SC_NATURE,bg_meadow:SC_NATURE,bg_sky:SC_NATURE,bg_forest:SC_FOREST,bg_forest2:SC_FOREST,bg_water:SC_WATER,bg_deep:SC_WATER,bg_snow:SC_SNOW,bg_sunset:SC_SUNSET,bg_candy:SC_CANDY,bg_dome:SC_FEST,bg_event:SC_FEST,bg_mount:SC_MOUNT};
+const GM_SCB={SC_SPACE:['✨','⭐','☄️','🪐'],SC_NATURE:['🌸','🦋','🍃','🌼'],SC_FOREST:['🍂','🍁','🍄','🌰'],SC_WATER:['🫧','🐠','💧','🐚'],SC_SNOW:['❄️','⛄','✨','💙'],SC_SUNSET:['🌅','🐦','✨','🧡'],SC_CANDY:['🍬','🍭','💖','🎈'],SC_FEST:['🎉','🎈','🎊','✨'],SC_MOUNT:['🏔️','🦅','☁️','🌲']};
+function gmSceneDecor(bg){
+  const L=GM_SCENES[bg]||SC_NATURE;
+  return L.map(([e,x,y,s,an,d,dl,dp])=>`<span class="sd sd-${an}" style="left:${x}%;top:${y}%;font-size:${s>1?s:34}px;--d:${d}s;--dl:${dl}s;--dp:${dp}">${e}</span>`).join('');
+}
+(function(){
+  if(window.__scInit)return;window.__scInit=1;
+  const burst=(el,x,y)=>{const bg=el.dataset.sc,L=GM_SCENES[bg]||SC_NATURE,key=Object.keys({SC_SPACE,SC_NATURE,SC_FOREST,SC_WATER,SC_SNOW,SC_SUNSET,SC_CANDY,SC_FEST,SC_MOUNT}).find(k=>({SC_SPACE,SC_NATURE,SC_FOREST,SC_WATER,SC_SNOW,SC_SUNSET,SC_CANDY,SC_FEST,SC_MOUNT})[k]===L),em=GM_SCB[key]||['✨'];
+    const r=el.getBoundingClientRect();
+    for(let i=0;i<7;i++){const s=document.createElement('span');s.className='scb';s.textContent=em[i%em.length];
+      const a=Math.PI*2*i/7+Math.random()*.6,d=40+Math.random()*50;
+      s.style.cssText=`left:${x-r.left}px;top:${y-r.top}px;--bx:${Math.cos(a)*d}px;--by:${Math.sin(a)*d-20}px`;
+      el.appendChild(s);setTimeout(()=>s.remove(),1100)}};
+  const move=(cx,cy)=>{document.querySelectorAll('.pscene').forEach(el=>{const r=el.getBoundingClientRect();if(!r.width)return;
+    el.style.setProperty('--px',(Math.max(-1,Math.min(1,(cx-(r.left+r.width/2))/(r.width/2)))).toFixed(2));el.style.setProperty('--py',(Math.max(-1,Math.min(1,(cy-(r.top+r.height/2))/(r.height/2)))).toFixed(2))})};
+  addEventListener('pointermove',e=>move(e.clientX,e.clientY),{passive:true});
+  addEventListener('touchmove',e=>{const t=e.touches[0];t&&move(t.clientX,t.clientY)},{passive:true});
+  document.addEventListener('click',e=>{const el=e.target.closest&&e.target.closest('.pscene');if(!el)return;
+    const sd=e.target.closest('.sd');if(sd){sd.classList.remove('pop');void sd.offsetWidth;sd.classList.add('pop')}
+    burst(el,e.clientX,e.clientY)});
+})();

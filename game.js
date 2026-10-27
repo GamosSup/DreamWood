@@ -108,7 +108,7 @@ function gmDef(a){ // a: {c,l} из выданных
 // req: код достижения; 'adm*' — любой допуск; 'evt*' — любое мероприятие
 const GM_FRAMES=[['','Без рамки',null],['f_leaf','Росток','chk1'],['f_sky','Небо','day20'],['f_sun','Солнце','hab7'],['f_rose','Роза','thx10'],['f_gold','Золото','chk500'],['f_pass','Допуск','adm*'],['f_spark','Искры','chk1000'],['f_aurora','Северное сияние','got50'],['f_fire','Огненный ореол','chk3000'],['f_diamond','Алмазная','spec:admin_server']];
 const GM_NAMES=[['','Обычный',null],['n_green','Зелёный','hab1'],['n_blue','Синий','thx1'],['n_amber','Янтарный','day20'],['n_rose','Розовый','got10'],['n_grad','Градиент','chk500'],['n_shine','Блеск','chk1000'],['n_rainbow','Радужный','spec:admin_server']];
-const GM_BGS=[['','Без фона',null],['bg_forest','Осенний лес','week1'],['bg_water','Вода','ot1'],['bg_mount','Горы','day100'],['bg_sky','Небо с облаками','todo25'],['bg_dome','Купол','ment1'],['bg_night','Звёздная ночь','got50'],['bg_event','Праздничный','evt*'],['bg_meadow','Летний луг',null],['bg_sunset','Закат над парком',null],['bg_snow','Зимняя сказка',null],['bg_candy','Конфетная',null],['bg_deep','Глубина',null],['bg_aurora','Северное сияние',null]];
+const GM_BGS=[['','Без фона',null],['bg_forest','Осенний лес','week1'],['bg_water','Вода','ot1'],['bg_mount','Горы','day100'],['bg_sky','Небо с облаками','todo25'],['bg_dome','Купол','ment1'],['bg_night','Звёздная ночь','got50'],['bg_event','Праздничный','evt*'],['bg_meadow','Летний луг',null],['bg_sunset','Закат над парком',null],['bg_snow','Зимняя сказка',null],['bg_candy','Конфетная',null],['bg_deep','Глубина',null],['bg_aurora','Северное сияние',null],['bg_space','Космос',null],['bg_forest2','Волшебный лес',null]];
 const GM_COSL={frame:['Рамка вокруг фото',GM_FRAMES],name:['Цвет имени',GM_NAMES],bg:['Фон за фото',GM_BGS]};
 
 // ---------- данные ----------
@@ -232,10 +232,10 @@ function gmAbout(row,own){
   if(!mo&&!bio&&!fav)return own?`<div class="gabout muted">Здесь может быть рассказ о тебе: девиз, чем занимаешься, что любишь. Заполни во вкладке «Мой образ».</div>`:'';
   return `<div class="gabout">${mo?`<div class="gmotto">«${esc(mo)}»</div>`:''}${bio?`<div class="gbio">${esc(bio)}</div>`:''}${fav?`<div class="gfav">❤️ Люблю: ${esc(fav)}</div>`:''}</div>`;
 }
-const gmStage=(row,sz=190)=>{
-  const c=row.cos||{},pn=(c.pname||'').trim();
-  if(typeof petCfg==='function'&&petCfg(row))return `<div class="pscene ${c.bg||'bg_default'}"><i class="psk a"></i><i class="psk b"></i><i class="psk c"></i><div class="pfloor"></div>${gmPet(row,sz,{bg:''})}${pn?`<div class="pnm">${esc(pn)}</div>`:''}</div>`;
-  return `<div class="pscene ${c.bg||'bg_default'}"><img src="stickers/mascot-hi.webp" alt="" width="120" height="120" style="object-fit:contain"></div>`;
+const gmStage=(row,sz=190,cfg)=>{
+  const c=row.cos||{},pn=(c.pname||'').trim(),bg=c.bg||'bg_default',ok=cfg||(typeof petCfg==='function'&&petCfg(row));
+  const inner=ok?gmPet(row,sz,{bg:'',...(cfg?{cfg}:{})})+(pn?`<div class="pnm">${esc(pn)}</div>`:''):`<img src="stickers/mascot-hi.webp" alt="" width="120" height="120" style="object-fit:contain">`;
+  return `<div class="pscene ${bg}" data-sc="${bg}">${typeof gmSceneDecor==='function'?gmSceneDecor(bg):''}<div class="pfloor"></div>${inner}</div>`;
 };
 function gmHero(row){
   const L=gmLv(row.xp),cos=gmCos(row);
@@ -449,7 +449,7 @@ function gmPetTab(box){
       const v=kind==='sw'?`<span class="petsw" style="background:${gmPetSw(val)}"></span>`:gmPet({},78,{cfg:{...base,...(k==='ec'||k==='gz'?{ex:'x_n'}:{}),[k]:id},vb:crop||PET_VB,bg:''});
       return `<button class="gop${on?' on':''}${ok?'':' lk'}" data-k="${k}" data-v="${esc(id)}" ${ok?'':'disabled'}><span class="gopv">${v}</span><span class="gopn">${esc(n)}</span>${ok?'':`<span class="gopl">🔒 ${esc(gmReqName(req))}</span>`}</button>`;
     };
-    box.innerHTML=`<div class="card pad col petpv">${gmPet(me,96,{cfg})}</div>
+    box.innerHTML=`<div class="petpv2">${gmStage(me,150,cfg)}</div>
     <div class="card pad col"><b>Вид</b><div class="muted">Это твой питомец. Выбирай всё, что нравится, а результат виден в карточке вверху. Новые вещи открываются за достижения и события. Фон берётся из раздела «Мой образ».</div><div class="gops">${PET_SP.filter(x=>!x[3]||gmHas(me,x[3])).map(([k,n])=>`<button class="gop${cfg.sp===k?' on':''}" data-sp="${k}"><span class="gopv">${gmPet({},78,{cfg:{...cfg,sp:k,bc:cfg.bc===petBcOf(cfg.sp)?petBcOf(k):cfg.bc},vb:GM_PETCROP,bg:''})}</span><span class="gopn">${n}</span></button>`).join('')}</div></div>`+
     PET_G.map(([k,ttl,L,kind,crop])=>`<div class="card pad col"><b>${ttl}</b><div class="gops">${L.map(it=>tile(k,kind,crop,it)).join('')}</div></div>`).join('');
     box.querySelectorAll('.gop[data-k]:not([disabled])').forEach(b=>b.onclick=async()=>{if(await gmPetSave({...cfg,[b.dataset.k]:b.dataset.v})){draw();window.scrollTo(0,keep)}});
