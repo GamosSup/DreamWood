@@ -179,11 +179,11 @@ function nbMonth(){
     try{await loadPeriods()}catch(e){}
     const marks={},otd={},byDay={};(mk.data||[]).forEach(r=>marks[r.day]=r);(ot.data||[]).forEach(o=>(otd[o.day]=otd[o.day]||[]).push(o));(tq.error?[]:tq.data||[]).forEach(x=>(byDay[x.due]=byDay[x.due]||[]).push(x));
     const dl=pf.data?.day_len||null,tm=pf.data?.team,dlen=dl||(tm==='M'?12:10),lenSet=!!dl;
-    let wd=0,wH=0,oH=0,dH=0,cO=0,cD=0;for(let d=1;d<=n;d++){const k=iso(new Date(y,mo,d)),mm=marks[k],hh=dayH(k,dlen,lenSet);if(!mm){wd++;wH+=hh}else if(mm.kind==='otgul'){oH+=hh;cO++}else if(mm.kind==='do'){dH+=hh;cD++}}
+    let wd=0,wH=0,oH=0,dH=0,cO=0,cD=0;for(let d=1;d<=n;d++){const k=iso(new Date(y,mo,d)),mm=marks[k],hh=dayH(k,dlen,lenSet);if(!mm){if(lenSet||!perOf(k)||parkOpen(k)){wd++;wH+=hh}}else if(mm.kind==='otgul'){oH+=hh;cO++}else if(mm.kind==='do'){dH+=hh;cD++}}
     const otK={d:0,p:0};(ot.data||[]).forEach(r=>otK[otKind(r)]+=Number(r.hours));const base=wH+oH-dH;
     let h=`<div class="gmon"><button class="btn ghost" id="nm_p" aria-label="Прошлый месяц">←</button><div class="gmt"><b>${m.toLocaleDateString('ru',{month:'long',year:'numeric'})}</b></div><button class="btn ghost" id="nm_n" aria-label="Следующий месяц">→</button></div>`;
     h+=`<div class="cal">${WDN.map(d=>`<div class="dh">${d}</div>`).join('')}${'<div></div>'.repeat(lead)}`;
-    for(let d=1;d<=n;d++){const k=iso(new Date(y,mo,d)),mm=marks[k],K=mm&&KINDS[mm.kind],its=byDay[k]||[],oo=otd[k]||[],ob=['d','p'].map(t=>[t,oo.filter(r=>otKind(r)===t).reduce((a,r)=>a+Number(r.hours),0)]).filter(x=>x[1]);
+    for(let d=1;d<=n;d++){const k=iso(new Date(y,mo,d)),mm=marks[k],K=mm?KINDS[mm.kind]:(!lenSet&&perOf(k)&&!parkOpen(k)?KINDS.off:null),its=byDay[k]||[],oo=otd[k]||[],ob=['d','p'].map(t=>[t,oo.filter(r=>otKind(r)===t).reduce((a,r)=>a+Number(r.hours),0)]).filter(x=>x[1]);
       const dots=its.slice(0,4).map(x=>`<i class="pld ${x.done?'dn':''}" style="background:${PL_C[x.kind]||PL_C.task}"></i>`).join('');
       h+=`<button class="day ${P.sel===k?'sel':''} ${k===today?'tdy':''}" data-k="${k}" style="${K?`background:${K[1]};color:#3B2A35;`:''}">${d}<small>${K?K[0]:''}</small>${ob.map(([t,v])=>`<i class="otm ${t}">${OT_K[t][0]}+${fh1(v)}ч</i>`).join('')}${dots?`<span class="pldw">${dots}</span>`:''}</button>`}
     h+=`</div><div class="stat"><div style="background:var(--gold)"><b>${fh1(base)}</b>часов по графику · ${wd} дн.</div><div style="background:var(--blue)"><b>${fh1(base+otK.d+otK.p)}</b>всего часов</div></div><div class="stat"><div style="background:${OT_K.d[2]};color:#3B2A35"><b>${fh1(otK.d)}</b>⏱ доработки</div><div style="background:${OT_K.p[2]};color:#3B2A35"><b>${fh1(otK.p)}</b>🔥 переработки</div></div>${cO||cD?`<div class="muted">Отгулов: ${cO} · ДО: ${cD}</div>`:''}`;

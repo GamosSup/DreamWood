@@ -430,13 +430,13 @@ function gmPetTab(box){
     }
     const keep=window.scrollY,base={...cfg,ha:'',gl:'',nk:'',ch:'',bk:'',hd:'',hr:''};
     const tile=(k,kind,crop,it)=>{
-      const [id,n,req,val]=it,ok=gmHas(me,req);if(!ok&&!gmSeeAll())return '';
+      const [id,n,req,val]=it,ok=gmHas(me,req);if(!ok&&(!gmSeeAll()||/^spec:/.test(req||'')))return '';
       const on=(cfg[k]||'')===id;
       const v=kind==='sw'?`<span class="petsw" style="background:${gmPetSw(val)}"></span>`:gmPet({},78,{cfg:{...base,...(k==='ec'||k==='gz'?{ex:'x_n'}:{}),[k]:id},vb:crop||PET_VB,bg:''});
       return `<button class="gop${on?' on':''}${ok?'':' lk'}" data-k="${k}" data-v="${esc(id)}" ${ok?'':'disabled'}><span class="gopv">${v}</span><span class="gopn">${esc(n)}</span>${ok?'':`<span class="gopl">🔒 ${esc(gmReqName(req))}</span>`}</button>`;
     };
     box.innerHTML=`<div class="card pad col petpv">${gmPet(me,96,{cfg})}</div>
-    <div class="card pad col"><b>Вид</b><div class="muted">Это твой питомец. Выбирай всё, что нравится, а результат виден в карточке вверху. Новые вещи открываются за достижения и события. Фон берётся из раздела «Мой образ».</div><div class="gops">${PET_SP.map(([k,n])=>`<button class="gop${cfg.sp===k?' on':''}" data-sp="${k}"><span class="gopv">${gmPet({},78,{cfg:{...cfg,sp:k,bc:cfg.bc===petBcOf(cfg.sp)?petBcOf(k):cfg.bc},vb:GM_PETCROP,bg:''})}</span><span class="gopn">${n}</span></button>`).join('')}</div></div>`+
+    <div class="card pad col"><b>Вид</b><div class="muted">Это твой питомец. Выбирай всё, что нравится, а результат виден в карточке вверху. Новые вещи открываются за достижения и события. Фон берётся из раздела «Мой образ».</div><div class="gops">${PET_SP.filter(x=>!x[3]||gmHas(me,x[3])).map(([k,n])=>`<button class="gop${cfg.sp===k?' on':''}" data-sp="${k}"><span class="gopv">${gmPet({},78,{cfg:{...cfg,sp:k,bc:cfg.bc===petBcOf(cfg.sp)?petBcOf(k):cfg.bc},vb:GM_PETCROP,bg:''})}</span><span class="gopn">${n}</span></button>`).join('')}</div></div>`+
     PET_G.map(([k,ttl,L,kind,crop])=>`<div class="card pad col"><b>${ttl}</b><div class="gops">${L.map(it=>tile(k,kind,crop,it)).join('')}</div></div>`).join('');
     box.querySelectorAll('.gop[data-k]:not([disabled])').forEach(b=>b.onclick=async()=>{if(await gmPetSave({...cfg,[b.dataset.k]:b.dataset.v})){draw();window.scrollTo(0,keep)}});
     box.querySelectorAll('.gop[data-sp]').forEach(b=>b.onclick=async()=>{const sp=b.dataset.sp;if(sp===cfg.sp)return;if(await gmPetSave({...cfg,sp,bc:cfg.bc===petBcOf(cfg.sp)?petBcOf(sp):cfg.bc})){draw();window.scrollTo(0,keep)}});

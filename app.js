@@ -225,7 +225,7 @@ function paintBadges(){
   const c=k=>(S.nl||[]).filter(x=>x.k===k).length,B={};
   ['req','fix','inc','wo','news','afisha','staff','rot','dg','shift','set','feedback','newbie','thanks'].forEach(k=>B[k]=c(k));
   B.contacts=0;B.kb=S.kbNew||0;B.sch=S.schNew||0;
-  B.msg=S.msgN||0;B.ap=B.req+B.fix+B.inc+B.wo+B.msg;B.park=B.news+B.afisha;B.team=B.staff;B.today=0;B.grid=0;
+  B.msg=S.msgN||0;B.ap=B.req+B.fix+B.inc+B.wo+B.msg;B.park=B.news+B.afisha;B.team=isAdmin()?B.staff:0;B.today=0;B.grid=0;
   B.more=B.shift+B.park+B.kb+B.team+B.set+B.feedback+B.newbie+B.thanks;
   S.badges=B;
   nav.querySelectorAll('button[data-tab]').forEach(btn=>{let i=btn.querySelector('i');const n=B[btn.dataset.tab]||0;
@@ -251,7 +251,7 @@ async function refreshUnread(){
   let ks=lsGet('dw_seen_kb');if(!ks){ks=new Date().toISOString();lsSet('dw_seen_kb',ks);S.kbNew=0;ks=null}
   // все независимые запросы идут одновременно (раньше шли цепочкой — это были лишние секунды на каждом переходе)
   const [n,r,p,dq,rq,fx,kq,mq,dmq]=await Promise.all([
-    Q(sb.from('notifications').select('id,kind,link')),
+    Q(sb.from('notifications').select('id,kind,link,created_at')),
     Q(sb.from('notif_reads').select('notif_id').eq('user_id',S.me.id)),
     Q(isAdmin()?sb.from('profiles').select('id',{count:'exact',head:true}).eq('status','pending'):{count:0}),
     Q(mgr?sb.from('dg_tasks').select('id,title,deadline,assignees').eq('done',false).not('deadline','is',null):{data:[]}),
@@ -260,7 +260,7 @@ async function refreshUnread(){
     Q(ks?sb.from('kb_pages').select('id,updated_by').gt('updated_at',ks):{data:[]}),
     Q(sb.from('marks').select('day,kind').eq('user_id',S.me.id).gte('day',td).order('day')),
     Q(sb.rpc('dm_unread'))]);
-  if(!n.error&&!r.error){const seen=new Set((r.data||[]).map(x=>x.notif_id));const un=(n.data||[]).filter(x=>!seen.has(x.id));S.unread=un.length;S.nl=un.map(x=>({id:x.id,k:NLK(x.link)})).filter(x=>x.k)}
+  if(!n.error&&!r.error){const seen=new Set((r.data||[]).map(x=>x.notif_id));const clr=lsGet('dw_nclear'),clt=clr?new Date(clr).getTime():0;const un=(n.data||[]).filter(x=>!seen.has(x.id)&&new Date(x.created_at).getTime()>clt);S.unread=un.length;S.nl=un.map(x=>({id:x.id,k:NLK(x.link)})).filter(x=>x.k)}
   S.msgN=(dmq&&!dmq.error&&typeof dmq.data==='number')?dmq.data:0;
   S.ckPending=false;
   try{if(!n.error&&(n.data||[]).some(x=>x.kind==='checkin'&&x.link==='checkin:'+td)){const c=await sb.from('checkins').select('at').eq('user_id',S.me.id).eq('day',td).maybeSingle();S.ckPending=!c.data}}catch(e){}
@@ -345,8 +345,8 @@ async function bellPins(){
 async function openBell(){
   const [pinsH,n,r,ckq]=await Promise.all([bellPins(),sb.from('notifications').select('*').order('created_at',{ascending:false}).limit(50),sb.from('notif_reads').select('notif_id').eq('user_id',S.me.id),sb.from('checkins').select('day,at').eq('user_id',S.me.id).order('day',{ascending:false}).limit(40)]);
   const cks=new Map((ckq.data||[]).map(c=>[c.day,c.at])),todayIso=iso(new Date()),tm=t=>new Date(t).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'});
-  const seen=new Set((r.data||[]).map(x=>x.notif_id)),list=n.data||[];
-  const ov=document.createElement('div');ov.className='ov';ov.innerHTML=`<div class="sheet"><div class="sh"><button class="x" id="bk" aria-label="Назад">←</button><b>Уведомления</b><span></span></div><div class="sb">${pinsH}${(S.due||[]).map(t=>{const od=t.deadline<iso(new Date()),td=t.deadline===iso(new Date());return `<div class="nt new" style="border-left:6px solid ${od?'#E08A7A':'#E6CC8F'}"><div class="ni">⏰</div><div class="nb"><b>${od?'Просрочена':td?'Срок сегодня':'Срок завтра'}: ${esc(t.title)}</b><div class="muted" style="margin-top:4px">📅 ${dgFmt(t.deadline)} · <a href="#" class="lnk" data-l="dg">открыть доску</a></div></div></div>`}).join('')}${list.map(x=>{if(x.kind==='checkin'){const day=String(x.link||'').slice(8),ck=cks.get(day),pend=!ck&&day===todayIso;return `<div class="nt ckn ${ck?'done':pend?'pend':'miss'}" data-id="${x.id}" ${pend?'data-ck="1"':''}><div class="ni">${ck?'✅':'☀️'}</div><div class="nb"><b>${ck?'Выход на смену подтверждён':pend?'Ты сегодня на смене?':'Выход не подтверждён'}</b>${seen.has(x.id)||pend?'':'<span class="newb">новое</span>'}<div class="nbody">${ck?'Подтверждено в '+tm(ck):pend?'Нажми на это сообщение, чтобы подтвердить.':dayLabel(day)}</div><div class="muted" style="margin-top:4px">${ago(x.created_at)}</div></div></div>`}
+  const seen=new Set((r.data||[]).map(x=>x.notif_id)),clr=lsGet('dw_nclear'),clt=clr?new Date(clr).getTime():0,list=(n.data||[]).filter(x=>new Date(x.created_at).getTime()>clt);
+  const ov=document.createElement('div');ov.className='ov';ov.innerHTML=`<div class="sheet"><div class="sh"><button class="x" id="bk" aria-label="Назад">←</button><b>Уведомления</b>${list.length?'<button class="x" id="ncl" style="width:auto;padding:0 12px;font-size:13px;font-weight:700">Очистить</button>':'<span></span>'}</div><div class="sb">${pinsH}${(S.due||[]).map(t=>{const od=t.deadline<iso(new Date()),td=t.deadline===iso(new Date());return `<div class="nt new" style="border-left:6px solid ${od?'#E08A7A':'#E6CC8F'}"><div class="ni">⏰</div><div class="nb"><b>${od?'Просрочена':td?'Срок сегодня':'Срок завтра'}: ${esc(t.title)}</b><div class="muted" style="margin-top:4px">📅 ${dgFmt(t.deadline)} · <a href="#" class="lnk" data-l="dg">открыть доску</a></div></div></div>`}).join('')}${list.map(x=>{if(x.kind==='checkin'){const day=String(x.link||'').slice(8),ck=cks.get(day),pend=!ck&&day===todayIso;return `<div class="nt ckn ${ck?'done':pend?'pend':'miss'}" data-id="${x.id}" ${pend?'data-ck="1"':''}><div class="ni">${ck?'✅':'☀️'}</div><div class="nb"><b>${ck?'Выход на смену подтверждён':pend?'Ты сегодня на смене?':'Выход не подтверждён'}</b>${seen.has(x.id)||pend?'':'<span class="newb">новое</span>'}<div class="nbody">${ck?'Подтверждено в '+tm(ck):pend?'Нажми на это сообщение, чтобы подтвердить.':dayLabel(day)}</div><div class="muted" style="margin-top:4px">${ago(x.created_at)}</div></div></div>`}
     const lg=(x.body||'').length>160;return `<div class="nt ${seen.has(x.id)?'':'new'}" data-id="${x.id}"><div class="ni">${NI[x.kind]||'🔔'}</div><div class="nb"><b>${esc(x.title)}</b>${seen.has(x.id)?'':'<span class="newb">новое</span>'}<div class="nbody ${lg?'cl':''}">${esc(x.body||'')}</div><div class="muted" style="margin-top:4px">${ago(x.created_at)}${lg?' · <a href="#" class="more">читать полностью</a>':''}${x.link?` · <a href="#" class="lnk" data-l="${esc(x.link)}">открыть</a>`:''}</div></div></div>`}).join('')||'<div class="muted" style="padding:20px">Пока ничего нового</div>'}</div></div>`;
   document.body.appendChild(ov);document.body.style.overflow='hidden';
   const close=()=>{ov.remove();document.body.style.overflow=''};
@@ -359,8 +359,14 @@ async function openBell(){
     el.className='nt ckn done';el.removeAttribute('data-ck');el.querySelector('.ni').textContent='✅';el.querySelector('b').textContent='Выход на смену подтверждён';el.querySelector('.nbody').textContent='Подтверждено в '+tm(r.data||Date.now());
     S.ckPending=false;paintBell()
   });
-  const fresh=list.filter(x=>!seen.has(x.id)&&!NKNOWN.has(NLK(x.link))).map(x=>({user_id:S.me.id,notif_id:x.id}));
-  if(fresh.length){await sb.from('notif_reads').upsert(fresh);S.unread=(S.nl||[]).length;paintBell()}
+  const fresh=list.filter(x=>!seen.has(x.id)).map(x=>({user_id:S.me.id,notif_id:x.id}));
+  if(fresh.length){S.nl=[];S.unread=0;paintBell();paintBadges();await sb.from('notif_reads').upsert(fresh)}
+  const ncl=ov.querySelector('#ncl');
+  if(ncl)ncl.onclick=async()=>{
+    lsSet('dw_nclear',new Date().toISOString());
+    const all=list.map(x=>({user_id:S.me.id,notif_id:x.id}));
+    S.nl=[];S.unread=0;paintBell();paintBadges();close();toast('Уведомления очищены',1800);
+    if(all.length)sb.from('notif_reads').upsert(all).then(()=>{},()=>{})};
 }
 
 // ---------- Ротации ----------
@@ -474,10 +480,10 @@ async function schView(){
   const otBy={},otDay={};otRows.forEach(r=>{otBy[r.day]=(otBy[r.day]||0)+Number(r.hours);const e=otDay[r.day]||(otDay[r.day]={d:0,p:0});e[otKind(r)]+=Number(r.hours)});
   const otB=k=>{const e=otDay[k];return e?['d','p'].filter(t=>e[t]).map(t=>`<i class="otm ${t}">${OT_K[t][0]}+${fh(e[t])}ч</i>`).join(''):''};
   let worked=0,wH=0,oH=0,dH=0;const cnt={};
-  for(let d=1;d<=n;d++){const k=iso(new Date(y,mo,d)),mk=S.marks[k],hh=dayH(k,dlen,lenSet);
-    if(!mk){worked++;wH+=hh}else{cnt[mk.kind]=(cnt[mk.kind]||0)+1;if(mk.kind==='otgul')oH+=hh;if(mk.kind==='do')dH+=hh}
+  for(let d=1;d<=n;d++){const k=iso(new Date(y,mo,d)),mk=S.marks[k],hh=dayH(k,dlen,lenSet),impl=!mk&&!lenSet&&!!perOf(k)&&!parkOpen(k);
+    if(!mk){if(!impl){worked++;wH+=hh}}else{cnt[mk.kind]=(cnt[mk.kind]||0)+1;if(mk.kind==='otgul')oH+=hh;if(mk.kind==='do')dH+=hh}
     const pd=S.pendDay[k];
-    h+=`<button class="day ${S.sel===k?'sel':''}" data-k="${k}" style="background:${mk?KINDS[mk.kind][1]:pd?KINDS[pd.kind]?.[1]||'var(--card)':'var(--card)'};${pd&&!mk?'border:2px dashed var(--ink);':''}">${d}<small>${mk?KINDS[mk.kind][0]:pd?'⏳ '+(KINDS[pd.kind]?.[0]||''):''}${S.dnotes[k]?' 📝':''}</small>${otB(k)}</button>`}
+    h+=`<button class="day ${S.sel===k?'sel':''}" data-k="${k}" style="background:${mk?KINDS[mk.kind][1]:impl?KINDS.off[1]:pd?KINDS[pd.kind]?.[1]||'var(--card)':'var(--card)'};${pd&&!mk?'border:2px dashed var(--ink);':''}">${d}<small>${mk?KINDS[mk.kind][0]:impl?'ВЫХ':pd?'⏳ '+(KINDS[pd.kind]?.[0]||''):''}${S.dnotes[k]?' 📝':''}</small>${otB(k)}</button>`}
   const cOt=cnt.otgul||0,cDo=cnt.do||0,base=wH+oH-dH;
   const pers=(S.periods||[]).filter(p=>p.date_to>=first&&p.date_from<=last);
   h+=`</div><div class="stat"><div style="background:var(--sage)"><b>${worked}</b>рабочих дней</div><div style="background:var(--gold)"><b>${fh(base)}</b>часов по графику</div></div>
