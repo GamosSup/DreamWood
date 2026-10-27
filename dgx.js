@@ -41,6 +41,8 @@ async function dgxUrl(path,bucket='dg'){
   const r=await sb.storage.from(bucket).createSignedUrl(path,3600);if(r.error)return null;
   dgxCache.set(key,{url:r.data.signedUrl,exp:Date.now()+3300e3});return r.data.signedUrl;
 }
+// файл не открылся (например, он лежит на Диске, а «сервер файлов» на этом сайте не настроен) — показываем это, а не прячем
+function dgxMiss(y){return `<div class="card pad muted" style="border-radius:14px">${/^video\//.test(y.mime||'')?'🎬':'📷'} ${esc(y.name||'файл')}<br><small>Не открылось на этом сайте. Если файл лежит на Диске, откройте заявку через dreamwood.pages.dev.</small></div>`}
 function dgxShrink(file,max=1600){
   return new Promise(res=>{
     if(!/^image\/(jpeg|png|webp)/.test(file.type))return res(file);

@@ -54,7 +54,7 @@ function fixOpen(x){
   dgxSheet((x.urgent?'🚨 ':'🛠 ')+esc(x.zone||'Поломка'),async(box)=>{
     const f=await sb.from('repair_files').select('*').eq('repair_id',x.id).order('created_at');const files=f.data||[];
     const urls=await Promise.all(files.map(y=>dgxUrl(y.path,'repairs')));
-    const media=files.map((y,i)=>{const u=urls[i];if(!u)return '';
+    const media=files.map((y,i)=>{const u=urls[i];if(!u)return dgxMiss(y);
       if(/^video\//.test(y.mime||''))return `<video src="${u}" controls playsinline preload="metadata" style="width:100%;border-radius:14px;background:#000;max-height:60vh"></video>`;
       if(/^image\//.test(y.mime||''))return `<a href="${u}" target="_blank" rel="noopener"><img src="${u}" loading="lazy" alt="" style="width:100%;border-radius:14px;display:block"></a>`;
       return `<a href="${u}" target="_blank" rel="noopener">📎 ${esc(y.name||'файл')}</a>`}).join('');

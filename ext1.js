@@ -43,7 +43,14 @@ function downloadCSV(name,rows){
 async function fileUpload(bucket,table,fk,id,file,maxMb=10){
   const f=await dgxShrink(file);
   const dv=await driveSend(bucket,id,f);
-  if(dv.id){const r=await sb.from(table).insert({[fk]:id,path:'drive:'+dv.id,name:file.name,mime:f.type,size:f.size});return r.error?'Не сохранилось: '+r.error.message:null}
+  if(dv.id){
+    // фото кладём ещё и в базу: оно открывается на обоих сайтах, даже если «сервер файлов» на зеркале не настроен (копия на Диске остаётся архивом)
+    if(/^image\//.test(f.type||'')&&f.size<=4*1024*1024){
+      const ext0=((f.name.match(/\.(\w{1,5})$/)||[])[1]||'jpg').toLowerCase(),p0=`${id}/${crypto.randomUUID()}.${ext0}`;
+      const u0=await sb.storage.from(bucket).upload(p0,f,{contentType:f.type||'image/jpeg'});
+      if(!u0.error){const r0=await sb.from(table).insert({[fk]:id,path:p0,name:file.name,mime:f.type,size:f.size});if(!r0.error)return null;sb.storage.from(bucket).remove([p0])}
+    }
+    const r=await sb.from(table).insert({[fk]:id,path:'drive:'+dv.id,name:file.name,mime:f.type,size:f.size});return r.error?'Не сохранилось: '+r.error.message:null}
   if(dv.err&&!dv.off)return dv.err;
   if(f.size>maxMb*1024*1024)return 'Файл «'+file.name+'» больше '+maxMb+' МБ';
   const ext=((f.name.match(/\.(\w{1,5})$/)||[])[1]||'bin').toLowerCase();
