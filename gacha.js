@@ -4,8 +4,6 @@
 
 // редкости: название, цвет, шанс (%)
 const GX_R=[null,['Обычная','#9FB68C',50],['Редкая','#6AA9E0',32],['Эпическая','#A57BE8',12],['Мифическая','#F26B4E',4],['Легендарная','#F0B429',1.9],['Тайна хранителя','conic-gradient(#FF5E7E,#FFB347,#4FC98F,#52A7FF,#B07CFF,#FF5E7E)',0.1]];
-const GX_COIN=[0,1,2,5,10,25,100];          // сколько монет даёт дубль
-const GX_PRICE=[0,5,10,25,50,100,0];         // цена в монетах (0 — не продаётся)
 const GX_KIND={bc:'Цвет шерсти',ha:'Шапка',gl:'Очки',nk:'Шея',ch:'Грудь',bk:'За спиной',hd:'В руке',cm:'Компаньон',frame:'Рамка',name:'Цвет имени',bg:'Фон',key:'Значок и титул'};
 // [код, редкость, вид, название, значение (цвет шерсти)]
 const GXI=[
@@ -118,59 +116,99 @@ const gxMachine=()=>{
    <text x="130" y="187" text-anchor="middle" font-family="Manrope,Arial,sans-serif" font-weight="800" font-size="13" fill="#fff" letter-spacing="2">ДРИМВУД</text></svg>`;
 };
 const gxPct=r=>{const p=GX_R[r][2];return (p<1?p.toString().replace('.',','):Math.round(p*10)/10).toString().replace('.',',')+'%'};
-function gxReveal(d,again){
-  const it=GX_BY[d.code]||{id:d.code,r:d.rarity,k:'bg',n:d.code},r=d.rarity,col=gxRc(r),big=r>=5;
+const gxReq=()=>(window.crypto&&crypto.randomUUID)?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return (c==='x'?r:(r&3|8)).toString(16)});
+const GX_DAY=[['🎟','1'],['🎟','1'],['🎟','2'],['🎟','2'],['🎟','3'],['🎟','3'],['🏅','золотой']];
+// шарик падает сразу при нажатии, запрос идёт параллельно; карточка открывается, когда доиграла анимация и пришёл ответ
+function gxSpin(fetchRes,onData,onClose){
   const ov=document.createElement('div');ov.className='gxov';
-  ov.innerHTML=`<div class="gxcap" style="--gc:${/^#/.test(col)?col:'#B07CFF'}"><div class="gxt"></div><div class="gxbm"></div></div>
-   <div class="gxres r${r}" style="--rc:${col}"><div class="gxrar" style="${r===6?'background:'+col+';-webkit-background-clip:text;background-clip:text;color:transparent':'color:'+col}">${GX_R[r][0]}</div><div class="gxpv">${gxPrev(it.id,150)}</div><b class="gxn">${esc(it.n)}</b><div class="muted">${GX_KIND[it.k]||''}</div>
-   <div class="gxdup">${d.dup?`Уже есть. Дубль превратился в <b>+${d.gain} 🪙</b>`:'✨ Новое в коллекции!'}</div>
-   <div class="gxbt">${d.dup?'':`<button class="btn" data-w>Надеть</button>`}${(d.tickets>0)?`<button class="btn ghost" data-a>Ещё раз · осталось ${d.tickets} 🎟</button>`:''}<button class="btn ghost" data-x>Закрыть</button></div></div>`;
+  ov.innerHTML=`<div class="gxcap" style="--gc:#B9A8E8"><div class="gxt"></div><div class="gxbm"></div></div><div class="gxres"></div>`;
   document.body.appendChild(ov);
-  const done=()=>ov.remove();
-  setTimeout(()=>{ov.classList.add('open');if(r>=3)dwParty();if(big){setTimeout(dwParty,500);setTimeout(dwParty,1000)}},1750);
-  ov.querySelector('[data-x]').onclick=()=>{done();again&&again(false)};
-  const a=ov.querySelector('[data-a]');if(a)a.onclick=()=>{done();again&&again(true)};
-  const w=ov.querySelector('[data-w]');if(w)w.onclick=async()=>{w.disabled=true;if(await gxWear(it.id)){w.textContent='Надето ✓'}else w.disabled=false};
+  const t0=Date.now();
+  return fetchRes().then(async d=>{
+    const left=1750-(Date.now()-t0);if(left>0)await new Promise(r=>setTimeout(r,left));
+    const it=GX_BY[d.code]||{id:d.code,r:d.rarity,k:'bg',n:d.code},r=d.rarity,col=gxRc(r),big=r>=5;
+    const nextG=d.gold&&d.gold_left>0,nextN=!d.gold&&d.tickets>0||d.gold&&d.gold_left<=0&&d.tickets>0;
+    const res=ov.querySelector('.gxres');res.className='gxres r'+r;res.style.setProperty('--rc',/^#/.test(col)?col:'#B07CFF');
+    res.innerHTML=`${d.gold?'<div class="gxgl">🏅 Золотая крутка</div>':''}<div class="gxrar" style="${r===6?'background:'+col+';-webkit-background-clip:text;background-clip:text;color:transparent':'color:'+col}">${GX_R[r][0]}</div><div class="gxpv">${gxPrev(it.id,150)}</div><b class="gxn">${esc(it.n)}</b><div class="muted">${GX_KIND[it.k]||''}</div>
+     <div class="gxdup">${d.dup?`Уже есть.${d.gain>0?` Возвращаем <b>+${d.gain} 🎟</b>`:''}`:'✨ Новое в коллекции!'}</div>
+     <div class="gxbt">${d.dup?'':`<button class="btn" data-w>Надеть</button>`}${nextG?`<button class="btn ghost" data-a="g">Ещё золотая · осталось ${d.gold_left} 🏅</button>`:''}${nextN?`<button class="btn ghost" data-a="n">Ещё раз · осталось ${d.tickets} 🎟</button>`:''}<button class="btn ghost" data-x>Закрыть</button></div>`;
+    ov.querySelector('.gxcap').remove();
+    onData&&onData(d);
+    ov.classList.add('open');if(r>=3)dwParty();if(big){setTimeout(dwParty,500);setTimeout(dwParty,1000)}
+    const done=()=>ov.remove();
+    ov.querySelector('[data-x]').onclick=()=>{done();onClose&&onClose(null)};
+    ov.querySelectorAll('[data-a]').forEach(a=>a.onclick=()=>{done();onClose&&onClose(a.dataset.a)});
+    const w=ov.querySelector('[data-w]');if(w)w.onclick=async()=>{w.disabled=true;if(await gxWear(it.id)){w.textContent='Надето ✓'}else w.disabled=false};
+  }).catch(e=>{ov.remove();toast((e&&e.message)||'Не получилось, попробуй ещё раз',3500);onClose&&onClose(null)});
 }
+const gxCells=(streak,claimed)=>{
+  const lastPos=streak>0?((streak-1)%7)+1:0,nextPos=streak>0?(lastPos%7)+1:1;
+  const doneTo=claimed?lastPos:(nextPos===1?0:nextPos-1);
+  return `<div class="gxdays">${GX_DAY.map(([ic,t],i)=>{const n=i+1,dn=n<=doneTo,td=!claimed&&n===nextPos;return `<div class="gxd${dn?' dn':''}${td?' td':''}${n===7?' g7':''}"><small>День ${n}</small><span>${dn?'✓':ic}</span><b>${t==='золотой'?'🏅':'+'+t}</b></div>`}).join('')}</div>`;
+};
+async function gxDaily(){
+  if(window._gxDay)return;window._gxDay=1;
+  try{
+    const r=await sb.rpc('gacha_daily_claim');if(r.error||!r.data||!r.data.claimed)return;
+    const d=r.data,ov=document.createElement('div');ov.className='gxov open gxdaily';
+    ov.innerHTML=`<div class="gxres" style="--rc:#F0B429;opacity:1;transform:none"><div class="gxrar" style="color:#C9871A">Ежедневная награда</div><b class="gxn">День ${d.pos} из 7 · серия ${d.streak}</b>${gxCells(d.streak,true)}
+      <div class="gxdup">Тебе: <b>+${d.tickets_gain} 🎟</b>${d.gold_gain?` и <b>🏅 золотой билет</b>: повышенный шанс на легендарную вещь`:''}</div>
+      <div class="muted">${d.pos===7?'Неделя подряд! Золотой билет ждёт в автомате.':'Заходи каждый день: на 7-й день серии будет золотой билет. Пропустишь день, серия начнётся заново.'}</div>
+      <div class="gxbt"><button class="btn" data-g>К автомату 🎰</button><button class="btn ghost" data-x>Закрыть</button></div></div>`;
+    document.body.appendChild(ov);dwParty();
+    ov.querySelector('[data-x]').onclick=()=>ov.remove();
+    ov.querySelector('[data-g]').onclick=()=>{ov.remove();S.gmTab='gx';go('game')};
+    gxS.info=null;
+  }catch(e){}
+}
+{const sa=startApp;startApp=function(){const x=sa.apply(this,arguments);setTimeout(gxDaily,2500);return x}}
 async function gmGachaTab(box){
   box.innerHTML='<div class="muted" style="padding:14px">Загружаю автомат…</div>';
   let inf;try{inf=await gxInfo()}catch(e){
     box.innerHTML=`<div class="card pad col"><b>Автомат ещё не подключён 🎰</b><div class="muted">${/does not exist|function|schema|gacha/i.test(String(e.message||e))?'В базе нужно один раз запустить обновление. Админ знает.':esc(e.message||e)}</div></div>`;return;
   }
-  const rows=GXI.length,have=GXI.filter(x=>gxOwn(x[0])).length,pityLeft=Math.max(0,10-(inf.pity||0)-0);
+  const rows=GXI.length,have=GXI.filter(x=>gxOwn(x[0])).length;
   const paint=()=>{
     const byR=[1,2,3,4,5,6].map(r=>({r,L:GXI.filter(x=>x[1]===r)}));
-    box.innerHTML=`<div class="card pad col gxm"><div class="gxst"><span>🎟 Билетов <b id="gx_t">${inf.tickets}</b></span><span>🪙 Монет <b>${inf.coins}</b></span></div>
+    const left=Math.max(1,10-(inf.pity||0));
+    box.innerHTML=`<div class="card pad col gxm"><div class="gxst"><span>🎟 Билетов <b id="gx_t">${inf.tickets}</b></span><span>🏅 Золотых <b>${inf.gold||0}</b></span></div>
      ${gxMachine()}
      <button class="btn" id="gx_pull" ${inf.tickets>0?'':'disabled'}>${inf.tickets>0?'Крутить ручку · 1 🎟':'Нет билетов'}</button>
-     <div class="muted" style="text-align:center">Гарантия редкого или выше: через <b>${Math.max(1,10-(inf.pity||0))}</b> ${((x)=>x%10===1&&x!==11?'крутку':x%10>=2&&x%10<=4&&(x<12||x>14)?'крутки':'круток')(Math.max(1,10-(inf.pity||0)))}.</div></div>
-    <div class="card pad col"><b>Как получить билеты</b><div class="muted">Один билет за каждое полученное достижение и по одному за каждые полчаса доработки или переработки. Билеты за всё, что уже есть, засчитаны сами.</div></div>
-    <div class="card pad col"><b>Шансы</b><div class="gxodds">${byR.map(({r,L})=>`<div class="otr"><span><i class="gxdot" style="background:${gxRc(r)}"></i> ${GX_R[r][0]}</span><span><b>${gxPct(r)}</b> · ${L.filter(x=>gxOwn(x[0])).length}/${L.length}</span></div>`).join('')}</div><div class="muted">Дубль превращается в монеты (обычная +1, редкая +2, эпическая +5, мифическая +10, легендарная +25, тайна +100). На монеты можно обменять любую вещь, которой нет в коллекции, кроме «Тайны хранителя».</div></div>
-    <div class="card pad col"><b>Коллекция · ${have} из ${rows}</b><div class="muted">Нажми на вещь, которая у тебя есть, чтобы надеть. Нет вещи: нажми, чтобы обменять на монеты, если хватает.</div></div>
-    ${byR.map(({r,L})=>`<details class="area gmg" ${r<=2?'open':''}><summary class="ah" style="background:var(--tab)"><span class="ahn"><i class="gxdot" style="background:${gxRc(r)}"></i> ${GX_R[r][0]}</span><span class="pill" style="background:#FFFDF9;align-self:center">${L.filter(x=>gxOwn(x[0])).length} / ${L.length}</span></summary><div class="gops" style="padding:8px">${L.map(([id,,k,n])=>{const ow=gxOwn(id),secret=r===6;return `<button class="gop gxit${ow?'':' lk'}" data-i="${id}"><span class="gopv">${ow?gxPrev(id,78):'<span style="font-size:30px;opacity:.5">?</span>'}</span><span class="gopn">${ow||!secret?esc(n):'???'}</span>${ow?'':`<span class="gopl">${secret?'только из автомата':'🪙 '+GX_PRICE[r]}</span>`}</button>`}).join('')}</div></details>`).join('')}`;
-    const m=box.querySelector('#gx_m');
-    box.querySelector('#gx_pull').onclick=()=>pull();
+     ${(inf.gold||0)>0?`<button class="btn gxgold" id="gx_gold">🏅 Золотая крутка · 1 🏅</button><div class="muted" style="text-align:center">Золотая: эпическая 45%, мифическая 30%, легендарная 24%, тайна 1%.</div>`:''}
+     <div class="muted" style="text-align:center">Гарантия редкого или выше: через <b>${left}</b> ${((x)=>x%10===1&&x!==11?'крутку':x%10>=2&&x%10<=4&&(x<12||x>14)?'крутки':'круток')(left)}.</div></div>
+    <div class="card pad col"><b>Ежедневная награда</b>${gxCells(inf.streak||0,inf.claimed)}<div class="muted">${inf.claimed?'Сегодняшняя награда получена. Приходи завтра!':'Заходи в приложение каждый день и получай билеты.'} На 7-й день подряд будет золотой билет. Пропустишь день: серия начнётся заново.${inf.streak?` Сейчас серия: <b>${inf.streak}</b>.`:''}</div></div>
+    ${(inf.recent&&inf.recent.length)?`<div class="card pad col"><b>Последние выпадения</b><div class="gxrec">${inf.recent.map(x=>`<div class="gxrc" title="${esc((GX_BY[x.code]||{}).n||'')}"><i class="gxdot" style="background:${gxRc(x.rarity)}"></i><span>${gxPrev(x.code,46)}</span>${x.dup?'<small>дубль</small>':''}${x.gold?'<small>🏅</small>':''}</div>`).join('')}</div></div>`:''}
+    <div class="card pad col"><b>Как получить билеты</b><div class="muted">Один билет за каждое полученное достижение и по одному за каждые полчаса доработки или переработки. Ещё билеты дают ежедневные награды. Билеты за всё, что уже есть, засчитаны сами.</div></div>
+    <div class="card pad col"><b>Шансы</b><div class="gxodds">${byR.map(({r,L})=>`<div class="otr"><span><i class="gxdot" style="background:${gxRc(r)}"></i> ${GX_R[r][0]}</span><span><b>${gxPct(r)}</b> · ${L.filter(x=>gxOwn(x[0])).length}/${L.length}</span></div>`).join('')}</div><div class="muted">Если выпал дубль, часть билетов возвращается: редкая и эпическая +1, мифическая +2, легендарная +3, тайна +5. Обычные дубли ничего не возвращают.</div></div>
+    <div class="card pad col"><b>Коллекция · ${have} из ${rows}</b><div class="muted">Нажми на вещь, которая у тебя есть, чтобы надеть.</div></div>
+    ${byR.map(({r,L})=>`<details class="area gmg" ${r<=2?'open':''}><summary class="ah" style="background:var(--tab)"><span class="ahn"><i class="gxdot" style="background:${gxRc(r)}"></i> ${GX_R[r][0]}</span><span class="pill" style="background:#FFFDF9;align-self:center">${L.filter(x=>gxOwn(x[0])).length} / ${L.length}</span></summary><div class="gops" style="padding:8px">${L.map(([id,,k,n])=>{const ow=gxOwn(id),secret=r===6;return `<button class="gop gxit${ow?'':' lk'}" data-i="${id}"><span class="gopv">${ow?gxPrev(id,78):'<span style="font-size:30px;opacity:.5">?</span>'}</span><span class="gopn">${ow||!secret?esc(n):'???'}</span>${ow?'':'<span class="gopl">пока нет</span>'}</button>`}).join('')}</div></details>`).join('')}`;
+    box.querySelector('#gx_pull').onclick=()=>pull(false);
+    const g=box.querySelector('#gx_gold');if(g)g.onclick=()=>pull(true);
     box.querySelectorAll('.gxit').forEach(b=>b.onclick=async()=>{
-      const id=b.dataset.i,it=GX_BY[id];
+      const id=b.dataset.i;
       if(gxOwn(id)){if(await gxWear(id))toast('Надето ✨',1500);return}
-      if(it.r===6)return toast('Это можно только выиграть в автомате',2600);
-      const pr=GX_PRICE[it.r];if(inf.coins<pr)return toast(`Нужно ${pr} 🪙, у тебя ${inf.coins}`,2800);
-      if(!confirm(`Обменять ${pr} монет на «${it.n}»?`))return;
-      const r=await sb.rpc('gacha_buy',{p_code:id});if(r.error)return toast(r.error.message,3200);
-      inf=r.data;await gmLoad(true);toast('Обменено ✨',1800);dwParty();paint();
+      toast('Этой вещи пока нет в коллекции. Выбей её в автомате!',2600);
     });
   };
-  const pull=async()=>{
-    if(window._gxBusy)return;window._gxBusy=1;try{await pull1()}finally{setTimeout(()=>{window._gxBusy=0},400)}
-  };
-  const pull1=async()=>{
-    const btn=box.querySelector('#gx_pull'),m=box.querySelector('#gx_m');btn.disabled=true;m&&m.classList.add('spin');
-    const [r]=await Promise.all([sb.rpc('gacha_pull'),new Promise(res=>setTimeout(res,1400))]);
-    m&&m.classList.remove('spin');
-    if(r.error){toast(r.error.message,3500);paint();return}
-    const d=r.data;inf={...inf,tickets:d.tickets,coins:d.coins,pity:d.pity};
-    await gmLoad(true);paint();
-    gxReveal(d,again=>{if(again)setTimeout(()=>{const b=document.querySelector('#gx_pull');b&&!b.disabled&&b.click()},200);else paint()});
+  // крутка: один клик = один номер запроса; повтор того же запроса база не списывает
+  const pull=gold=>{
+    if(window._gxBusy)return;window._gxBusy=1;
+    const req=gxReq();
+    gxSpin(async()=>{
+      const call=()=>sb.rpc('gacha_pull',{p_req:req,p_gold:!!gold});
+      let r=await call();
+      if(r.error&&/fetch|network|load failed|timeout/i.test(r.error.message||''))r=await call();
+      if(r.error)throw r.error;return r.data;
+    },d=>{
+      inf={...inf,tickets:d.tickets,pity:d.pity,gold:d.gold_left!=null?d.gold_left:inf.gold,recent:[{code:d.code,rarity:d.rarity,dup:d.dup,gold:d.gold},...(inf.recent||[])].slice(0,8)};
+      if(box.isConnected)paint();
+      const hd=document.getElementById('gx_hdr');if(hd)hd.textContent=d.tickets;
+      gmLoad(true).then(()=>{if(box.isConnected&&!window._gxBusy)paint()}).catch(()=>{});
+    },again=>{
+      window._gxBusy=0;
+      if(box.isConnected)paint();
+      if(again)setTimeout(()=>pull(again==='g'),150);
+    });
   };
   paint();
 }

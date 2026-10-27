@@ -667,3 +667,21 @@ html[data-dark="1"] .alcard.brfcard{background:#3a2f22;color:#f3e6d3}
 .shvg input{width:100%;min-height:50px;font-size:22px;font-weight:800;text-align:center;border-radius:14px;box-sizing:border-box}
 .shvb{width:100%;min-height:48px}
 .shv small.who.bad{background:#F2C4BA}
+/* v73: ежедневные награды, золотая крутка, последние выпадения */
+.gxdays{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;width:100%}
+.gxd{display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 2px;border-radius:12px;background:var(--tab,#F3EAE0);border:2px solid transparent;text-align:center;min-width:0}
+.gxd small{font-size:9px;opacity:.7;line-height:1.1}
+.gxd span{font-size:18px;line-height:1.2}
+.gxd b{font-size:12px}
+.gxd.dn{background:#DDF3DF;opacity:.85}
+.gxd.td{border-color:#F0B429;background:#FFF3D1;box-shadow:0 0 0 3px rgba(240,180,41,.25)}
+.gxd.g7{background:linear-gradient(135deg,#FFF3D1,#FFE08A)}
+.gxd.g7.dn{background:linear-gradient(135deg,#DDF3DF,#BFE9C4)}
+.gxgold{background:linear-gradient(135deg,#FFD23F,#F29A1F)!important;color:#5A3A00!important;font-weight:800;box-shadow:0 0 0 3px rgba(240,180,41,.35),0 4px 14px rgba(240,154,31,.45)}
+.gxgl{font-weight:800;color:#B7791F;font-size:13px;letter-spacing:.02em}
+.gxrec{display:flex;gap:8px;flex-wrap:wrap}
+.gxrc{position:relative;display:flex;flex-direction:column;align-items:center;width:54px}
+.gxrc .gxdot{position:absolute;top:0;left:2px;z-index:1}
+.gxrc small{font-size:9px;opacity:.7}
+.gxdaily .gxres .gxdays{margin:6px 0}
+@media(max-width:380px){.gxd small{font-size:8px}.gxd b{font-size:11px}}
