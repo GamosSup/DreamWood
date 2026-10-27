@@ -33,7 +33,7 @@ const gmRankSvg=(r,sz=22)=>`<svg viewBox="0 0 32 32" width="${sz}" height="${sz}
 // «Невозможный»: подпись вместо числа
 const gmLvChip=(row,big)=>{
   if(!row)return '';
-  if(row.lvl_text)return `<span class="lvx${/^последний$/i.test(row.lvl_text.trim())?' lvz':''}${big?' big':''}" title="Уровень: ${esc(row.lvl_text)}">${esc(row.lvl_text)}</span>`;
+  if(row.lvl_text)return `<span class="lvx${/^последний$/i.test(row.lvl_text.trim())?' lvz':/^супер/i.test(row.lvl_text.trim())?' lvs':''}${big?' big':''}" title="Уровень: ${esc(row.lvl_text)}">${esc(row.lvl_text)}</span>`;
   const L=gmLv(row.xp);
   return `<span class="lvb${big?' big':''}" style="--rc:${GM_RANKS[L.r].c}" title="${esc(GM_RANKS[L.r].full)} · уровень ${L.n}">${gmRankSvg(L.r,big?30:20)}<b>${L.n}</b></span>`;
 };
@@ -88,7 +88,8 @@ const GM_ACH=[
  {c:'spec:shark',g:'skill',t:5,ic:'🦈',n:'Кигуруми акулы',d:'Особый подарок: костюм акулы для питомца',b:0,man:1,secret:1,title:'Акула-супервайзер'},
  {c:'spec:admin_server',g:'skill',t:5,ic:'sword',n:'Админ на сервере',d:'Особый значок. Выдаёт админ, ничего лишнего не просит',b:500,man:1,secret:1,title:'Админ на сервере'},
  {c:'spec:whipcarrot',g:'skill',t:5,ic:'whipgb',n:'Кнут и пряник',d:'Для работы с командой 💙',b:0,man:1,secret:1,title:'Кнут и пряник'},
- {c:'spec:finished',g:'skill',t:5,ic:'🏆',n:'Прошёл игру',d:'Дошёл до конца: прошёл Дримвуд целиком',b:0,man:1,secret:1,title:'Прошёл игру'}
+ {c:'spec:finished',g:'skill',t:5,ic:'🏆',n:'Прошёл игру',d:'Дошёл до конца: прошёл Дримвуд целиком',b:0,man:1,secret:1,title:'Прошёл игру'},
+ {c:'spec:curly',g:'skill',t:5,ic:'🌀',n:'Кучерявая причёска',d:'Особый подарок: кучерявая причёска для питомца',b:0,man:1,secret:1,title:'Кучерявый'}
 ];
 const GM_BY=Object.fromEntries(GM_ACH.map(a=>[a.c,a]));
 // выданные вручную коды без записи в каталоге: допуски, события, особые

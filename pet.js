@@ -16,7 +16,7 @@ const PET_EC=[['e_gr','Зелёные',null,'#3CA559'],['e_br','Карие',null
 const PET_EX=[['x_n','Обычные',null],['x_h','Весёлые',null],['x_s','Сонные','hab7'],['x_w','Подмигивает','ot1'],['x_o','Удивлённые','chk100'],['x_l','Сердечки','thx10'],['x_t','Звёзды','chk500']];
 const PET_GZ=[['c','Прямо',null],['l','Влево',null],['r','Вправо',null],['u','Вверх',null]];
 const PET_MO=[['m_s','Улыбка',null],['m_g','Широкая',null],['m_k','Хитрая','day20'],['m_t','С языком','hab1'],['m_o','Ого!','chk100'],['m_c','Котик','thx1'],['m_z','Спит','hab7']];
-const PET_HR=[['r_0','Без причёски',null],['r_t','Хохолок',null],['r_b','Чёлка',null],['r_m','Ирокез','day20'],['r_c','Завиток','hab1']];
+const PET_HR=[['r_0','Без причёски',null],['r_t','Хохолок',null],['r_b','Чёлка',null],['r_m','Ирокез','day20'],['r_c','Завиток','hab1'],['r_k','Кучерявая','spec:curly']];
 const PET_HC=[['k_br','Каштановый',null,'#5A3A22'],['k_bk','Чёрный',null,'#2A2A35'],['k_bl','Синий',null,'#2F6FD0'],['k_or','Рыжий',null,'#E8872E'],['k_pk','Розовый','thx1','#F06FA6'],['k_gr','Зелёный','hab1','#3FAE5A'],['k_pu','Фиолетовый','day20','#7B4FD1'],['k_go','Золотой','chk500','#F2C94C'],['k_wh','Белый','hab30','#F4F4F4']];
 const PET_PT=[['p_0','Без узора',null],['p_d','Веснушки-пятнышки','day1'],['p_h','Сердце на пузике','thx1'],['p_s','Звезда на пузике','chk100'],['p_z','Полоски','hab7']];
 // накладки: svg-текст строится в системе координат слоя, см. petGear
@@ -89,6 +89,11 @@ function petHair(h,F,D,id){
   if(h==='r_t')return `<path d="M126 84Q92 30 140 6Q136 44 156 72Z" ${st}/><path d="M146 74Q138 12 198 -10Q172 34 184 74Z" ${st}/><path d="M176 76Q206 34 250 40Q216 58 210 88Z" ${st}/>`;
   if(h==='r_m')return `<path d="M124 78L134 20L150 70L162 6L176 68L192 22L200 78Q160 62 124 78Z" ${st}/>`;
   if(h==='r_c')return `<path d="M160 74Q150 26 188 22Q222 22 210 50Q198 66 184 52" fill="none" stroke="${D}" stroke-width="19" stroke-linecap="round"/><path d="M160 74Q150 26 188 22Q222 22 210 50Q198 66 184 52" fill="none" stroke="url(#${id}h)" stroke-width="13" stroke-linecap="round"/>`;
+  if(h==='r_k'){let c='';const cs=[];for(let a=12;a<=168;a+=14){const r=a/180*Math.PI;cs.push([160+Math.cos(r)*98,126-Math.sin(r)*80,22])}
+    [[110,78,19],[142,62,20],[178,62,20],[210,78,19],[126,98,15],[194,98,15]].forEach(x=>cs.push(x));
+    c=cs.map(([x,y,r])=>`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" ${st}/>`).join('');
+    const sp=cs.slice(0,11).map(([x,y,r])=>`<path d="M${(x-r*.45).toFixed(1)} ${(y+r*.1).toFixed(1)}q${(r*.45).toFixed(1)} ${(-r*.7).toFixed(1)} ${(r*.9).toFixed(1)} 0" fill="none" stroke="${D}" stroke-width="2.2" stroke-linecap="round" opacity=".55"/>`).join('');
+    return c+sp}
   if(h==='r_b')return `<path d="M62 126Q78 54 160 58Q242 54 258 126Q236 96 208 112Q184 84 160 108Q136 84 112 112Q84 96 62 126Z" ${st}/>`;
   return '';
 }
