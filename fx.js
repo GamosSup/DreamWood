@@ -105,8 +105,9 @@ const dayJoke=(skip)=>{const d=new Date(),n=Math.floor((Date.UTC(d.getFullYear()
   let n=0,t=0;
   const L=['Дримми подпрыгнул от радости! 🎈','Ты нашёл секрет! Дримми тебе подмигивает 😉','Ура! Ты наш человек 🌟','Бонус: +100 к настроению 🎉','Тссс… никому не говори, что Дримми умеет прыгать 🤫'];
   document.addEventListener('click',e=>{
+    const nv=e.target&&e.target.tagName==='NAV'&&e.offsetY<84&&innerWidth>=900;if(nv&&window.gmAboutPark){gmAboutPark();return}
     if(!e.target.closest||!e.target.closest('.brand .lg'))return;
-    clearTimeout(t);n++;t=setTimeout(()=>n=0,2200);
+    clearTimeout(t);clearTimeout(window.__abt);n++;t=setTimeout(()=>n=0,2200);if(n===1)window.__abt=setTimeout(()=>{if(n===1&&window.gmAboutPark)gmAboutPark()},700);
     if(n>=5){n=0;
       const m=document.createElement('img');m.src='stickers/mascot-balloon.webp';m.className='dwjump';m.alt='';document.body.appendChild(m);setTimeout(()=>m.remove(),1800);
       dwParty();toast(dwPick(L),3200);window.gmClaim&&gmClaim('egg')}
