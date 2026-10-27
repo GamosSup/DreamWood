@@ -186,15 +186,16 @@ S.msg={t:'in'};
 const msgReq=()=>(window.crypto&&crypto.randomUUID)?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return (c==='x'?r:(r&3|8)).toString(16)});
 async function msgView(){
   await ensurePeople();
-  const [ib,sn]=await Promise.all([sb.rpc('dm_inbox'),sb.from('dm').select('id,to_user,body,anon,read_at,created_at').eq('from_user',S.me.id).order('created_at',{ascending:false}).limit(100)]);
+  const [ib,sn]=await Promise.all([sb.rpc('dm_inbox'),sb.from('dm').select('id,to_user,body,anon,read_at,created_at,photo').eq('from_user',S.me.id).order('created_at',{ascending:false}).limit(100)]);
   const inb=ib.data||[],sent=sn.data||[],unread=inb.filter(x=>!x.read);
-  let h=head('Личные сообщения','Напиши коллеге лично, можно анонимно')+subBar('ap','msg');
+  let h=head('Написать сообщение','Напиши коллеге лично, можно с фото и анонимно')+subBar('ap','msg');
   h+=`<button class="btn" id="mg_new">✉️ Написать сообщение</button><div class="tabs"><button data-mt="in" class="${S.msg.t==='in'?'on':''}">Мне · ${inb.length}${unread.length?` <i class="sbn">${unread.length}</i>`:''}</button><button data-mt="out" class="${S.msg.t==='out'?'on':''}">Я писал(а) · ${sent.length}</button></div>`;
   if(ib.error)h+=`<div class="card pad muted">Сообщения пока не подключены: ${esc(ib.error.message)}</div>`;
-  else if(S.msg.t==='in')h+=inb.map(x=>`<div class="card pad col" style="${x.read?'':'border-left:8px solid var(--gold,#F0B429)'}"><div style="display:flex;justify-content:space-between;gap:8px"><b>${x.anon?'🕶 Аноним':esc(x.from_name||'Коллега')}</b><span class="muted">${dayLabel(iso(new Date(x.at)))}</span></div><div style="white-space:pre-wrap">${esc(x.body)}</div>${x.anon?'<div class="muted">Автор скрыт, ответить нельзя.</div>':`<button class="btn ghost" data-re="${x.from_id}">↩️ Ответить</button>`}</div>`).join('')||'<div class="card pad muted">Пока никто не писал тебе лично.</div>';
-  else h+=sent.map(x=>`<div class="card pad col"><div style="display:flex;justify-content:space-between;gap:8px"><b>Кому: ${esc(pname(x.to_user))}</b><span class="muted">${dayLabel(iso(new Date(x.created_at)))}</span></div><div style="white-space:pre-wrap">${esc(x.body)}</div><div class="muted">${x.anon?'🕶 Отправлено анонимно · ':''}${x.read_at?'✓ Прочитано':'Ещё не прочитано'}</div></div>`).join('')||'<div class="card pad muted">Ты пока никому не писал(а).</div>';
+  else if(S.msg.t==='in')h+=inb.map(x=>`<div class="card pad col" style="${x.read?'':'border-left:8px solid var(--gold,#F0B429)'}"><div style="display:flex;justify-content:space-between;gap:8px"><b>${x.anon?'🕶 Аноним':esc(x.from_name||'Коллега')}</b><span class="muted">${dayLabel(iso(new Date(x.at)))}</span></div><div style="white-space:pre-wrap">${esc(x.body)}</div>${x.photo?`<img class="dmph" data-ph="${esc(x.photo)}" alt="Фото" style="display:none">`:''}${x.anon?'<div class="muted">Автор скрыт, ответить нельзя.</div>':`<button class="btn ghost" data-re="${x.from_id}">↩️ Ответить</button>`}</div>`).join('')||'<div class="card pad muted">Пока никто не писал тебе лично.</div>';
+  else h+=sent.map(x=>`<div class="card pad col"><div style="display:flex;justify-content:space-between;gap:8px"><b>Кому: ${esc(pname(x.to_user))}</b><span class="muted">${dayLabel(iso(new Date(x.created_at)))}</span></div><div style="white-space:pre-wrap">${esc(x.body)}</div>${x.photo?`<img class="dmph" data-ph="${esc(x.photo)}" alt="Фото" style="display:none">`:''}<div class="muted">${x.anon?'🕶 Отправлено анонимно · ':''}${x.read_at?'✓ Прочитано':'Ещё не прочитано'}</div></div>`).join('')||'<div class="card pad muted">Ты пока никому не писал(а).</div>';
   app.innerHTML=h;
   $('#mg_new').onclick=()=>msgForm();
+  app.querySelectorAll('img[data-ph]').forEach(async im=>{try{const r=await sb.storage.from('dm').createSignedUrl(im.dataset.ph,3600);if(r.data&&r.data.signedUrl){im.src=r.data.signedUrl;im.style.display='';im.onclick=()=>window.open(im.src,'_blank')}}catch(e){}});
   app.querySelectorAll('[data-mt]').forEach(b=>b.onclick=()=>{S.msg.t=b.dataset.mt;msgView()});
   app.querySelectorAll('[data-re]').forEach(b=>b.onclick=()=>msgForm(b.dataset.re));
   if(S.msg.t==='in'&&unread.length){sb.rpc('dm_read',{p_ids:unread.map(x=>x.id)}).then(()=>{S.msgN=0;if(typeof paintBadges==='function')paintBadges()},()=>{})}
@@ -207,13 +208,27 @@ function msgForm(to){
     <label>Сообщение<textarea id="m_body" maxlength="1500" rows="5" placeholder="Что хочешь сказать">${esc(f.body)}</textarea></label>
     <label style="display:flex;flex-direction:row;gap:10px;align-items:center;justify-content:flex-start"><input type="checkbox" id="m_anon" ${f.anon?'checked':''} style="width:22px;height:22px;flex:none;margin:0"><span>🕶 Отправить анонимно</span></label>
     <div class="muted">Анонимно: получатель не увидит, кто написал, и не сможет ответить. Автора видит только администратор приложения, и только если сообщение нарушает правила: оскорбления, травля, угрозы.</div>
+    <label>Фото (по желанию)<input type="file" id="m_ph" accept="image/*"></label><img id="m_pv" alt="" style="display:none;max-width:100%;max-height:200px;border-radius:12px;object-fit:contain">
     <button class="btn" id="m_go">Отправить</button><div class="err" id="m_er"></div>`;
+    box.querySelector('#m_ph').onchange=ev=>{const fl=ev.target.files[0],pv=box.querySelector('#m_pv');if(fl&&/^image\//.test(fl.type)){pv.src=URL.createObjectURL(fl);pv.style.display=''}else pv.style.display='none'};
     box.querySelector('#m_go').onclick=async e=>{
       const to=box.querySelector('#m_to').value,body=box.querySelector('#m_body').value.trim(),anon=box.querySelector('#m_anon').checked,er=box.querySelector('#m_er');
       if(!to)return er.textContent='Выбери, кому написать';
-      if(!body)return er.textContent='Напиши текст сообщения';
+      const file=box.querySelector('#m_ph').files[0];
+      if(!body&&!file)return er.textContent='Напиши текст или приложи фото';
+      if(file&&!/^image\//.test(file.type))return er.textContent='Можно приложить только фото';
       e.target.disabled=true;er.textContent='';
-      const r=await sb.rpc('dm_send',{p_to:to,p_body:body,p_anon:anon,p_req:msgReq()});
+      const req=msgReq(),args={p_to:to,p_body:body,p_anon:anon,p_req:req};
+      if(file){
+        try{
+          const f=await dgxShrink(file),ext=((f.name.match(/\.(\w{1,5})$/)||[])[1]||'jpg').toLowerCase();
+          if(f.size>4.5*1024*1024){e.target.disabled=false;return er.textContent='Фото больше 4 МБ'}
+          const path=`${req}/${msgReq()}.${ext}`,up=await sb.storage.from('dm').upload(path,f,{contentType:f.type||'image/jpeg'});
+          if(up.error){e.target.disabled=false;return er.textContent='Фото не загрузилось: '+up.error.message}
+          args.p_photo=path;
+        }catch(x){e.target.disabled=false;return er.textContent='Фото не загрузилось'}
+      }
+      const r=await sb.rpc('dm_send',args);
       if(r.error){e.target.disabled=false;return er.textContent=r.error.message}
       close(false);toast(anon?'Отправлено анонимно':'Отправлено',2200);S.msg.t='out';if(onTab('msg'))msgView()};
   },()=>{});

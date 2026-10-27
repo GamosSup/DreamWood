@@ -101,6 +101,32 @@ async function gxWear(id){
   if(!cfg){toast('Сначала выбери питомца во вкладке «Мой питомец»',3200);return false}
   return gmPetSave({...cfg,[k]:id});
 }
+// меню вещи: надеть или подарить коллеге (вещь переходит к нему, у тебя её не остаётся)
+async function gxItemMenu(id,after){
+  await ensurePeople();
+  const it=GX_BY[id];
+  dgxSheet(esc(it.n),(box,paint,close)=>{
+    const people=(S.dg.people||[]).filter(p=>p.id!==S.me.id).slice().sort((a,b)=>String(a.full_name).localeCompare(String(b.full_name),'ru'));
+    box.innerHTML=`<div style="text-align:center">${gxPrev(id,130)}</div>
+    <button class="btn" id="gi_wear">✨ Надеть</button>
+    <div class="card pad col"><b>🎁 Подарить коллеге</b><div class="muted">Вещь перейдёт к нему, а у тебя её больше не будет. Если у коллеги такая уже есть, подарить не получится.</div>
+    <select id="gi_to" aria-label="Кому"><option value="">— выбери —</option>${people.map(p=>`<option value="${p.id}">${esc(p.full_name)}</option>`).join('')}</select>
+    <button class="btn ghost" id="gi_give">Подарить</button><div class="err" id="gi_er"></div></div>`;
+    box.querySelector('#gi_wear').onclick=async()=>{if(await gxWear(id)){close(false);toast('Надето ✨',1500)}};
+    box.querySelector('#gi_give').onclick=async e=>{
+      const to=box.querySelector('#gi_to').value,er=box.querySelector('#gi_er');
+      if(!to)return er.textContent='Выбери, кому подарить';
+      const who=box.querySelector('#gi_to').selectedOptions[0].textContent;
+      if(!confirm(`Подарить «${it.n}»: ${who}? У тебя этой вещи не останется.`))return;
+      e.target.disabled=true;er.textContent='';
+      const r=await sb.rpc('gacha_gift_item',{p_to:to,p_code:id,p_req:gxReq()});
+      if(r.error){e.target.disabled=false;return er.textContent=r.error.message}
+      close(false);toast(`Подарено: ${who} 🎁`,2600);
+      try{await gmLoad(true)}catch(x){}
+      after&&after();
+    };
+  },()=>{});
+}
 const gxMachine=()=>{
   const cols=['#FF6B8B','#FFB347','#7BDB8A','#52A7FF','#B07CFF','#FFD23F','#F26B4E','#4FC9C0'];
   const balls=Array.from({length:15},(_,i)=>{const a=(i*137.5)%360,rr=14+(i*37)%54,x=130+Math.cos(a*Math.PI/180)*rr*1.25,y=108+Math.sin(a*Math.PI/180)*rr*.85;return `<circle class="gxb" style="animation-delay:${(i%5)*-.12}s" cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="17" fill="${cols[i%8]}" stroke="#fff" stroke-width="2.4"/><path d="M${(x-9).toFixed(0)} ${(y-4).toFixed(0)}Q${x.toFixed(0)} ${(y-14).toFixed(0)} ${(x+8).toFixed(0)} ${(y-8).toFixed(0)}" stroke="#fff" stroke-width="2.4" fill="none" opacity=".7" stroke-linecap="round"/>`}).join('');
@@ -185,7 +211,7 @@ async function gmGachaTab(box){
     ${(inf.recent&&inf.recent.length)?`<div class="card pad col"><b>Последние выпадения</b><div class="gxrec">${inf.recent.map(x=>`<div class="gxrc" title="${esc((GX_BY[x.code]||{}).n||'')}"><i class="gxdot" style="background:${gxRc(x.rarity)}"></i><span>${gxPrev(x.code,46)}</span>${x.dup?'<small>дубль</small>':''}${x.gold?'<small>🏅</small>':''}</div>`).join('')}</div></div>`:''}
     <div class="card pad col"><b>Как получить билеты</b><div class="muted">Один билет за каждое полученное достижение и по одному за каждые полчаса доработки или переработки. Ещё билеты дают ежедневные награды. Билеты за всё, что уже есть, засчитаны сами.</div></div>
     <div class="card pad col"><b>Шансы</b><div class="gxodds">${byR.map(({r,L})=>`<div class="otr"><span><i class="gxdot" style="background:${gxRc(r)}"></i> ${GX_R[r][0]}</span><span><b>${gxPct(r)}</b> · ${L.filter(x=>gxOwn(x[0])).length}/${L.length}</span></div>`).join('')}</div><div class="muted">Если выпал дубль, часть билетов возвращается: редкая и эпическая +1, мифическая +2, легендарная +3, тайна +5. Обычные дубли ничего не возвращают.</div></div>
-    <div class="card pad col"><b>Коллекция · ${have} из ${rows}</b><div class="muted">Нажми на вещь, которая у тебя есть, чтобы надеть.</div></div>
+    <div class="card pad col"><b>Коллекция · ${have} из ${rows}</b><div class="muted">Нажми на вещь, которая у тебя есть, чтобы надеть или подарить коллеге.</div></div>
     ${byR.map(({r,L})=>`<details class="area gmg" ${r<=2?'open':''}><summary class="ah" style="background:var(--tab)"><span class="ahn"><i class="gxdot" style="background:${gxRc(r)}"></i> ${GX_R[r][0]}</span><span class="pill" style="background:#FFFDF9;align-self:center">${L.filter(x=>gxOwn(x[0])).length} / ${L.length}</span></summary><div class="gops" style="padding:8px">${L.map(([id,,k,n])=>{const ow=gxOwn(id),secret=r===6;return `<button class="gop gxit${ow?'':' lk'}" data-i="${id}"><span class="gopv">${ow?gxPrev(id,78):'<span style="font-size:30px;opacity:.5">?</span>'}</span><span class="gopn">${ow||!secret?esc(n):'???'}</span>${ow?'':'<span class="gopl">пока нет</span>'}</button>`}).join('')}</div></details>`).join('')}`;
     box.querySelector('#gx_pull').onclick=()=>pull(false);
     const gv=box.querySelector('#gx_give');
@@ -206,7 +232,7 @@ async function gmGachaTab(box){
     const g=box.querySelector('#gx_gold');if(g)g.onclick=()=>pull(true);
     box.querySelectorAll('.gxit').forEach(b=>b.onclick=async()=>{
       const id=b.dataset.i;
-      if(gxOwn(id)){if(await gxWear(id))toast('Надето ✨',1500);return}
+      if(gxOwn(id)){gxItemMenu(id,()=>{if(box.isConnected)paint()});return}
       toast('Этой вещи пока нет в коллекции. Выбей её в автомате!',2600);
     });
   };
