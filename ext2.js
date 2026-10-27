@@ -51,13 +51,14 @@ function reqForm(){
       <label>День коллеги, когда выйду я<input id="q_pday" type="date" min="${today}" value="${f.peer_day}"></label>
       <div class="muted">Сначала коллега должен согласиться, потом заявку одобрит руководитель, и график обновится сам.</div>`
     :`<div class="two"><label>С какого дня<input id="q_day" type="date" min="${today}" value="${f.day}"></label><label>По (если несколько дней)<input id="q_to" type="date" min="${today}" value="${f.day_to}"></label></div>`}
-    <label>Комментарий<input id="q_note" value="${esc(f.note)}" placeholder="Причина, пожелания"></label>
+    <label>Причина (обязательно)<input id="q_note" value="${esc(f.note)}" placeholder="Например: семейные обстоятельства" maxlength="300" required></label>
     <button class="btn" id="q_go">Отправить</button><div class="err" id="q_er"></div>`;
     const read=()=>{f.day=box.querySelector('#q_day').value;f.note=box.querySelector('#q_note').value;if(sw){f.peer_id=box.querySelector('#q_peer').value;f.peer_day=box.querySelector('#q_pday').value}else f.day_to=box.querySelector('#q_to').value};
     box.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{read();f.kind=b.dataset.k;paint()});
     box.querySelector('#q_go').onclick=async e=>{
       read();const er=box.querySelector('#q_er');
       if(!f.day)return er.textContent='Укажи дату';
+      if(f.note.trim().length<3)return er.textContent='Напиши причину заявки, без неё отправить нельзя';
       if(sw){if(!f.peer_id)return er.textContent='Выбери коллегу';if(!f.peer_day)return er.textContent='Укажи день коллеги';if(f.day===f.peer_day)return er.textContent='Даты должны быть разными'}
       else if(f.day_to&&f.day_to<f.day)return er.textContent='Конец раньше начала';
       e.target.disabled=true;

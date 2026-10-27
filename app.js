@@ -394,12 +394,14 @@ function dayModal(k){
     const L={otgul:['🏖','Отгул'],do:['📌','ДО'],sick:['🤒','Больничный'],vac:['🌴','Отпуск']};
     box.innerHTML=`${!mk&&!S.lenSet&&perLabel(k)?`<div class="muted">🕘 Смена: ${perLabel(k)}</div>`:''}${mk?`<div class="card pad" style="background:${KINDS[mk.kind][1]}"><b>${KINDS[mk.kind][2]}</b>${mk.note?`<div class="muted">${esc(mk.note)}</div>`:''}<div class="muted">Поставлено в графике. Изменить может руководитель.</div></div>`:''}
     ${pd?`<div class="card pad col" style="border:2px dashed var(--ink)"><b>⏳ Отправлено на согласование: ${esc((KINDS[pd.kind]||[])[2]||pd.kind)}</b><div class="muted">${dRange(pd)}</div><button class="btn ghost" id="dm_cn">Отменить заявку</button></div>`
-    :`<b>Отправить заявку на этот день</b><div class="two">${['otgul','do'].map(x=>`<button class="btn ghost" data-rq="${x}">${L[x][0]} ${L[x][1]}</button>`).join('')}</div><div class="two">${['sick','vac'].map(x=>`<button class="btn ghost" data-rq="${x}">${L[x][0]} ${L[x][1]}</button>`).join('')}</div><label>Если несколько дней: по какое число<input type="date" id="dm_to" min="${k}"></label><div class="muted">Заявку увидит руководитель. Когда одобрит, день появится в графике.</div>`}
+    :`<b>Отправить заявку на этот день</b><div class="two">${['otgul','do'].map(x=>`<button class="btn ghost" data-rq="${x}">${L[x][0]} ${L[x][1]}</button>`).join('')}</div><div class="two">${['sick','vac'].map(x=>`<button class="btn ghost" data-rq="${x}">${L[x][0]} ${L[x][1]}</button>`).join('')}</div><label>Причина (обязательно)<input id="dm_reason" maxlength="300" placeholder="Например: семейные обстоятельства" required></label><label>Если несколько дней: по какое число<input type="date" id="dm_to" min="${k}"></label><div class="muted">Заявку увидит руководитель. Когда одобрит, день появится в графике.</div>`}
     <label>📝 Комментарий к дню<textarea id="dm_note" placeholder="Например: съездить в банк, отпроситься на час">${esc(S.dnotes[k]||'')}</textarea></label><div class="muted">Комментарий виден руководителям.</div><button class="btn" id="dm_save">Сохранить комментарий</button><div class="err" id="dm_er"></div>`;
     box.querySelectorAll('[data-rq]').forEach(b=>b.onclick=async()=>{
       const to=box.querySelector('#dm_to')?.value,er=box.querySelector('#dm_er');
       if(to&&to<k)return er.textContent='Конец раньше начала';
-      b.disabled=true;const row={kind:b.dataset.rq,day:k,status:'pending'};if(to&&to!==k)row.day_to=to;
+      const why=(box.querySelector('#dm_reason')?.value||'').trim();
+      if(why.length<3){er.textContent='Напиши причину заявки, без неё отправить нельзя';box.querySelector('#dm_reason')?.focus();return}
+      b.disabled=true;const row={kind:b.dataset.rq,day:k,status:'pending',note:why};if(to&&to!==k)row.day_to=to;
       const r=await sb.from('requests').insert(row);if(r.error){b.disabled=false;return er.textContent='Не получилось: '+r.error.message}
       close(false);S.sel=null;schView();refreshUnread()});
     box.querySelector('#dm_cn')?.addEventListener('click',async()=>{if(!confirm('Отменить заявку?'))return;const r=await sb.from('requests').update({status:'cancelled'}).eq('id',pd.id);if(r.error)return alert(r.error.message);close(false);S.sel=null;schView()});
@@ -770,7 +772,9 @@ async function settingsView(){
   $('#out').onclick=()=>sb.auth.signOut().then(()=>{clearCache();S.me=null;S.unread=0;boot()});
 }
 sb.auth.onAuthStateChange(ev=>{if(ev==='SIGNED_OUT'&&S.me&&S.tab){S.me=null;S.tab='today';clearCache();authView('in','Сессия закончилась — войди заново')}});
-if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
+if('serviceWorker'in navigator){const had=!!navigator.serviceWorker.controller;navigator.serviceWorker.register('sw.js');
+  // вышла новая версия: один раз перезагружаем страницу, когда нет открытых окон ввода, чтобы все сразу работали на свежем коде
+  let rl=0;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!had||rl)return;rl=1;const go=()=>{if(document.querySelector('.ov,.dgs,textarea:focus,input:focus'))return setTimeout(go,4000);location.reload()};setTimeout(go,300)})}
 function openLink(l){if(!l)return;if(l==='alert'){window.alertCheck&&alertCheck();return}if(String(l).startsWith('checkin:'))return openBell();if(String(l).startsWith('rot:')){S.day=l.slice(4);go('rot')}else go(l)}
 if('serviceWorker'in navigator)navigator.serviceWorker.addEventListener('message',e=>{if(e.data&&e.data.go&&S.me)openLink(e.data.go)});
 boot();
