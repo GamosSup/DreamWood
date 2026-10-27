@@ -657,3 +657,13 @@ html[data-dark="1"] .alcard.brfcard{background:#3a2f22;color:#f3e6d3}
 .gxbt{display:flex;flex-direction:column;gap:8px;width:100%;margin-top:8px}
 .gxres.r6{box-shadow:0 0 0 4px #fff,0 0 0 8px #B07CFF,0 0 50px #FFB347}
 @media(prefers-reduced-motion:reduce){.f_lava::after,.f_sak::after,.f_royal::after,.f_rainbow::after,.f_neon::after,.f_circuit::after,.f_pixel::after,.gnm.n_aur,.gnm.n_royal,.pgh svg,.pgs svg,.cmw,#gx_m .gxb,#gx_m.spin,#gx_m.spin #gx_cr,#gx_m.spin .gxb{animation:none}}
+/* v71: пункты чек-листа с числом и «работают / не работают» — аккуратно на телефоне */
+.shv{display:flex;flex-direction:column;gap:10px;padding:12px 0;border-top:1px solid #0001}
+.shvt{font-weight:800;font-size:16px}
+.shvg{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.shvg.one{grid-template-columns:1fr}
+.shvg label{display:flex;flex-direction:column;gap:6px;min-width:0}
+.shvg label span{font-size:14px;font-weight:600}
+.shvg input{width:100%;min-height:50px;font-size:22px;font-weight:800;text-align:center;border-radius:14px;box-sizing:border-box}
+.shvb{width:100%;min-height:48px}
+.shv small.who.bad{background:#F2C4BA}
