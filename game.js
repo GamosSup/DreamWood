@@ -141,6 +141,9 @@ const gmHas=(row,req)=>{
   if(!req)return true;const codes=(row?.ach||[]).map(a=>a.c);
   return req.endsWith('*')?codes.some(c=>c.startsWith(req.slice(0,-1)+':')):codes.includes(req);
 };
+// достижения без «трофеев из автомата» (gx:…): их считать достижениями нельзя; исключение — особый значок из каталога
+const gmReal=a=>!String(a.c).startsWith('gx:')||!!GM_BY[a.c];
+const gmRealN=row=>(row.ach||[]).filter(gmReal).length;
 // косметика человека, очищенная от того, чего у него нет (например, значок отозвали)
 function gmCos(row){
   const c=row?.cos||{},o={};
@@ -207,7 +210,7 @@ function gmClaim(code,silent){
 // ---------- карточка на «Сегодня» ----------
 function gameCard(){
   const row=gmMe();if(!row)return '';
-  const L=gmLv(row.xp),cos=gmCos(row),have=(row.ach||[]).length;
+  const L=gmLv(row.xp),cos=gmCos(row),have=gmRealN(row);
   return `<div class="card pad col gmc" data-go="game" style="cursor:pointer">
     <div class="gmcr">${gmLvChip(row,true)}<div style="flex:1;min-width:0"><b>${row.lvl_text?esc(row.lvl_text):esc(GM_RANKS[L.r].full)}</b>${row.lvl_text?'':`<div class="muted">Уровень ${L.n}${L.hi?` · до следующего ${L.left} оч.`:' · максимум'}</div>`}</div><span class="muted" style="white-space:nowrap">🏅 ${have}</span><span class="drmmini">${gmPetHead(row,40)}</span></div>
     ${row.lvl_text?'':`<div class="pgb"><div class="pg" style="width:${L.pct}%"></div></div>`}</div>`;
@@ -216,33 +219,39 @@ function gameCard(){
 // ---------- экран «Мой профиль» ----------
 const gmTab=()=>S.gmTab||'ach';
 const gmSeeAll=()=>!!gmMe()?.lvl_text; // только у владельца приложения видны и закрытые достижения; у остальных — лишь открытые
+// сколько всего достижений можно получить: открытые каталожные (без секретных и выдаваемых вручную) + всё, что уже есть
+const gmCatTotal=row=>{const got=new Set((row.ach||[]).map(a=>a.c));return GM_ACH.filter(a=>got.has(a.c)||(!a.secret&&!a.man)).length+(row.ach||[]).filter(a=>gmReal(a)&&!GM_BY[a.c]).length};
 function gmHero(row){
   const L=gmLv(row.xp),cos=gmCos(row);
   return `<div class="card gmh"><div class="gmhr"><div class="gmav">${av(S.me,84)}<button class="avcam gmcam" aria-label="Поставить фото из галереи">📷 Фото</button></div><div style="flex:1;min-width:0">
     <div class="gmn">${gmName(S.me.full_name||'',row,{lv:false})}</div>${gmTitleHtml(row)}
     <div style="margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">${gmLvChip(row,true)}${row.lvl_text?'':`<span><b>${esc(GM_RANKS[L.r].full)}</b><br><span class="muted">Уровень ${L.n} из 50</span></span>`}</div></div><div class="gmhp">${gmPetHead(row,62)}</div></div>
+    <div class="gmcnt"><span>🏅 Достижений: <b>${gmRealN(row)}</b> из ${gmCatTotal(row)}</span><span>🎰 Билетов: <b id="gx_hdr">${typeof gxS!=='undefined'&&gxS.info?gxS.info.tickets:'…'}</b></span></div>
     ${row.lvl_text?`<div class="muted" style="margin-top:8px">Всего очков: <b>${row.xp}</b></div>`:`<div class="pgb" style="margin-top:12px"><div class="pg" style="width:${L.pct}%"></div></div><div class="muted" style="margin-top:6px">${row.xp} очков${L.hi?` · до уровня ${L.n+1} осталось <b>${L.left}</b>`:' · максимальный уровень, ты легенда'}</div>`}</div>`;
 }
 async function gameView(){
   S.offline=0;
   await gmLoad(true);gmSync(30000);
   const me=gmMe();
-  let h=head('Мой профиль','Опыт, уровень, достижения и твой образ');
+  let h=head('Мой профиль','Фото, уровень, достижения, питомец и автомат');
   if(!me){
     h+=`<div class="card pad col"><b>Раздел почти готов 🙂</b><div class="muted">${S.gmErr&&!/does not exist|function|schema/i.test(S.gmErr)?esc(S.gmErr):'В базе ещё не включены уровни и достижения. Админ должен один раз запустить обновление базы, и всё заработает.'}</div></div>`;
     app.innerHTML=h;return;
   }
   if(!S.gmTab&&!petCfg(me))S.gmTab='pet';
   h+=gmHero(me);
-  const tabs=[['ach','🏅 Достижения'],['pet','🐾 Мой питомец'],['look','🎨 Мой образ'],['lv','📈 Уровни'],...(isManager()?[['mng','🎖 Выдать']]:[])];
+  h+=`<button class="btn ghost" id="gm_set" style="margin-top:-4px">⚙️ Настройки приложения</button>`;
+  const tabs=[['ach','🏅 Достижения'],['pet','🐾 Мой питомец'],['gx','🎰 Автомат'],['look','🎨 Мой образ'],['lv','📈 Уровни'],...(isManager()?[['mng','🎖 Выдать']]:[])];
   h+=`<div class="tabs gmtabs">${tabs.map(([k,n])=>`<button data-gt="${k}" class="${gmTab()===k?'on':''}" style="background:var(--tab)">${n}</button>`).join('')}</div><div id="gm_body"></div>`;
   app.innerHTML=h;
   app.querySelectorAll('[data-gt]').forEach(b=>b.onclick=()=>{S.gmTab=b.dataset.gt;app.querySelectorAll('[data-gt]').forEach(x=>x.classList.toggle('on',x===b));gmPaint()});
+  $('#gm_set').onclick=()=>go('set');
+  if(typeof gxInfo==='function')gxInfo().then(i=>{const e=$('#gx_hdr');if(e)e.textContent=i.tickets}).catch(()=>{const e=$('#gx_hdr');if(e)e.textContent='—'});
   gmPaint();
 }
 async function gmPaint(){
   const box=$('#gm_body');if(!box)return;const t=gmTab();
-  if(t==='ach')await gmAchTab(box);else if(t==='pet')gmPetTab(box);else if(t==='look')gmLookTab(box);else if(t==='lv')gmLvTab(box);else gmMngTab(box);
+  if(t==='ach')await gmAchTab(box);else if(t==='pet')gmPetTab(box);else if(t==='look')gmLookTab(box);else if(t==='lv')gmLvTab(box);else if(t==='gx')await gmGachaTab(box);else gmMngTab(box);
 }
 
 // --- достижения ---
@@ -252,7 +261,7 @@ async function gmAchTab(box){
   const rew=c=>{const r=[];GM_FRAMES.concat(GM_NAMES,GM_BGS).forEach(x=>{if(x[2]===c)r.push(x)});return r.map(x=>(GM_FRAMES.includes(x)?'рамка':GM_NAMES.includes(x)?'цвет имени':'фон')+' «'+x[1]+'»').join(', ')};
   // каталог + выданные вручную, которых нет в каталоге
   const all=GM_ACH.filter(a=>gmSeeAll()?!(a.secret&&!got.has(a.c)):got.has(a.c)).map(a=>({...a}));
-  (me.ach||[]).forEach(a=>{if(!GM_BY[a.c])all.push(gmDef(a))});
+  (me.ach||[]).forEach(a=>{if(!GM_BY[a.c]&&gmReal(a))all.push(gmDef(a))});
   const total=all.filter(a=>!a.man||got.has(a.c)).length,have=all.filter(a=>got.has(a.c)).length;
   let h=gmSeeAll()?`<div class="muted" style="margin:2px 2px 10px">Получено <b>${have}</b> из ${total}. За каждое достижение — бонус к очкам, а многие открывают рамки, цвета имени и фоны.</div>`:`<div class="muted" style="margin:2px 2px 10px">Получено: <b>${have}</b>. Новые достижения приходят сами, когда ты делаешь своё дело: отмечаешь чек-листы, выходишь на смены, ведёшь привычки, говоришь спасибо коллегам. За каждое — очки и, часто, новая красота для профиля.</div>${have?'':`<div class="card pad col" style="align-items:center;text-align:center"><img src="stickers/mascot-hi.webp" alt="" width="90"><b>Пока пусто</b><div class="muted">Первое достижение уже рядом. Отметь пункт в чек-листе смены.</div></div>`}`;
   h+=GM_GR.map(([g,ic,nm])=>{
@@ -278,8 +287,8 @@ async function gmSaveCos(patch){
 function gmLookTab(box){
   const me=gmMe();let cur={...(me.cos||{})};
   const save=async(patch)=>{if(await gmSaveCos(patch)){cur={...(me.cos||{})};paint()}};
-  const reqName=req=>{if(!req)return '';if(req.endsWith('*'))return req==='adm*'?'любой допуск':'любое мероприятие';const a=GM_BY[req];return a?a.n:req};
-  const earned=(me.ach||[]).map(a=>gmDef(a));
+  const reqName=req=>{if(!req)return '';if(req.startsWith('gx:'))return 'из автомата';if(req.endsWith('*'))return req==='adm*'?'любой допуск':'любое мероприятие';const a=GM_BY[req];return a?a.n:req};
+  const earned=(me.ach||[]).filter(gmReal).map(a=>gmDef(a));
   const opt=(k,it)=>{
     const [v,n,req]=it,ok=gmHas(me,req),on=(cur[k]||'')===v;
     if(!ok&&!gmSeeAll())return '';
@@ -398,7 +407,7 @@ function gmPetHead(row,sz){
   if(typeof petCfg!=='function'||!petCfg(row))return `<img src="stickers/mascot-hi.webp" alt="" width="${sz}" height="${sz}" style="object-fit:contain">`;
   return gmPet(row,sz,{vb:GM_PETCROP,bg:''});
 }
-const gmPetSw=v=>v==='gold'?'linear-gradient(135deg,#FFF0B0,#EDBE46 50%,#B8821C)':v==='rainbow'?'linear-gradient(135deg,#FF6B8B,#FFB347,#7BDB8A,#52A7FF,#B07CFF)':v==='night'?'radial-gradient(circle at 35% 30%,#4C5CC8,#1B2262)':v;
+const gmPetSw=v=>(typeof PET_GRAD!=='undefined'&&PET_GRAD[v])?`linear-gradient(135deg,${PET_GRAD[v].s.join(',')})`:v==='gold'?'linear-gradient(135deg,#FFF0B0,#EDBE46 50%,#B8821C)':v==='rainbow'?'linear-gradient(135deg,#FF6B8B,#FFB347,#7BDB8A,#52A7FF,#B07CFF)':v==='night'?'radial-gradient(circle at 35% 30%,#4C5CC8,#1B2262)':v;
 async function gmPetSave(cfg){return gmSaveCos({pet:petEnc(cfg)})}
 function gmPetChooser(onPick,sz=104){
   return `<div class="petch">${PET_SP.map(([k,n,c])=>`<button class="petc" data-sp="${k}"><span class="petcv">${gmPet({},sz,{cfg:{...PET_DEF,sp:k,bc:petBcOf(k)},vb:GM_PETCROP,bg:''})}</span><b>${n}</b></button>`).join('')}</div>`;
@@ -427,7 +436,7 @@ function gmPetTab(box){
   };
   draw();
 }
-function gmReqName(req){if(!req)return '';if(req.endsWith('*'))return req==='adm*'?'любой допуск':'любое мероприятие';const a=GM_BY[req];return a?a.n:req}
+function gmReqName(req){if(!req)return '';if(req.startsWith('gx:'))return 'из автомата';if(req.endsWith('*'))return req==='adm*'?'любой допуск':'любое мероприятие';const a=GM_BY[req];return a?a.n:req}
 
 // ---------- событие «Парад кошмаров»: приветственное окно (один раз всем; без питомца ещё до 3 раз) ----------
 const GM_EVT='parade1';

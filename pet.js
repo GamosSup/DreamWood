@@ -32,7 +32,7 @@ const PET_G=[
  ['mo','Улыбка',PET_MO,'pv',[80,130,160,130]],['hr','Причёска',PET_HR,'pv',[50,-40,220,200]],['hc','Цвет причёски',PET_HC,'sw',null],['pt','Узор',PET_PT,'pv',[40,-20,240,420]],
  ['ha','Шапка',PET_HA,'pv',[40,-50,240,200]],['gl','Очки',PET_GL,'pv',[60,70,200,170]],['nk','Шея',PET_NK,'pv',[50,170,220,170]],['ch','Грудь',PET_CH,'pv',[60,230,200,200]],
  ['bk','За спиной',PET_BK,'pv',[0,170,320,290]],['hd','В руке',PET_HD,'pv',[100,100,220,300]]];
-const PET_DEF={sp:'',bc:'',ec:'e_gr',ex:'x_n',gz:'c',mo:'m_s',hr:'r_0',hc:'k_br',pt:'p_0',ha:'',gl:'',nk:'',ch:'',bk:'',hd:''};
+const PET_DEF={sp:'',bc:'',ec:'e_gr',ex:'x_n',gz:'c',mo:'m_s',hr:'r_0',hc:'k_br',pt:'p_0',ha:'',gl:'',nk:'',ch:'',bk:'',hd:'',cm:''};
 const petEnc=c=>Object.entries(c).filter(([k,v])=>v&&v!==PET_DEF[k]||k==='sp'&&v).map(([k,v])=>k+'='+v).join(';');
 const petDec=s=>{const c={...PET_DEF};String(s||'').split(';').forEach(p=>{const i=p.indexOf('=');if(i>0)c[p.slice(0,i)]=p.slice(i+1)});return c};
 // конфигурация человека с проверкой, что вещи у него открыты
@@ -47,12 +47,17 @@ function petCfg(row){
 const petBcOf=sp=>(PET_BC.find(x=>x[3]===PET_SP.find(s=>s[0]===sp)[2])||PET_BC[0])[0];
 
 // ---------- рисование ----------
+// градиентные «скины» шерсти (из автомата): s — цвета по диагонали, base — средний цвет, belly — цвет пузика
+const PET_GRAD={sunset:{s:['#FF6B8B','#FF9E4D','#FFD76B'],base:'#FF8E53',belly:'#FFE6D2'},ocean:{s:['#5FE0C8','#3A9AE0','#2B3A9F'],base:'#3C9AD0',belly:'#D8F1FA'},candy:{s:['#FF9ECD','#FFE0EE','#9EE7FF'],base:'#FFB3D5',belly:'#FFF3F8'},galaxy:{s:['#2B1B5E','#6A3FC9','#C06BFF'],base:'#5B35B0',belly:'#8F6AE0'},goldsuit:{s:['#FFF6C2','#F5C842','#C48A12','#FFE98A'],base:'#F5C842',belly:'#FFF8D6'},ghost:{s:['#EAFBFF','#BCE8F6','#93CDEA'],base:'#BCE8F6',belly:'#F6FDFF'}};
+// дополнительные рисунки (заполняются в gacha.js): за спиной, в руке, очки
+const PET_BX={},PET_HX={},PET_GLX={};
 function petDefs(id,bcv,hcv,ecv){
   const rad=(n,c)=>`<radialGradient id="${id}${n}" cx=".35" cy=".28" r=".85"><stop offset="0" stop-color="${pMix(c,'#ffffff',.38)}"/><stop offset=".55" stop-color="${c}"/><stop offset="1" stop-color="${pMix(c,'#000000',.24)}"/></radialGradient>`;
   let body;
   if(bcv==='gold')body=`<linearGradient id="${id}b" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFF0B0"/><stop offset=".5" stop-color="#EDBE46"/><stop offset="1" stop-color="#B8821C"/></linearGradient>`;
   else if(bcv==='rainbow')body=`<linearGradient id="${id}b" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF6B8B"/><stop offset=".25" stop-color="#FFB347"/><stop offset=".5" stop-color="#7BDB8A"/><stop offset=".75" stop-color="#52A7FF"/><stop offset="1" stop-color="#B07CFF"/></linearGradient>`;
   else if(bcv==='night')body=`<radialGradient id="${id}b" cx=".35" cy=".28" r=".9"><stop offset="0" stop-color="#4C5CC8"/><stop offset="1" stop-color="#1B2262"/></radialGradient>`;
+  else if(PET_GRAD[bcv]){const g=PET_GRAD[bcv].s;body=`<linearGradient id="${id}b" x1="0" y1="0" x2="1" y2="1">${g.map((c,i)=>`<stop offset="${(i/(g.length-1)).toFixed(2)}" stop-color="${c}"/>`).join('')}</linearGradient>`}
   else body=rad('b',bcv);
   return body+rad('h',hcv)+`<radialGradient id="${id}e" cx=".4" cy=".35" r=".8"><stop offset="0" stop-color="${pMix(ecv,'#ffffff',.35)}"/><stop offset=".7" stop-color="${ecv}"/><stop offset="1" stop-color="${pMix(ecv,'#000000',.35)}"/></radialGradient><radialGradient id="${id}p" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#FF9BC4"/><stop offset="1" stop-color="#E5226F"/></radialGradient>`;
 }
@@ -108,6 +113,7 @@ function petBack(b,sp,F,D,W){
   if(b==='b_bat'){const w=`<path d="M104 268Q-10 238 4 146Q34 178 52 160Q70 194 98 178Q100 214 108 246Z" fill="#3A2A55" stroke="#150A28" stroke-width="3.2" stroke-linejoin="round"/><path d="M52 160Q58 196 76 214M98 178Q92 204 96 230" stroke="#150A28" stroke-width="2.4" fill="none"/>`;o+=`<g>${w}</g><g transform="translate(320 0) scale(-1 1)">${w}</g>`}
   if(b==='b_cape')o+=`<path d="M100 236Q36 330 56 424Q160 446 264 424Q284 330 220 236Z" fill="#E5484D" stroke="#8E2222" stroke-width="3.2" stroke-linejoin="round"/><path d="M100 236Q70 340 80 420Q160 436 240 420Q250 340 220 236" fill="none" stroke="#B83232" stroke-width="3" opacity=".6"/>`;
   if(b==='b_wings'){const w=`<path d="M104 268Q-6 216 10 138Q64 160 104 244Z" fill="rgba(190,232,255,.82)" stroke="#6AA9E0" stroke-width="3" stroke-linejoin="round"/><path d="M96 276Q30 292 28 340Q78 338 108 296Z" fill="rgba(190,232,255,.82)" stroke="#6AA9E0" stroke-width="3" stroke-linejoin="round"/>`;o+=`<g>${w}</g><g transform="translate(320 0) scale(-1 1)">${w}</g>`}
+  if(PET_BX[b])o+=PET_BX[b];
   return o;
 }
 // особая вещь: кигуруми акулы (капюшон с плавником и зубами рисуется прямо в координатах головы; тело, хвост и ушки меняются в petSvg)
@@ -143,22 +149,23 @@ function petGear(c,face){ // face: {eyesY}
   if(g==='g_round')gl=`<g fill="rgba(255,255,255,.2)" stroke="#2B2B3A" stroke-width="5.5"><circle cx="118" cy="148" r="35"/><circle cx="202" cy="148" r="35"/></g><path d="M153 146Q160 138 167 146M83 142L58 130M237 142L262 130" stroke="#2B2B3A" stroke-width="5.5" fill="none" stroke-linecap="round"/>`;
   if(g==='g_sun')gl=`<path d="M82 128Q82 116 96 116H134Q148 116 146 140Q142 182 112 182Q80 178 82 128Z" fill="#1E1F2B" stroke="#000" stroke-width="3.4"/><path d="M174 140Q172 116 186 116H224Q238 116 238 128Q240 178 208 182Q178 182 174 140Z" fill="#1E1F2B" stroke="#000" stroke-width="3.4"/><path d="M144 134H176" stroke="#000" stroke-width="6"/><path d="M92 130L112 124M184 130L204 124" stroke="#fff" stroke-opacity=".6" stroke-width="4.4" stroke-linecap="round"/>`;
   if(g==='g_heart')gl=`${petHrt(118,150,3.2,'#FF5C9A')}${petHrt(202,150,3.2,'#FF5C9A')}<path d="M153 142Q160 134 167 142" stroke="#B02A63" stroke-width="5" fill="none" stroke-linecap="round"/>`;
+  if(PET_GLX[g])gl=PET_GLX[g];
   return {hat:c.ha==='h_shark'?PET_SHARK_HOOD:id?petT(160,104,1.34,180,205,PET_GEAR[c.ha]):'',gl,nk:c.nk?petT(160,236,1.3,184,352,PET_GEAR[c.nk]):'',ch:c.ch?petT(160,322,1.12,184,410,PET_GEAR[c.ch]):''};
 }
 function petHandItem(h){
   if(h==='d_balloon')return `<path d="M240 352Q270 270 290 176" stroke="#7A5C8F" stroke-width="3" fill="none"/><ellipse cx="292" cy="130" rx="30" ry="42" fill="url(#PETP)" stroke="#B0176A" stroke-width="3"/><ellipse cx="282" cy="114" rx="8" ry="13" fill="#fff" opacity=".5" transform="rotate(20 282 114)"/><path d="M286 172L292 180L298 172Z" fill="#E5226F"/>`;
   if(h==='d_wand')return `<path d="M240 358L272 214" stroke="#8E5FE0" stroke-width="8" stroke-linecap="round"/>${petStar(276,196,2.1,'#FFD54A')}<circle cx="296" cy="168" r="4" fill="#fff"/><circle cx="256" cy="176" r="3" fill="#fff"/>`;
   if(h==='d_flag')return `<path d="M242 360L268 150" stroke="#7A5C3A" stroke-width="6" stroke-linecap="round"/><path d="M268 152L318 168L270 196Z" fill="#E5484D" stroke="#8E2222" stroke-width="3" stroke-linejoin="round"/>${petStar(284,170,.6,'#fff')}`;
-  return '';
+  return PET_HX[h]||'';
 }
 // сам зверёк. opt: cfg — настройки, vb — кадр, bg — фон, sz — ширина
 function petSvg(c,opt={}){
   const id='pt'+(++PET_N)+'_';
   const sp=c.sp,bcItem=PET_BC.find(x=>x[0]===c.bc)||PET_BC[0],bcv=bcItem[3];
   const solid=/^#/.test(bcv),F=`url(#${id}b)`;
-  const baseHex=solid?bcv:(bcv==='gold'?'#EDBE46':bcv==='night'?'#2F3F9A':'#9A7BFF');
+  const baseHex=solid?bcv:PET_GRAD[bcv]?PET_GRAD[bcv].base:(bcv==='gold'?'#EDBE46':bcv==='night'?'#2F3F9A':'#9A7BFF');
   const D=pMix(baseHex,'#1a1030',.45),hcv=(PET_HC.find(x=>x[0]===c.hc)||PET_HC[0])[3],ecv=(PET_EC.find(x=>x[0]===c.ec)||PET_EC[0])[3];
-  const belly=solid?pMix(bcv,'#FFF4DC',.62):bcv==='gold'?'#FFF1C4':bcv==='night'?'#5668D4':'#ffffff';
+  const belly=solid?pMix(bcv,'#FFF4DC',.62):PET_GRAD[bcv]?PET_GRAD[bcv].belly:bcv==='gold'?'#FFF1C4':bcv==='night'?'#5668D4':'#ffffff';
   const muz=sp==='bear'?pMix(baseHex,'#FFE9C7',.65):sp==='dragon'?belly:(solid?pMix(bcv,'#ffffff',.82):belly);
   const inn='#F7C6CF',hD=pMix(hcv,'#000000',.45);
   const gear=petGear(c);
@@ -169,7 +176,7 @@ function petSvg(c,opt={}){
   if(c.pt==='p_s')pat=petStar(160,334,1.9,'#FFD54A');
   if(c.pt==='p_d'){const sp2=pMix(baseHex,'#ffffff',.42);pat=[[150,80,6],[176,88,8],[128,92,5],[212,94,5],[118,284,9],[204,292,11],[134,372,8],[190,366,6],[222,330,7]].map(([x,y,r])=>`<circle cx="${x}" cy="${y}" r="${r}" fill="${sp2}" opacity=".85"/>`).join('')}
   if(c.pt==='p_z')pat=`<path d="M142 68Q140 90 146 104M160 62V98M178 68Q180 90 174 104" stroke="${D}" stroke-width="7" fill="none" stroke-linecap="round" opacity=".75"/><path d="M98 290Q118 296 124 316M96 330Q116 334 122 352M222 290Q202 296 196 316M224 330Q204 334 198 352" stroke="${D}" stroke-width="7" fill="none" stroke-linecap="round" opacity=".6"/>`;
-  if(bcv==='night')pat+=[[100,90,3],[220,80,2.5],[84,230,2.5],[250,150,3],[120,300,3],[206,280,2.5],[150,380,3],[186,358,2],[70,150,2.5],[236,112,2]].map(([x,y,r])=>`<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" opacity=".9"/>`).join('');
+  if(bcv==='night'||bcv==='galaxy')pat+=[[100,90,3],[220,80,2.5],[84,230,2.5],[250,150,3],[120,300,3],[206,280,2.5],[150,380,3],[186,358,2],[70,150,2.5],[236,112,2]].map(([x,y,r])=>`<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" opacity=".9"/>`).join('');
   const hand=petHandItem(c.hd).replace('PETP',id+'p');
   const vb=opt.vb||PET_VB,sz=opt.sz||160;
   const body=`<defs>${petDefs(id,solid?bcv:bcv,hcv,ecv)}</defs>`+
@@ -182,12 +189,12 @@ function petSvg(c,opt={}){
    `<ellipse cx="160" cy="150" rx="104" ry="90" fill="${F}" stroke="${D}" stroke-width="3.4"/><ellipse cx="116" cy="96" rx="42" ry="20" fill="#fff" opacity=".2" transform="rotate(-20 116 96)"/>`+
    `<ellipse cx="160" cy="196" rx="48" ry="33" fill="${muz}"/><circle cx="84" cy="196" r="16" fill="#FF8FA3" opacity=".42"/><circle cx="236" cy="196" r="16" fill="#FF8FA3" opacity=".42"/>`+pat+
    petEye(118,148,c.ex,id,c.gz,0)+petEye(202,148,c.ex,id,c.gz,1)+nose+petMouth(c.mo)+
-   petHair(c.hr,F,hD,id)+gear.nk+gear.ch+hand+gear.gl+gear.hat;
+   petHair(c.hr,F,hD,id)+gear.nk+gear.ch+hand+gear.gl+gear.hat+(c.cm?`<g class="cmw"><image href="stickers/mascot-hi.webp" x="188" y="282" width="132" height="132"/></g>`:'');
   return `<svg viewBox="${vb.join(' ')}" width="100%" height="100%" aria-hidden="true">${body}</svg>`;
 }
 // готовый блок с питомцем человека (или с заданной настройкой). bg — класс фона
 function gmPet(row,sz=160,opt={}){
   const c=opt.cfg||petCfg(row);if(!c)return '';
   const bg=opt.bg===undefined?(gmCos(row).bg||''):opt.bg,vb=opt.vb||PET_VB;
-  return `<div class="drm ${bg}" style="width:${sz}px;height:${Math.round(sz*vb[3]/vb[2])}px">${petSvg(c,{vb})}</div>`;
+  return `<div class="drm ${bg}${c.bc==='c_ghost'?' pgh':c.bc==='c_goldsuit'?' pgs':''}" style="width:${sz}px;height:${Math.round(sz*vb[3]/vb[2])}px">${petSvg(c,{vb})}</div>`;
 }
