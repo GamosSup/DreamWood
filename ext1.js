@@ -70,7 +70,7 @@ async function shiftView(){
   const [L,C,N]=await Promise.all([cq('shl',()=>sb.from('shift_lists').select('*').eq('active',true).order('sort')),cq('shc'+day,()=>sb.from('shift_checks').select('*').eq('day',day).order('at')),cq('shn'+day,()=>sb.from('shift_notes').select('*').eq('day',day).order('created_at'))]);
   const notes=N.error?[]:(N.data||[]);
   const mgr=isManager(),all=(L.data||[]).filter(l=>l.kind===S.sh.kind);
-  const checks=[];{const seen=new Set();(C.data||[]).forEach(c=>{const k=c.list_id+'|'+c.item;if(!seen.has(k)){seen.add(k);checks.push(c)}})} // общий список: пункт отмечен, если его отметил кто-то из команды
+  const checks=[];{const seen=new Map();(C.data||[]).forEach(c=>{const k=c.list_id+'|'+c.item;if(!seen.has(k)){seen.set(k,checks.length);checks.push(c)}else if(/::(n|vr)$/.test(c.item))checks[seen.get(k)]=c})} // общий список: пункт отмечен, если его отметил кто-то из команды
   const doneOf=l=>l.items.filter(it=>checks.some(c=>c.list_id===l.id&&c.item===it));
   const isFull=l=>l.items.length>0&&doneOf(l).length===l.items.length;
   const complete=all.filter(isFull).length,can=day===today||mgr;
@@ -86,6 +86,9 @@ async function shiftView(){
     const mine=checks.filter(x=>x.list_id===l.id).sort((a,b)=>a.at<b.at?1:-1),last=mine[0]||null,nl=notes.filter(n=>n.list_id===l.id);
     return `<details class="card shl" data-zl="${l.id}" ${S.shZ[l.id]?'open':''}><summary class="zh" style="background:${c}"><span>${esc(l.zone||l.title)}</span><span class="pill" style="background:${full?'#C9D4B0':'#FFFDF9'};align-self:center">${nl.length?'💬'+nl.length+' · ':''}${full?'✅ '+hm(last.at)+' · '+esc(shortName(pname(last.user_id))):dn.length+' / '+l.items.length+(last?' · '+hm(last.at)+' '+esc(shortName(pname(last.user_id)).split(' ')[0]):'')}</span></summary>
       <div class="zb">${l.items.map(it=>{const ck=checks.find(x=>x.list_id===l.id&&x.item===it);
+        const tm=it.match(/^(.*)::(n|vr)$/);
+        if(tm){const vv=ck&&ck.val!=null?String(ck.val):'',[a,b]=tm[2]==='vr'?vv.split('/'):[vv],bad=tm[2]==='vr'&&+b>0,inp=(f,ph,v)=>`<input type="number" inputmode="numeric" min="0" step="1" data-f="${f}" placeholder="${ph}" value="${esc(v||'')}" ${can?'':'disabled'} style="width:84px;min-height:42px;text-align:center">`;
+          return `<div class="shv" data-l="${l.id}" data-i="${esc(it)}" data-t="${tm[2]}" style="display:flex;flex-direction:column;gap:6px;padding:8px 0;border-top:1px solid #0001"><b>${esc(tm[1])}</b><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${tm[2]==='vr'?`<span>✅ Работают</span>${inp('ok','шт',a)}<span>⛔ Не работают</span>${inp('bad','шт',b)}`:`<span>Количество</span>${inp('n','шт',a)}`}${can?'<button class="btn" data-sv style="min-height:42px;flex:none;padding:0 16px">Сохранить</button>':''}</div>${ck?`<small class="who"${bad?' style="background:#F2C4BA"':''}>✔ ${esc(pname(ck.user_id))} · ${hm(ck.at)}${tm[2]==='vr'?` · работают ${esc(a||'0')}, не работают ${esc(b||'0')}`:` · ${esc(a)} шт`}</small>`:'<small class="muted">Не заполнено</small>'}</div>`}
         return `<label class="shi"><input type="checkbox" data-l="${l.id}" data-i="${esc(it)}" data-u="${ck?ck.user_id:''}" ${ck?'checked':''} ${can&&(!ck||ck.user_id===S.me.id||mgr)?'':'disabled'}><span style="${ck?'text-decoration:line-through;color:var(--muted)':''}">${esc(it)}${ck?`<br><small class="who">✔ ${esc(pname(ck.user_id))} · ${hm(ck.at)}</small>`:''}${notes.some(n=>n.list_id===l.id&&n.item===it)?` <small class="who" style="background:#F5E2A8">💬 ${notes.filter(n=>n.list_id===l.id&&n.item===it).length}</small>`:''}</span></label>`}).join('')||'<div class="muted">Пунктов нет</div>'}
       <div class="shn"><b>💬 Комментарии${nl.length?' · '+nl.length:''}</b>${nl.map(n=>`<div class="shc"><div><b>${esc(shortName(pname(n.user_id)))}</b> <span class="muted">${hm(n.created_at)}${n.item?' · к пункту «'+esc(n.item)+'»':''}</span>${n.user_id===S.me.id||mgr?` <button class="x" data-nd="${n.id}" aria-label="Удалить">✕</button>`:''}</div><div>${esc(n.body)}</div></div>`).join('')}
         ${can?`<div class="shnf"><select data-nl="${l.id}"><option value="">Ко всему списку</option>${l.items.map(it=>`<option value="${esc(it)}">${esc(it.length>46?it.slice(0,46)+'…':it)}</option>`).join('')}</select><textarea data-nt="${l.id}" placeholder="Например: закончились журналы, нужны новые"></textarea><button class="btn" data-ns="${l.id}" style="min-height:42px">Отправить</button></div>`:''}</div></div></details>`};
@@ -111,6 +114,17 @@ async function shiftView(){
     const list_id=+b.dataset.l,item=b.dataset.i;b.disabled=true;
     const r=b.checked?await sb.from('shift_checks').insert({list_id,day,item}):await sb.from('shift_checks').delete().eq('list_id',list_id).eq('day',day).eq('item',item).eq('user_id',b.dataset.u||S.me.id);
     if(r.error&&r.error.code!=='23505')alert(r.error.message);
+    keepScroll(shiftView);
+  });
+  app.querySelectorAll('.shv [data-sv]').forEach(b=>b.onclick=async()=>{
+    const w=b.closest('.shv'),t=w.dataset.t,g=f=>(w.querySelector(`[data-f=${f}]`)||{}).value;
+    const nums=(t==='vr'?['ok','bad']:['n']).map(g);
+    if(nums.some(v=>v===''||v==null||!/^\d{1,5}$/.test(String(v).trim())))return alert(t==='vr'?'Впиши числа: сколько работают и сколько не работают (0, если таких нет)':'Впиши количество числом');
+    const val=nums.map(v=>+v).join('/');b.disabled=true;
+    const list_id=+w.dataset.l,item=w.dataset.i;
+    await sb.from('shift_checks').delete().eq('list_id',list_id).eq('day',day).eq('item',item).eq('user_id',S.me.id);
+    const r=await sb.from('shift_checks').insert({list_id,day,item,val});
+    if(r.error){alert(r.error.message.includes('val')?'Нужно обновить базу (колонка val): скажи админу':r.error.message);b.disabled=false;return}
     keepScroll(shiftView);
   });
   app.querySelectorAll('[data-ns]').forEach(b=>b.onclick=async()=>{
@@ -139,7 +153,7 @@ function shiftEditor(){
     box.innerHTML=`<label>Название<input id="e_t" value="${esc(x.title)}" placeholder="Например: Гольф · открытие"></label>
     <div class="two"><label>Когда<select id="e_k"><option value="open" ${x.kind==='open'?'selected':''}>Открытие</option><option value="close" ${x.kind==='close'?'selected':''}>Закрытие</option><option value="alpha_k" ${x.kind==='alpha_k'?'selected':''}>Альфа хранителей</option><option value="alpha_r" ${x.kind==='alpha_r'?'selected':''}>Альфа рейнджеров</option></select></label>
     <label>Зона<select id="e_z"><option value="">— без зоны —</option>${DGX_ZONES.map(z=>`<option ${z===x.zone?'selected':''}>${esc(z)}</option>`).join('')}</select></label></div>
-    <label>Пункты (каждый с новой строки)<textarea id="e_i" style="min-height:160px">${esc(x.items.join('\n'))}</textarea></label>
+    <label>Пункты (каждый с новой строки)<textarea id="e_i" style="min-height:160px">${esc(x.items.join('\n'))}</textarea></label><div class="muted">Чтобы сотрудник вписывал число, добавь в конец пункта <b>::n</b> (например «Мячей, шт::n»). Для «работают / не работают» — <b>::vr</b> (например «VR-очки::vr»).</div>
     <label style="flex-direction:row;align-items:center;gap:10px"><input type="checkbox" id="e_a" ${x.active?'checked':''} style="width:24px;min-height:24px"> Список включён</label>
     <button class="btn" id="e_sv">Сохранить</button><button class="btn ghost" id="e_cn">Назад</button>${x.id?'<button class="btn ghost" id="e_dl" style="color:#9b2c2c;border-color:#9b2c2c">Удалить список</button>':''}<div class="err" id="e_er"></div>`;
     box.querySelector('#e_cn').onclick=()=>{edit=null;paint()};
