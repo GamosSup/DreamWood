@@ -161,6 +161,9 @@ async function gmGachaTab(box){
     });
   };
   const pull=async()=>{
+    if(window._gxBusy)return;window._gxBusy=1;try{await pull1()}finally{setTimeout(()=>{window._gxBusy=0},400)}
+  };
+  const pull1=async()=>{
     const btn=box.querySelector('#gx_pull'),m=box.querySelector('#gx_m');btn.disabled=true;m&&m.classList.add('spin');
     const [r]=await Promise.all([sb.rpc('gacha_pull'),new Promise(res=>setTimeout(res,1400))]);
     m&&m.classList.remove('spin');
