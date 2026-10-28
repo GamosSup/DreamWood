@@ -87,7 +87,7 @@ async function gridView(){
       {const ids=new Set(rows.filter(r=>r.reg).map(r=>r.id)),nmx=new Map(rows.map(r=>[r.id,r.name])),ol=ot.data.filter(o=>ids.has(o.user_id)).sort((p,q)=>p.day.localeCompare(q.day)||String(nmx.get(p.user_id)).localeCompare(String(nmx.get(q.user_id)),'ru'));
         body.insertAdjacentHTML('beforeend',`<div class="card pad col"><b>⏱ Доработки и 🔥 переработки за месяц · ${ol.length?repFh(ol.reduce((a,o)=>a+Number(o.hours),0))+' ч':'нет'}</b>${ol.map(o=>`<div class="otr"><span><b>${dayLabel(o.day)}</b> · ${esc(shortName(nmx.get(o.user_id)))} · ${OT_K[otKind(o)][0]}${o.note?' '+esc(o.note):''}</span><b>+${repFh(Number(o.hours))} ч</b></div>`).join('')||'<div class="muted">В этом месяце доработок и переработок не было.</div>'}</div>`)}
       body.querySelectorAll('tr[data-k]').forEach(t=>t.onclick=()=>hoursSheet(byKey.get(t.dataset.k),calc,title,parkH,days));
-      body.querySelectorAll('tr[data-tm]').forEach(t=>t.onclick=()=>{G.team=G.team===t.dataset.tm?'':t.dataset.tm;gridView()});
+      body.querySelectorAll('tr[data-tm]').forEach(t=>t.onclick=()=>{G.team=G.team===t.dataset.tm?'':t.dataset.tm;refresh()});
       bindPc();
       return;
     }
@@ -109,14 +109,15 @@ async function gridView(){
   };
   paint();
 
+  const refresh=()=>{['gt','gm','gf','gs'].forEach(k=>app.querySelectorAll(`[data-${k}]`).forEach(b=>{const v=k==='gt'?G.team:k==='gm'?G.mode:k==='gf'?(G.f||'all'):(G.s||'name');b.classList.toggle('on',b.dataset[k]===v)}));paint()};
   const shift=d=>{G.month=new Date(y,mo+d,1);G.sx=null;gridView()};
   $('#gpm').onclick=()=>shift(-1);$('#gnm').onclick=()=>shift(1);
   app.querySelector('.gmt').onclick=()=>{G.month=new Date();G.sx=null;gridView()};
-  app.querySelectorAll('[data-gt]').forEach(b=>b.onclick=()=>{G.team=b.dataset.gt;gridView()});
-  app.querySelectorAll('[data-gm]').forEach(b=>b.onclick=()=>{G.mode=b.dataset.gm;gridView()});
+  app.querySelectorAll('[data-gt]').forEach(b=>b.onclick=()=>{G.team=b.dataset.gt;refresh()});
+  app.querySelectorAll('[data-gm]').forEach(b=>b.onclick=()=>{G.mode=b.dataset.gm;refresh()});
   $('#gq').oninput=e=>{G.q=e.target.value;paint()};
-  app.querySelectorAll('[data-gf]').forEach(b=>b.onclick=()=>{G.f=b.dataset.gf;G.sx=G.sx;gridView()});
-  app.querySelectorAll('[data-gs]').forEach(b=>b.onclick=()=>{G.s=b.dataset.gs;gridView()});
+  app.querySelectorAll('[data-gf]').forEach(b=>b.onclick=()=>{G.f=b.dataset.gf;refresh()});
+  app.querySelectorAll('[data-gs]').forEach(b=>b.onclick=()=>{G.s=b.dataset.gs;refresh()});
   $('#gx').onclick=async e=>{const b=e.target;b.disabled=true;const t=b.textContent;b.textContent='Готовлю файл…';
     try{await gridXlsx({rows:view(),days,calc,title,ym,n,team:G.team,ot:(ot.data||[])})}catch(err){alert('Не получилось сделать Excel: '+(err.message||err))}
     b.disabled=false;b.textContent=t};

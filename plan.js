@@ -25,21 +25,26 @@ function hbStats(h,logs,today){
 }
 const hbIsDue=(h,k)=>(h.days||[]).includes(wdOf(k))&&k>=iso(new Date(h.created_at||Date.now()));
 
-async function noteView(){
+async function noteView(local){
   const today=iso(new Date());
   const P=S.pl||(S.pl={sel:today,tab:'day',m:new Date(),f:'all'});
   if(!P.sel)P.sel=today;
   const me=S.me.id,ws=wkMon(P.sel),we=addD(ws,6);
   S.offline=0;
-  const [,tq,pb,hq,hl,mk,ot,dnq]=await Promise.all([
-    loadPeriods().catch(()=>{}),
-    sb.from('todos').select('*').eq('user_id',me).order('created_at'),
-    sb.from('todos').select('due,prio,tag,subs,arch').limit(1),
-    sb.from('habits').select('*').eq('user_id',me).eq('arch',false).order('created_at'),
-    sb.from('habit_logs').select('habit_id,day').eq('user_id',me).gte('day',addD(today,-400)),
-    sb.from('marks').select('day,kind,note').eq('user_id',me).gte('day',ws).lte('day',we),
-    sb.from('overtime').select('*').eq('user_id',me).gte('day',ws).lte('day',we),
-    sb.from('day_notes').select('day,body').eq('user_id',me).gte('day',ws).lte('day',we)]);
+  let tq,pb,hq,hl,mk,ot,dnq;
+  if(local&&P.raw)({tq,pb,hq,hl,mk,ot,dnq}=P.raw);
+  else{
+    [,tq,pb,hq,hl,mk,ot,dnq]=await Promise.all([
+      loadPeriods().catch(()=>{}),
+      sb.from('todos').select('*').eq('user_id',me).order('created_at'),
+      sb.from('todos').select('due,prio,tag,subs,arch').limit(1),
+      sb.from('habits').select('*').eq('user_id',me).eq('arch',false).order('created_at'),
+      sb.from('habit_logs').select('habit_id,day').eq('user_id',me).gte('day',addD(today,-400)),
+      sb.from('marks').select('day,kind,note').eq('user_id',me).gte('day',ws).lte('day',we),
+      sb.from('overtime').select('*').eq('user_id',me).gte('day',ws).lte('day',we),
+      sb.from('day_notes').select('day,body').eq('user_id',me).gte('day',ws).lte('day',we)]);
+    P.raw={tq,pb,hq,hl,mk,ot,dnq};
+  }
   P.ext=!pb.error;P.hab=!hq.error;
   const every=(tq.data||[]).map(plNorm),all=every.filter(x=>!x.arch),archived=every.filter(x=>x.arch);
   S.plTags=[...new Set(every.map(x=>x.tag).filter(Boolean))].sort();
@@ -122,7 +127,7 @@ async function noteView(){
   app.innerHTML=h;
 
   // ---------- действия ----------
-  const rr=()=>keepScroll(noteView);
+  const rr=()=>keepScroll(noteView),rl=()=>keepScroll(()=>noteView(true));
   const get=id=>every.find(x=>x.id==id);
   const q=$('#nb_q');
   const qadd=async()=>{const t=q.value.trim();if(!t)return;const row={body:t};if(P.tab==='day')row.due=P.sel;const r=await sb.from('todos').insert(row);if(r.error)return alert(r.error.message);toast('Добавлено ✅');if(window.dqPing)dqPing('wtodo');rr()};
@@ -130,8 +135,8 @@ async function noteView(){
   $('#nb_qm').onclick=()=>{P.prefill=q.value.trim();plEdit(null,P.tab==='day'?P.sel:null)};
   $('#wk_p').onclick=()=>{P.sel=addD(P.sel,-7);noteView()};$('#wk_n').onclick=()=>{P.sel=addD(P.sel,7);noteView()};
   $('#wk_t')?.addEventListener('click',()=>{P.sel=today;noteView()});$('#wk_m').onclick=()=>{P.m=new Date(P.sel+'T12:00:00');nbMonth()};
-  app.querySelectorAll('.wd').forEach(b=>b.onclick=()=>{P.sel=b.dataset.k;if(P.tab!=='day')P.tab='day';rr()});
-  app.querySelectorAll('[data-nt]').forEach(b=>b.onclick=()=>{P.tab=b.dataset.nt;noteView()});
+  app.querySelectorAll('.wd').forEach(b=>b.onclick=()=>{P.sel=b.dataset.k;if(P.tab!=='day')P.tab='day';rl()});
+  app.querySelectorAll('[data-nt]').forEach(b=>b.onclick=()=>{P.tab=b.dataset.nt;rl()});
   $('#pl_add')?.addEventListener('click',()=>plEdit(null,P.sel));
   app.querySelectorAll('[data-pe]').forEach(b=>b.onclick=()=>plEdit(get(b.dataset.pe)));
   const dayDone=()=>{const di=dayItems(P.sel);return di.tot&&di.dn===di.tot};
@@ -158,10 +163,10 @@ async function noteView(){
   app.querySelectorAll('[data-he]').forEach(b=>b.onclick=()=>hbEdit(habits.find(x=>x.id==b.dataset.he)));
   $('#hb_add')?.addEventListener('click',()=>hbEdit(null));
   $('#pl_ov')?.addEventListener('click',async()=>{const r=await sb.from('todos').update({due:today}).eq('user_id',me).eq('done',false).lt('due',today);if(r.error)return alert(r.error.message);toast('Перенёс на сегодня');rr()});
-  {const si=$('#pl_s');if(si)si.oninput=()=>{P.q=si.value;clearTimeout(P.qt);P.qt=setTimeout(()=>{const pos=si.selectionStart;noteView().then(()=>{const n=$('#pl_s');if(n){n.focus();n.setSelectionRange(pos,pos)}})},350)}}
-  app.querySelectorAll('[data-pf]').forEach(b=>b.onclick=()=>{P.f=b.dataset.pf;rr()});
-  app.querySelectorAll('[data-tg]').forEach(b=>b.onclick=()=>{P.tg=P.tg===b.dataset.tg?null:b.dataset.tg;rr()});
-  $('#pl_hd')?.addEventListener('click',()=>{P.hd=!P.hd;rr()});
+  {const si=$('#pl_s');if(si)si.oninput=()=>{P.q=si.value;clearTimeout(P.qt);P.qt=setTimeout(()=>{const pos=si.selectionStart;noteView(true).then(()=>{const n=$('#pl_s');if(n){n.focus();n.setSelectionRange(pos,pos)}})},350)}}
+  app.querySelectorAll('[data-pf]').forEach(b=>b.onclick=()=>{P.f=b.dataset.pf;rl()});
+  app.querySelectorAll('[data-tg]').forEach(b=>b.onclick=()=>{P.tg=P.tg===b.dataset.tg?null:b.dataset.tg;rl()});
+  $('#pl_hd')?.addEventListener('click',()=>{P.hd=!P.hd;rl()});
   $('#pl_arc')?.addEventListener('click',async()=>{const r=await sb.from('todos').update({arch:true}).eq('user_id',me).eq('done',true);if(r.error)return alert(r.error.message);toast('Убрано в архив 📦');rr()});
   $('#pl_clr')?.addEventListener('click',async()=>{if(!confirm('Удалить всё из архива насовсем?'))return;await sb.from('todos').delete().eq('user_id',me).eq('arch',true);rr()});
 }
