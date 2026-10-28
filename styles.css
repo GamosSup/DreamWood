@@ -935,3 +935,9 @@ html[data-dark="1"] .gmt small{color:var(--ink);opacity:.9}
 html[data-dark="1"] .ab .card:not([style*="background"]),html[data-dark="1"] .ab .card:not([style*="background"]) .shn,html[data-dark="1"] .ab .card:not([style*="background"]) label{color:var(--ink)}
 html[data-dark="1"] .ab .card:not([style*="background"]) .muted{color:var(--muted)}
 html[data-dark="1"] .sheet .card:not([style*="background"]){color:var(--ink)}
+/* v104: личное приветствие */
+.wlc{align-items:center;z-index:9000;background:radial-gradient(circle at 50% 30%,rgba(255,200,120,.35),rgba(40,28,36,.75))}
+.wlcs{max-width:420px;width:calc(100% - 28px);text-align:center;align-items:center;padding:22px 20px;border-radius:28px;background:linear-gradient(160deg,#FFF6E0,#FBE3C6);color:#3B2A35;border:2px solid #E6B96B;gap:10px;display:flex;flex-direction:column;animation:pop .45s ease-out}
+.wlcp{display:flex;justify-content:center}.wlct{font-family:Alegreya,Georgia,serif;font-size:26px;font-weight:800;line-height:1.15}
+.wlcb{font-size:16px;line-height:1.45}.wlcg{display:flex;flex-direction:column;gap:6px;text-align:left;font-size:14px;background:rgba(255,255,255,.65);border-radius:16px;padding:10px 12px;width:100%}
+html[data-dark="1"] .wlcs,html[data-dark="1"] .wlcs *{color:#3B2A35}

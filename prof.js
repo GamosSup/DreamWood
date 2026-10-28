@@ -124,3 +124,20 @@ function gmAboutPark(){
   },()=>{});
 }
 window.gmAboutPark=gmAboutPark;
+
+// ---------- личное приветствие (показывается один раз тем, у кого есть особый статус «Легенда») ----------
+function gmWelcomeLegend(){
+  const me=typeof gmMe==='function'?gmMe():null;if(!me||!(me.ach||[]).some(a=>a.c==='spec:legend'))return;
+  const key='dw-welcome-legend:'+S.me.id;try{if(localStorage.getItem(key))return}catch(e){}
+  if(document.getElementById('wlc'))return;
+  const nm=(S.me.full_name||'').trim().split(/\s+/)[0]||'';
+  const ov=document.createElement('div');ov.className='ov wlc';ov.id='wlc';
+  ov.innerHTML=`<div class="sheet wlcs"><div class="wlcp">${gmPet(me,150,{anim:true})}</div>
+    <div class="wlct">Добро пожаловать в Дримвуд, ${esc(nm||'Настя')}! 💛</div>
+    <div class="wlcb">Это приветствие сделано специально для тебя. Игорь тебя обожает и придумал его отдельно, чтобы ты поняла, как тебе тут рады.<br><br>Пусть эти два дня будут самыми спокойными и самыми лучшими!</div>
+    <div class="wlcg"><div>🚕 <b>Лама-таксист</b> теперь живёт у тебя: светло-рыжая шерсть и небольшая борода</div><div>👑 Статус <b>«Легенда»</b></div><div>✨ Уровень <b>«Как же она хороша»</b></div><div>🎟 <b>100 тикетов</b> на крутку</div></div>
+    <button class="btn" id="wlcx">Спасибо, Игорь! 💛</button></div>`;
+  document.body.appendChild(ov);
+  try{typeof dwParty==='function'&&dwParty()}catch(e){}
+  ov.querySelector('#wlcx').onclick=()=>{try{localStorage.setItem(key,'1')}catch(e){}ov.remove()};
+}

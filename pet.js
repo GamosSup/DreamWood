@@ -51,6 +51,11 @@ const petBcOf=sp=>(PET_BC.find(x=>x[3]===PET_SP.find(s=>s[0]===sp)[2])||PET_BC[0
 const PET_GRAD={sunset:{s:['#FF6B8B','#FF9E4D','#FFD76B'],base:'#FF8E53',belly:'#FFE6D2'},ocean:{s:['#5FE0C8','#3A9AE0','#2B3A9F'],base:'#3C9AD0',belly:'#D8F1FA'},candy:{s:['#FF9ECD','#FFE0EE','#9EE7FF'],base:'#FFB3D5',belly:'#FFF3F8'},galaxy:{s:['#2B1B5E','#6A3FC9','#C06BFF'],base:'#5B35B0',belly:'#8F6AE0'},goldsuit:{s:['#FFF6C2','#F5C842','#C48A12','#FFE98A'],base:'#F5C842',belly:'#FFF8D6'},ghost:{s:['#EAFBFF','#BCE8F6','#93CDEA'],base:'#BCE8F6',belly:'#F6FDFF'}};
 // дополнительные рисунки (заполняются в gacha.js): за спиной, в руке, очки
 const PET_BX={},PET_HX={},PET_GLX={};
+// лама-таксист (особая, выдаётся вручную): светло-рыжая шерсть, борода, кепка таксиста
+PET_SP.push(['llama','Лама-таксист','#E9B97E','spec:taxi']);
+PET_BC.push(['c_gi','Светло-рыжий','spec:taxi','#E9B97E']);
+PET_HA.push(['h_taxi','Кепка таксиста','spec:taxi']);
+
 function petDefs(id,bcv,hcv,ecv){
   const rad=(n,c)=>`<radialGradient id="${id}${n}" cx=".35" cy=".28" r=".85"><stop offset="0" stop-color="${pMix(c,'#ffffff',.38)}"/><stop offset=".55" stop-color="${c}"/><stop offset="1" stop-color="${pMix(c,'#000000',.24)}"/></radialGradient>`;
   let body;
@@ -105,6 +110,7 @@ function petEars(sp,F,D,inn){
   if(sp==='potato')return m(`<ellipse cx="72" cy="128" rx="22" ry="17" transform="rotate(-24 72 128)" ${st}/>`);
   if(sp==='leopard')return m(`<circle cx="92" cy="86" r="32" ${st}/><circle cx="92" cy="90" r="17" fill="#3A2A22"/>`);
   if(sp==='unicorn')return m(`<path d="M66 122L48 50L118 92Z" ${st}/><path d="M72 108L60 66L102 92Z" fill="${inn}"/>`)+`<path d="M144 84L160 -30L176 84Z" fill="#F6C945" stroke="#9A6D0A" stroke-width="3.2" stroke-linejoin="round"/><path d="M148 62L172 52M150 44L170 34M152 26L168 18M146 80L174 70" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".85"/>`;
+  if(sp==='llama')return m(`<ellipse cx="98" cy="58" rx="22" ry="58" transform="rotate(-16 98 58)" ${st}/><ellipse cx="98" cy="64" rx="10" ry="38" transform="rotate(-16 98 64)" fill="${inn}"/>`);
   if(sp==='bunny')return m(`<ellipse cx="106" cy="14" rx="28" ry="64" transform="rotate(-12 106 14)" ${st}/><ellipse cx="106" cy="20" rx="14" ry="46" transform="rotate(-12 106 20)" fill="${inn}"/>`);
   return m(`<path d="M64 120L8 96L42 152Z" ${st}/><path d="M112 78L98 12L146 66Z" fill="#F5E6B3" stroke="${D}" stroke-width="3.2" stroke-linejoin="round"/>`);
 }
@@ -112,6 +118,7 @@ function petTail(sp,F,D,bellyc){
   const st=`fill="${F}" stroke="${D}" stroke-width="3.2" stroke-linejoin="round"`;
   if(sp==='fox')return `<path d="M112 394Q8 414 8 300Q8 238 58 232Q40 290 78 332Q98 352 130 352Z" ${st}/><path d="M8 300Q8 240 58 232Q42 262 48 286Q24 284 8 300Z" fill="#FFF6E8" stroke="${D}" stroke-width="2"/>`;
   if(sp==='bear')return `<circle cx="96" cy="392" r="22" ${st}/>`;
+  if(sp==='llama')return `<path d="M110 396Q60 408 50 366Q76 372 92 356Z" ${st}/><path d="M50 366Q40 340 62 330Q70 352 92 356Z" fill="#fff" opacity=".35"/>`;
   if(sp==='bunny')return `<circle cx="94" cy="394" r="25" fill="#fff" stroke="${D}" stroke-width="3"/>`;
   if(sp==='potato')return '';
   if(sp==='leopard')return `<path d="M112 392Q30 410 24 330Q20 290 52 272" fill="none" stroke="${D}" stroke-width="32" stroke-linecap="round"/><path d="M112 392Q30 410 24 330Q20 290 52 272" fill="none" stroke="${F}" stroke-width="25" stroke-linecap="round"/><path d="M40 380Q30 362 28 346M26 318Q24 304 32 292" stroke="#2A1B12" stroke-width="8" stroke-linecap="round" fill="none"/>`;
@@ -208,7 +215,7 @@ function petSvg(c,opt={}){
    `<ellipse cx="116" cy="410" rx="38" ry="19" fill="${Fb}" stroke="${Dk}" stroke-width="3.2"/><ellipse cx="204" cy="410" rx="38" ry="19" fill="${Fb}" stroke="${Dk}" stroke-width="3.2"/><path d="M98 414v-8M116 416v-9M134 414v-8M186 414v-8M204 416v-9M222 414v-8" stroke="${D}" stroke-width="2.6" stroke-linecap="round"/>`+
    `<ellipse cx="160" cy="150" rx="104" ry="90" fill="${F}" stroke="${D}" stroke-width="3.4"/><ellipse cx="116" cy="96" rx="42" ry="20" fill="#fff" opacity=".2" transform="rotate(-20 116 96)"/>`+
    `<ellipse cx="160" cy="196" rx="48" ry="33" fill="${muz}"/><circle cx="84" cy="196" r="16" fill="#FF8FA3" opacity=".42"/><circle cx="236" cy="196" r="16" fill="#FF8FA3" opacity=".42"/>`+pat+
-   `<g class="pey">`+petEye(118,148,c.ex,id,c.gz,0)+petEye(202,148,c.ex,id,c.gz,1)+`</g>`+nose+petMouth(c.mo)+
+   (sp==='llama'?`<path d="M124 216Q160 202 196 216Q210 266 160 286Q110 266 124 216Z" fill="${pMix(baseHex,'#ffffff',.3)}" stroke="${D}" stroke-width="3.2" stroke-linejoin="round"/><path d="M140 238Q146 262 142 272M160 242V282M180 238Q174 262 178 272" stroke="${D}" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".5"/>`:'')+`<g class="pey">`+petEye(118,148,c.ex,id,c.gz,0)+petEye(202,148,c.ex,id,c.gz,1)+`</g>`+nose+petMouth(c.mo)+
    petHair(c.hr,F,hD,id)+gear.nk+petBadgeName(gear.ch,c,opt)+hand+gear.gl+gear.hat+(sp==='potato'&&!c.ha?`<path d="M158 70Q148 34 176 22Q168 44 172 70Z" fill="#6DBB48" stroke="#3E7B2E" stroke-width="3" stroke-linejoin="round"/><ellipse cx="186" cy="34" rx="16" ry="9" transform="rotate(-28 186 34)" fill="#7ED957" stroke="#3E7B2E" stroke-width="3"/>`:'')+(c.cm?`<g class="cmw"><image href="stickers/mascot-hi.webp" x="188" y="282" width="132" height="132"/></g>`:'');
   return `<svg viewBox="${vb.join(' ')}" width="100%" height="100%" aria-hidden="true">${body}</svg>`;
 }
@@ -241,3 +248,5 @@ function gmPet(row,sz=160,opt={}){
       document.body.appendChild(h);setTimeout(()=>h.remove(),1500)}
   });
 })();
+// кепка таксиста для ламы
+PET_GEAR.h_taxi=`<path d="M108 208Q108 140 180 138Q252 142 254 208Z" fill="#F6C945" stroke="#8A6200" stroke-width="3"/>${Array.from({length:10},(_,i)=>`<rect x="${112+i*14}" y="${192}" width="14" height="8" fill="${i%2?'#1F1F28':'#fff'}"/><rect x="${112+i*14}" y="${200}" width="14" height="8" fill="${i%2?'#fff':'#1F1F28'}"/>`).join('')}<path d="M108 192Q112 150 180 146" fill="none" stroke="#8A6200" stroke-width="0"/><path d="M200 210Q268 202 292 224Q250 236 200 222Z" fill="#2A2A35" stroke="#111" stroke-width="3"/><rect x="156" y="146" width="48" height="18" rx="4" fill="#fff" stroke="#8A6200" stroke-width="2.4"/><text x="180" y="160" text-anchor="middle" font-family="Manrope,Arial,sans-serif" font-weight="800" font-size="13" fill="#1F1F28">TAXI</text>`;

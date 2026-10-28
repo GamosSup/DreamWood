@@ -89,6 +89,8 @@ const GM_ACH=[
  {c:'spec:shark',g:'skill',t:5,ic:'🦈',n:'Кигуруми акулы',d:'Особый подарок: костюм акулы для питомца',b:0,man:1,secret:1,title:'Акула-супервайзер'},
  {c:'spec:admin_server',g:'skill',t:5,ic:'sword',n:'Админ на сервере',d:'Особый значок. Выдаёт админ, ничего лишнего не просит',b:500,man:1,secret:1,title:'Админ на сервере'},
  {c:'spec:whipcarrot',g:'skill',t:5,ic:'whipgb',n:'Кнут и пряник',d:'Для работы с командой 💙',b:0,man:1,secret:1,title:'Кнут и пряник'},
+ {c:'spec:taxi',g:'skill',t:5,ic:'🚕',n:'Лама-таксист',d:'Особый питомец: лама в кепке таксиста, светло-рыжая, с бородой',b:0,man:1,secret:1},
+ {c:'spec:legend',g:'skill',t:5,ic:'👑',n:'Легенда',d:'Статус для тех, кого в парке обожают',b:0,man:1,secret:1,title:'Легенда'},
  {c:'spec:finished',g:'skill',t:5,ic:'🏆',n:'Прошёл игру',d:'Дошёл до конца: прошёл Дримвуд целиком',b:0,man:1,secret:1,title:'Прошёл игру'},
  {c:'spec:alpha',g:'skill',t:5,ic:'🐺',n:'Альфа',d:'Один за всех, оклад за одного',b:100,man:1,title:'Альфа'},
  {c:'spec:ropes_all',g:'skill',t:5,ic:'🏔️',n:'Все три маршрута лагеря',d:'Открыты все три маршрута верёвочного лагеря: Семейный, Мастер и Герой',b:150,man:1,title:'Покоритель лагеря'},
@@ -137,7 +139,7 @@ async function gmLoad(force){
       const old=S.gm?JSON.stringify(S.gm.rows.map(x=>[x.id,x.lvl_text,x.cos,gmLv(x.xp).n])):'';
       const g=gmIndex(r.data||[]);S.gm=g;
       try{localStorage.setItem('dw:gm:'+S.me.id,JSON.stringify({rows:g.rows}))}catch(e){}
-      gmLevelUp();setTimeout(gmPopups,1800);
+      gmLevelUp();setTimeout(()=>{try{window.gmWelcomeLegend&&gmWelcomeLegend()}catch(e){}},900);setTimeout(gmPopups,1800);
       if(old&&old!==JSON.stringify(g.rows.map(x=>[x.id,x.lvl_text,x.cos,gmLv(x.xp).n]))&&window.qcRerender)qcRerender();
     }catch(e){}finally{S.gmP=null}
     return S.gm})();
