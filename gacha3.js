@@ -133,3 +133,20 @@ Object.assign(PET_BX,{
   const L={ha:PET_HA,gl:PET_GL,nk:PET_NK,ch:PET_CH,bk:PET_BK,hd:PET_HD,frame:GM_FRAMES,name:GM_NAMES,bg:GM_BGS};
   GXI3.forEach(([id,r,k,n,v])=>{const req=gxCode(id);if(k==='bc')PET_BC.push([id,n,req,v]);else if(L[k])L[k].push([id,n,req])});
 }
+
+// ---------- Таня Мехрякова: кот «Отчёт» с горящими бумагами над головой, статус «Серый кардинал» ----------
+PET_SP.push(['cat','Кот «Отчёт»','#9AA5B1','spec:pet_tanya']);
+PET_HA.push(['h_reports','Горящие отчёты','spec:pet_tanya']);
+PET_GEAR.h_reports=(()=>{
+  const sheet=(d,rot)=>`<g transform="translate(180 160)"><animateMotion dur="9s" begin="-${d}s" repeatCount="indefinite" path="M-88 0A88 22 0 1 1 88 0A88 22 0 1 1 -88 0"/><g transform="rotate(${rot}) scale(.85)">`+
+    `<g><animate attributeName="opacity" values="1;.72;1;.85;1" dur=".6s" repeatCount="indefinite"/><path d="M-15 -6Q-22 -22 -9 -32Q-8 -21 -2 -27Q0 -40 11 -44Q8 -29 19 -22Q23 -10 15 -6Z" fill="#FF6A1A"/><path d="M-7 -6Q-10 -17 0 -24Q2 -15 9 -11Q9 -6 7 -6Z" fill="#FFD24A"/></g>`+
+    `<path d="M-17 -6L-8 -9L-2 -5L6 -9L12 -5L17 -7L18 24L-18 24Z" fill="#FFF8E6" stroke="#3A2A22" stroke-width="2" stroke-linejoin="round"/><path d="M-17 -6L-8 -9L-2 -5L6 -9L12 -5L17 -7L17 -3L-17 -2Z" fill="#6B3A1E" opacity=".75"/>`+
+    `<text x="0" y="12" text-anchor="middle" font-family="Manrope,Arial,sans-serif" font-weight="800" font-size="9" fill="#9A1F10">отчёт</text><path d="M-12 17H12M-12 21H6" stroke="#9AA5B1" stroke-width="1.6" stroke-linecap="round"/></g></g>`;
+  return [0,1.8,3.6,5.4,7.2].map((d,i)=>sheet(d,[-12,9,-6,14,-16][i])).join('');
+})();
+{
+  const sp=(c,n,d,ic)=>{const a={c,g:'skill',t:5,ic,n,d,b:0,man:1,secret:1,title:n};GM_ACH.push(a);GM_BY[c]=a};
+  sp('spec:pet_tanya','Кот «Отчёт»','Подарок Тане: серый кот, вокруг головы летают горящие отчёты','🐈‍⬛');
+  sp('spec:cardinal','Серый кардинал','Тот, кто решает всё тихо, а отчёты горят сами','🕶️');
+  GM_PTAG.cat='спокойный; отчёты вокруг горят, ему всё равно';
+}

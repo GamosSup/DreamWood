@@ -105,6 +105,7 @@ function petHair(h,F,D,id){
 function petEars(sp,F,D,inn){
   const m=(g)=>`<g>${g}</g><g transform="translate(320 0) scale(-1 1)">${g}</g>`;
   const st=`fill="${F}" stroke="${D}" stroke-width="3.2" stroke-linejoin="round"`;
+  if(sp==='cat')return m(`<path d="M74 122L58 26L136 86Z" ${st}/><path d="M80 108L70 52L118 88Z" fill="${inn}"/>`);
   if(sp==='fox')return m(`<path d="M70 124L38 4L140 72Z" ${st}/><path d="M74 104L56 38L116 76Z" fill="${inn}"/>`);
   if(sp==='bear')return m(`<circle cx="88" cy="84" r="40" ${st}/><circle cx="88" cy="86" r="22" fill="${inn}"/>`);
   if(sp==='potato')return m(`<ellipse cx="72" cy="128" rx="22" ry="17" transform="rotate(-24 72 128)" ${st}/>`);
@@ -121,7 +122,7 @@ function petTail(sp,F,D,bellyc){
   if(sp==='llama')return `<path d="M110 396Q60 408 50 366Q76 372 92 356Z" ${st}/><path d="M50 366Q40 340 62 330Q70 352 92 356Z" fill="#fff" opacity=".35"/>`;
   if(sp==='bunny')return `<circle cx="94" cy="394" r="25" fill="#fff" stroke="${D}" stroke-width="3"/>`;
   if(sp==='potato')return '';
-  if(sp==='leopard')return `<path d="M112 392Q30 410 24 330Q20 290 52 272" fill="none" stroke="${D}" stroke-width="32" stroke-linecap="round"/><path d="M112 392Q30 410 24 330Q20 290 52 272" fill="none" stroke="${F}" stroke-width="25" stroke-linecap="round"/><path d="M40 380Q30 362 28 346M26 318Q24 304 32 292" stroke="#2A1B12" stroke-width="8" stroke-linecap="round" fill="none"/>`;
+  if(sp==='leopard'||sp==='cat')return `<path d="M112 392Q30 410 24 330Q20 290 52 272" fill="none" stroke="${D}" stroke-width="32" stroke-linecap="round"/><path d="M112 392Q30 410 24 330Q20 290 52 272" fill="none" stroke="${F}" stroke-width="25" stroke-linecap="round"/><path d="M40 380Q30 362 28 346M26 318Q24 304 32 292" stroke="#2A1B12" stroke-width="8" stroke-linecap="round" fill="none"/>`;
   if(sp==='unicorn')return ['#FF5E7E','#FFB347','#FFE45E','#4FC98F','#52A7FF','#B07CFF'].map((c,i)=>`<path d="M112 396Q${40-i*3} ${410+i*4} ${34-i*2} ${340-i*4}Q${28-i*2} ${300-i*3} ${60-i*2} ${280+i*3}" fill="none" stroke="${c}" stroke-width="${30-i*4.4}" stroke-linecap="round"/>`).join('');
   return `<path d="M112 392Q32 406 24 336Q20 302 46 292" fill="none" stroke="${D}" stroke-width="32" stroke-linecap="round"/><path d="M112 392Q32 406 24 336Q20 302 46 292" fill="none" stroke="${F}" stroke-width="25" stroke-linecap="round"/><path d="M46 292L20 268L70 274Z" fill="#F5E6B3" stroke="${D}" stroke-width="3" stroke-linejoin="round"/>`;
 }
@@ -204,6 +205,7 @@ function petSvg(c,opt={}){
   if(sp==='potato')pat+=[[120,84,7,4],[206,92,6,4],[150,64,5,3],[100,150,6,4],[226,150,5,3],[110,300,10,7],[212,296,9,6],[126,380,8,5],[198,372,9,6],[222,336,7,5],[98,340,6,4],[170,392,8,5]].map(([x,y,rx,ry])=>`<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="#8A5E2C" opacity=".78"/><ellipse cx="${x-1}" cy="${y-1}" rx="${rx*.5}" ry="${ry*.5}" fill="#5E3C16" opacity=".6"/>`).join('');
   if(sp==='leopard')pat+=[[118,86,9],[204,88,8],[148,66,6],[98,150,7],[228,150,6],[110,296,12],[214,292,11],[96,350,9],[230,346,9],[128,382,10],[196,380,10],[160,262,8],[84,258,7],[238,262,7]].map(([x,y,r])=>`<circle cx="${x}" cy="${y}" r="${r}" fill="none" stroke="#2A1B12" stroke-width="${Math.max(3,r*.45)}" opacity=".85"/><circle cx="${x}" cy="${y}" r="${r*.28}" fill="#2A1B12" opacity=".85"/>`).join('');
   if(sp==='unicorn')pat+=`<rect x="112" y="316" width="96" height="34" rx="12" fill="#fff" stroke="#8E5FE0" stroke-width="3.4"/><text x="160" y="340" text-anchor="middle" font-family="Manrope,Arial,sans-serif" font-weight="800" font-size="21" fill="#8E5FE0" letter-spacing="1">МЕДИА</text>`;
+  if(sp==='cat')pat+=`<path d="M148 70V98M160 66V100M172 70V98" stroke="${D}" stroke-width="5" fill="none" stroke-linecap="round" opacity=".55"/><path d="M84 188L34 178M84 198L30 204M236 188L286 178M236 198L290 204" stroke="${D}" stroke-width="2.6" fill="none" stroke-linecap="round" opacity=".8"/>`
   const hand=petHandItem(c.hd).replace('PETP',id+'p');
   const vb=opt.vb||PET_VB,sz=opt.sz||160;
   const body=`<defs>${petDefs(id,solid?bcv:bcv,hcv,ecv)}</defs>`+
