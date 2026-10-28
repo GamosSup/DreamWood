@@ -112,7 +112,9 @@ function newsForm(x){
 }
 
 // ================= БАЗА ЗНАНИЙ =================
-S.kb={q:'',cat:'all'};
+S.kb={q:'',cat:'all',section:'base'};
+function kbSectionTabs(){return `<div class="tabs"><button data-kbs="base" class="${S.kb.section==='base'?'on':''}" style="background:var(--tab)">Страницы</button><button data-kbs="my" class="${S.kb.section==='my'?'on':''}" style="background:var(--tab)">📁 Моё</button></div>`}
+function kbSectionBind(){app.querySelectorAll('[data-kbs]').forEach(b=>b.onclick=()=>{S.kb.section=b.dataset.kbs;kbView()})}
 function md(src){
   const e=s=>esc(s).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
   let out='',ul=false;const cl=()=>{if(ul){out+='</ul>';ul=false}};
@@ -126,15 +128,16 @@ function md(src){
   cl();return out;
 }
 async function kbView(){
+  if(S.kb.section==='my')return myFilesView();
   const r=await sb.from('kb_pages').select('*').order('pinned',{ascending:false}).order('title');
   const all=r.data||[],cats=[...new Set(all.map(p=>p.category))].sort(),mgr=isManager();
   const q=S.kb.q.trim().toLowerCase(),list=all.filter(p=>(S.kb.cat==='all'||p.category===S.kb.cat)&&(!q||(p.title+' '+p.body+' '+p.category).toLowerCase().includes(q)));
-  let h=head('База знаний','Регламенты, инструкции и подсказки');
+  let h=head('База знаний','Регламенты, инструкции и подсказки')+kbSectionTabs();
   h+=`<input id="kb_q" type="search" placeholder="🔍 Поиск по базе" value="${esc(S.kb.q)}">`;
   h+=`<div class="tabs"><button data-c="all" class="${S.kb.cat==='all'?'on':''}" style="background:var(--tab)">Все</button>${cats.map(c=>`<button data-c="${esc(c)}" class="${S.kb.cat===c?'on':''}" style="background:var(--tab)">${esc(c)}</button>`).join('')}</div>`;
   if(mgr)h+='<button class="btn" id="kb_new">➕ Новая страница</button>';
   h+=`<div id="kb_list" class="kbl">${kbGroups(list,!!q)||'<div class="card pad muted">Ничего не найдено.</div>'}</div>`;
-  app.innerHTML=h;
+  app.innerHTML=h;kbSectionBind();
   $('#kb_q').oninput=e=>{S.kb.q=e.target.value;const qq=S.kb.q.trim().toLowerCase();const l2=all.filter(p=>(S.kb.cat==='all'||p.category===S.kb.cat)&&(!qq||(p.title+' '+p.body+' '+p.category).toLowerCase().includes(qq)));$('#kb_list').innerHTML=kbGroups(l2,!!qq)||'<div class="card pad muted">Ничего не найдено.</div>';bindAreas($('#kb_list'));kbBind(all)};
   app.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{S.kb.cat=b.dataset.c;kbView()});
   $('#kb_new')?.addEventListener('click',()=>kbEdit());

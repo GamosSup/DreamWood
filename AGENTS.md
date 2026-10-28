@@ -16,7 +16,7 @@
 ## 2. Как устроен код
 Сборки нет. Файлы подключаются обычными `<script>` в `index.html` в строгом порядке, глобальные переменные общие. Порядок важен:
 
-`config, logo, app, qc, dgx, ext1, ext2, ext3, ext4, today, roted, xlsx, rep, plan, grow, pet, game, gacha, gacha2, gacha3, prof, pet25d, brief, fx, push, tour`
+`config, logo, app, qc, dgx, ext1, ext2, ext3, ext4, myfiles, today, roted, xlsx, rep, plan, grow, pet, game, gacha, gacha2, gacha3, prof, pet25d, brief, fx, push, tour`
 
 | Файл | За что отвечает |
 |---|---|
@@ -24,6 +24,7 @@
 | `app.js` | ядро: вход, роутинг (`go(tab)`), состояние `S`, темы, график, «Сотрудники», роли |
 | `today.js` | экран «Сегодня» |
 | `ext1.js`…`ext4.js` | чек-листы смены, контакты, заявки, поломки, прочие разделы |
+| `myfiles.js` | база знаний → «Моё»: личные файлы, папки и доступ для коллег |
 | `roted.js` | ротации (редактор и просмотр) |
 | `rep.js`, `xlsx.js` | отчёты и выгрузки |
 | `plan.js` | «Мой блокнот»: дела, привычки |

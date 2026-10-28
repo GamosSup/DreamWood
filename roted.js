@@ -13,22 +13,24 @@ S.rainSeen={};
 async function rotView(){
   S.offline=0;
   const todayIso=iso(new Date()),from=iso(new Date(Date.now()-7*864e5)),archive=!!S.rotArchive;
-  const lr=await cq(archive?'rotarch':'rotlist',()=>{
-    let q=sb.from('rotations').select('day');q=archive?q.lt('day',from):q.gte('day',from);
-    return q.order('day',{ascending:!archive});
+  const lr=await cq(archive?'rotarch2':'rotlist2',async()=>{
+    let r=await sb.from('rotations').select('day,archived_at').order('day',{ascending:!archive});
+    if(r.error&&/archived_at/.test(r.error.message||''))r=await sb.from('rotations').select('day').order('day',{ascending:!archive});
+    const rows=(r.data||[]).filter(x=>archive?(x.archived_at||x.day<from):(!x.archived_at&&x.day>=from));
+    return {...r,data:rows,hasToday:(r.data||[]).some(x=>x.day===todayIso)};
   });
-  const days=[...new Set([...(lr.data||[]).map(x=>x.day),...(archive?[]:[todayIso])])].sort();
+  const days=[...new Set([...(lr.data||[]).map(x=>x.day),...(!archive&&!lr.hasToday?[todayIso]:[])])].sort();
   if(archive)days.reverse();
   if(days.length&&(!S.day||!days.includes(S.day)))S.day=archive?days[0]:(days.includes(todayIso)?todayIso:days[days.length-1]);
-  let h=head(archive?'Ротации · Архив':'Ротации',archive?'Ротации старше 7 дней — записи и картинки сохранены':'Кто где стоит и когда перерыв');
+  let h=head(archive?'Ротации · Архив':'Ротации',archive?'Перенесённые вручную и старше 7 дней — записи и картинки сохранены':'Кто где стоит и когда перерыв');
   h+=`<div class="tabs">${days.map(d=>`<button data-d="${d}" class="${d===S.day?'on':''}" style="background:var(--tab)">${!archive&&d===todayIso?'Сегодня':dayLabel(d)}${!archive&&d===todayIso?'<br><small>'+dayLabel(d)+'</small>':''}</button>`).join('')}<button data-a="${archive?0:1}" style="background:var(--tab)">${archive?'← Текущие':'Архив'}</button></div>`;
-  if(archive&&!days.length){h+='<div class="card pad"><b>В архиве пока нет ротаций</b><div class="muted">Сюда автоматически попадут даты старше семи дней. Ничего не удаляется.</div></div>';app.innerHTML=h;return bindRot(null)}
+  if(archive&&!days.length){h+='<div class="card pad"><b>В архиве пока нет ротаций</b><div class="muted">Сюда попадают даты старше семи дней и дни, перенесённые руководителем вручную. Ничего не удаляется.</div></div>';app.innerHTML=h;return bindRot(null)}
   const dr=await cq('rot:'+S.day,()=>sb.from('rotations').select('*').eq('day',S.day).maybeSingle());
-  const rot=dr.data?.data,mgr=isManager();
+  const rot=dr.data?.data,mgr=isManager(),canArchive=mgr&&!archive&&dr.data&&'archived_at' in dr.data;
   if(S.rname===undefined){const r=await sb.rpc('my_roster_name');S.rname=r.error?null:(r.data||null)}
   S.dayEnd=rot?dayEndOf(rot):18;
   if(rot?.rain&&!S.rainSeen[S.day]){S.team='W';S.rainSeen[S.day]=1}
-  if(mgr)h+=`<div class="tabs"><button id="re_new" style="background:var(--tab)">➕ Новый день</button>${rot?`<button id="re_edit" style="background:var(--tab)">✏️ Редактировать</button><button id="re_rain" style="background:${rot.rain?'#F5E2A8':'#BCC8D6'}">${rot.rain?'☀️ Отключить режим дождя':'🌧 Включить режим дождя'}</button>`:''}</div>`;
+  if(mgr)h+=`<div class="tabs"><button id="re_new" style="background:var(--tab)">➕ Новый день</button>${rot?`<button id="re_edit" style="background:var(--tab)">✏️ Редактировать</button>${canArchive?'<button id="re_archive" style="background:var(--tab)">🗄 В архив</button>':''}<button id="re_rain" style="background:${rot.rain?'#F5E2A8':'#BCC8D6'}">${rot.rain?'☀️ Отключить режим дождя':'🌧 Включить режим дождя'}</button>`:''}</div>`;
   if(!rot){h+=`<div class="card pad"><b>Ротации на ${dayLabel(S.day)} пока нет</b><div class="muted">Как только её загрузят, она появится здесь.</div></div>`;app.innerHTML=h;return bindRot(rot)}
   if(rot.rain)h+=`<div class="banner" style="background:#7E98AE;color:#fff">🌧 Идёт дождь — работаем по плану «Если дождь»</div>`;
   if(rot.banner)h+=`<div class="banner">🎃 ${esc(rot.banner)}</div>`;
@@ -67,6 +69,11 @@ function bindRot(rot){
   app.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{S.team=b.dataset.t;rotView()});
   $('#re_edit')?.addEventListener('click',()=>rotEditor(S.day,JSON.parse(JSON.stringify(rot)),false));
   $('#re_new')?.addEventListener('click',rotNew);
+  $('#re_archive')?.addEventListener('click',async()=>{
+    if(!confirm(`Перенести ротацию на ${dayLabel(S.day)} в архив? Уведомление не будет отправлено.`))return;
+    const r=await sb.from('rotations').update({archived_at:new Date().toISOString()}).eq('day',S.day);
+    if(r.error)return alert(r.error.message);S.rotArchive=false;rotView();
+  });
   $('#re_rain')?.addEventListener('click',async()=>{
     const on=!rot.rain;if(!confirm(on?'Включить режим дождя? Всем придёт уведомление, откроется план «Если дождь».':'Отключить режим дождя? Всем придёт уведомление.'))return;
     const r=await sb.from('rotations').update({data:{...rot,rain:on},updated_at:new Date().toISOString()}).eq('day',S.day);

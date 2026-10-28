@@ -31,6 +31,7 @@ const routes = {
   'GET /api/link': ['link.js', 'onRequestGet'],
   'GET /api/site': ['site.js', 'onRequestGet'],
   'POST /api/upload': ['upload.js', 'onRequestPost'],
+  'DELETE /api/myfile': ['myfile.js', 'onRequestDelete'],
 };
 
 const send = (res, status, obj) => {

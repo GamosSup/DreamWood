@@ -17,7 +17,7 @@ function dgxSheet(title,render,onClose,cls){
 }
 
 // ---------- файлы ----------
-const DRV_K={dg:'dg',inc:'inc',repairs:'repairs',wo:'wo'};
+const DRV_K={dg:'dg',inc:'inc',repairs:'repairs',wo:'wo',my:'my'};
 // отправка файла на Google Drive через /api/upload. Возвращает {id} или {err, off} (off — Drive не настроен, нужен запасной путь)
 async function driveSend(bucket,rec,file){
   if(S.driveOff)return {off:1};

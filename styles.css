@@ -135,6 +135,7 @@ nav button.dsk{display:none}
 .shi{flex-direction:row;align-items:flex-start;gap:12px;font-weight:600;font-size:15px;padding:6px 0}.shi input{width:26px;min-height:26px;flex:none;margin-top:1px;accent-color:var(--ink)}
 .kbbody h2{font:800 24px Alegreya,Georgia,serif;margin:10px 0 4px}.kbbody h3{font:800 19px Alegreya,Georgia,serif;margin:10px 0 2px}.kbbody p{margin:4px 0;line-height:1.5}.kbbody ul{margin:4px 0;padding-left:22px;line-height:1.5}.kbbody a{color:var(--ink);font-weight:700}
 .kbl{display:flex;flex-direction:column;gap:10px}
+.myrow{display:flex;align-items:center;gap:12px;min-width:0}.myrow .mi{font-size:30px;flex:none}.myrow .mt{min-width:0;flex:1}.myrow .mt b{display:block;overflow-wrap:anywhere}.myrow .mt .muted{display:block;margin-top:3px}.myprev{display:block;max-width:100%;max-height:50vh;object-fit:contain;margin:auto;border-radius:16px;background:var(--card)}
 @media (min-width:900px){body[data-tab=kb] .kbl,body[data-tab=inc] #app,body[data-tab=news] #app{}
   body[data-tab=kb] .kbl{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:14px}
   body[data-tab=shift] #app{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));align-items:start;align-content:start;grid-auto-rows:max-content;gap:18px}
