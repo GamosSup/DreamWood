@@ -12,17 +12,22 @@ S.rainSeen={};
 // ---------- просмотр ----------
 async function rotView(){
   S.offline=0;
-  const todayIso=iso(new Date()),from=iso(new Date(Date.now()-7*864e5));
-  const lr=await cq('rotlist',()=>sb.from('rotations').select('day').gte('day',from).order('day'));
-  const days=[...new Set([...(lr.data||[]).map(x=>x.day),todayIso])].sort();
-  if(!S.day||!days.includes(S.day))S.day=days.includes(todayIso)?todayIso:days[days.length-1];
+  const todayIso=iso(new Date()),from=iso(new Date(Date.now()-7*864e5)),archive=!!S.rotArchive;
+  const lr=await cq(archive?'rotarch':'rotlist',()=>{
+    let q=sb.from('rotations').select('day');q=archive?q.lt('day',from):q.gte('day',from);
+    return q.order('day',{ascending:!archive});
+  });
+  const days=[...new Set([...(lr.data||[]).map(x=>x.day),...(archive?[]:[todayIso])])].sort();
+  if(archive)days.reverse();
+  if(days.length&&(!S.day||!days.includes(S.day)))S.day=archive?days[0]:(days.includes(todayIso)?todayIso:days[days.length-1]);
+  let h=head(archive?'Ротации · Архив':'Ротации',archive?'Ротации старше 7 дней — записи и картинки сохранены':'Кто где стоит и когда перерыв');
+  h+=`<div class="tabs">${days.map(d=>`<button data-d="${d}" class="${d===S.day?'on':''}" style="background:var(--tab)">${!archive&&d===todayIso?'Сегодня':dayLabel(d)}${!archive&&d===todayIso?'<br><small>'+dayLabel(d)+'</small>':''}</button>`).join('')}<button data-a="${archive?0:1}" style="background:var(--tab)">${archive?'← Текущие':'Архив'}</button></div>`;
+  if(archive&&!days.length){h+='<div class="card pad"><b>В архиве пока нет ротаций</b><div class="muted">Сюда автоматически попадут даты старше семи дней. Ничего не удаляется.</div></div>';app.innerHTML=h;return bindRot(null)}
   const dr=await cq('rot:'+S.day,()=>sb.from('rotations').select('*').eq('day',S.day).maybeSingle());
   const rot=dr.data?.data,mgr=isManager();
   if(S.rname===undefined){const r=await sb.rpc('my_roster_name');S.rname=r.error?null:(r.data||null)}
   S.dayEnd=rot?dayEndOf(rot):18;
   if(rot?.rain&&!S.rainSeen[S.day]){S.team='W';S.rainSeen[S.day]=1}
-  let h=head('Ротации','Кто где стоит и когда перерыв');
-  h+=`<div class="tabs">${days.map(d=>`<button data-d="${d}" class="${d===S.day?'on':''}" style="background:var(--tab)">${d===todayIso?'Сегодня':dayLabel(d)}${d===todayIso?'<br><small>'+dayLabel(d)+'</small>':''}</button>`).join('')}</div>`;
   if(mgr)h+=`<div class="tabs"><button id="re_new" style="background:var(--tab)">➕ Новый день</button>${rot?`<button id="re_edit" style="background:var(--tab)">✏️ Редактировать</button><button id="re_rain" style="background:${rot.rain?'#F5E2A8':'#BCC8D6'}">${rot.rain?'☀️ Отключить режим дождя':'🌧 Включить режим дождя'}</button>`:''}</div>`;
   if(!rot){h+=`<div class="card pad"><b>Ротации на ${dayLabel(S.day)} пока нет</b><div class="muted">Как только её загрузят, она появится здесь.</div></div>`;app.innerHTML=h;return bindRot(rot)}
   if(rot.rain)h+=`<div class="banner" style="background:#7E98AE;color:#fff">🌧 Идёт дождь — работаем по плану «Если дождь»</div>`;
@@ -31,7 +36,8 @@ async function rotView(){
   const mine=myShift(rot);
   h+=myShiftCard(mine);
   const rimg=rot.images?.[S.team]||(rot.image&&(rot.imageTeams||['R','M']).includes(S.team)?rot.image:null);
-  if(rimg)h+=`<button class="card rimg" id="rimg" aria-label="Увеличить картинку ротации"><img src="${esc(rimg)}" alt="Ротация картинкой" loading="lazy"><span>🔍 Нажми, чтобы увеличить</span></button>`;
+  const rcloud=!rimg&&['R','M'].includes(S.team)?`https://images.dreamwood.pages.dev/rotations/${S.day}.png`:null,rsrc=rimg||rcloud;
+  if(rsrc)h+=`<button class="card rimg" id="rimg" aria-label="Увеличить картинку ротации"><img src="${esc(rsrc)}" alt="Ротация картинкой" loading="lazy"><span>🔍 Нажми, чтобы увеличить</span></button>`;
   h+=`<div class="tabs">${TEAMS.map(([k,n,c])=>`<button data-t="${k}" class="${S.team===k?'on':''}" style="background:${c}">${n}</button>`).join('')}</div>`;
   const secs=rot.teams?.[S.team]||[];
   if(!secs.length)h+=`<div class="card pad"><b>Для этой команды ротации на этот день пока нет</b><div class="muted">Как только она появится, придёт уведомление.</div></div>`;
@@ -45,7 +51,7 @@ async function rotView(){
   const nt=await sb.from('rot_notes').select('note').eq('day',S.day).maybeSingle();
   h+=`<div class="card pad col"><b>📝 Моя пометка к этому дню</b><div class="muted">Видишь только ты.</div><textarea id="rn_t" placeholder="Например: взять рацию, поменяться с Таней обедом…">${esc(nt.data?.note||'')}</textarea><div class="muted" id="rn_s"></div></div>`;
   app.innerHTML=h;bindRot(rot);bindAreas(app);
-  $('#rimg')?.addEventListener('click',()=>rotZoom(rimg));
+  const ri=$('#rimg');if(ri){ri.addEventListener('click',()=>rotZoom(rsrc));if(rcloud){const im=ri.querySelector('img');im.onerror=()=>ri.hidden=true;if(im.complete&&!im.naturalWidth)ri.hidden=true}}
   let tm;const sv=async()=>{const r=await sb.from('rot_notes').upsert({day:S.day,note:$('#rn_t').value});$('#rn_s').textContent=r.error?'Не сохранилось: '+r.error.message:'Сохранено ✓'};
   $('#rn_t').oninput=()=>{$('#rn_s').textContent='…';clearTimeout(tm);tm=setTimeout(sv,900)};$('#rn_t').onblur=()=>{clearTimeout(tm);sv()};
 }
@@ -57,6 +63,7 @@ function myShift(rot){
 }
 function bindRot(rot){
   app.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{S.day=b.dataset.d;rotView()});
+  app.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{S.rotArchive=b.dataset.a==='1';rotView()});
   app.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{S.team=b.dataset.t;rotView()});
   $('#re_edit')?.addEventListener('click',()=>rotEditor(S.day,JSON.parse(JSON.stringify(rot)),false));
   $('#re_new')?.addEventListener('click',rotNew);
