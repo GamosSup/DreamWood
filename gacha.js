@@ -267,7 +267,7 @@ function dqPing(c){const k='dq:'+(S.me?S.me.id:'')+':'+c+':'+new Date().toDateSt
 async function dqFill(){
   const box=document.getElementById('dqbox');if(!box)return;
   try{
-    const r=await sb.rpc('dq_status');if(r.error||!r.data)return;
+    const r=await sb.rpc('dq_status');if(r.error||!r.data){if(!window._dqRetry){window._dqRetry=1;box.innerHTML='<div class="card pad col dqc"><b>🎯 Задания дня</b><div class="muted">Загружаю…</div></div>';setTimeout(()=>{window._dqRetry=0;dqFill()},3000)}return}
     const s=window._dqS=r.data,dn=new Set(s.done||[]),n=DQ_LIST.filter(x=>dn.has(x[0])).length;
     box.innerHTML=`<div class="card pad col dqc"><div style="display:flex;align-items:center;gap:8px"><b style="flex:1">🎯 Задания дня</b><span class="pill" style="background:#F6E3B0;color:#3B2A35">${n} из 5</span></div>
       <div class="pgb"><div class="pg" style="width:${n*20}%"></div></div>
