@@ -324,7 +324,7 @@ function gmLookTab(box){
     `<div class="card pad col"><b>Значок рядом с именем</b><div class="muted">Один любимый из заработанных.</div><div class="gops"><button class="gop${cur.badge?'':' on'}" data-k="badge" data-v=""><span class="gopv">—</span><span class="gopn">Без значка</span></button>${earned.map(d=>`<button class="gop${cur.badge===d.c?' on':''}" data-k="badge" data-v="${esc(d.c)}"><span class="gopv">${gmIc(d.ic,26)}</span><span class="gopn">${esc(d.n)}</span></button>`).join('')}</div></div>
     <div class="card pad col"><b>Титул под именем</b><div class="muted">Короткая подпись из заработанного.</div><div class="gops"><button class="gop${cur.title?'':' on'}" data-k="title" data-v=""><span class="gopv">—</span><span class="gopn">Без титула</span></button>${earned.filter(d=>d.title).map(d=>`<button class="gop${cur.title===d.c?' on':''}" data-k="title" data-v="${esc(d.c)}"><span class="gopn" style="font-weight:800">${esc(d.title)}</span></button>`).join('')}</div></div>`;
     box.querySelectorAll('.gop:not([disabled])').forEach(b=>b.onclick=()=>save({[b.dataset.k]:b.dataset.v}));
-    const sv=box.querySelector('#ab_s');if(sv)sv.onclick=()=>save({pname:box.querySelector('#ab_p').value.trim(),motto:box.querySelector('#ab_m').value.trim(),bio:box.querySelector('#ab_b').value.trim(),fav:box.querySelector('#ab_f').value.trim()});
+    const sv=box.querySelector('#ab_s');if(sv)sv.onclick=()=>save({motto:box.querySelector('#ab_m').value.trim(),bio:box.querySelector('#ab_b').value.trim(),fav:box.querySelector('#ab_f').value.trim()});
   };
   paint();
 }

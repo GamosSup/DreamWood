@@ -38,7 +38,7 @@ async function todayView(){
    h+=`<div class="card pad dayph" id="td_ph" role="button" tabindex="0" aria-label="Ещё один совет"><div style="flex:1;min-width:0"><div class="phh" id="td_pht">${dj?'🌟 Совет Дримми':'✨ Фраза дня'}</div><div class="pht" id="td_phx">${esc(tx)}</div></div><img src="stickers/mascot-hi.webp" alt="" width="64" height="64"></div>`}
   // статус дня
   if(K)h+=`<div class="card pad col" style="background:${K[1]}"><b style="font-size:18px">Сегодня у тебя: ${mk.data.kind==='do'?'день отдыха (ДО)':K[2].toLowerCase()}</b>${mk.data.note?`<div class="muted">${esc(mk.data.note)}</div>`:''}</div>`;
-  else h+=`<div class="card pad col"><b style="font-size:18px">Сегодня рабочий день</b>${ck.data?`<div class="pill" style="background:#C9D4B0;align-self:flex-start">✅ Выход подтверждён в ${new Date(ck.data.at).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'})}</div>`:`<button class="btn" id="td_ck">☀️ Я на смене</button>`}</div>`;
+  else h+=`<div class="card pad col"><b style="font-size:18px">Сегодня рабочий день</b>${ck.data?`<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><div class="pill" style="background:#C9D4B0;color:#3B2A35">✅ Выход подтверждён в ${new Date(ck.data.at).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'})}</div>${mgr?'<button class="btn ghost" id="td_ckx" style="min-height:34px;padding:0 12px">↩️ Отменить</button>':''}</div>`:`<button class="btn" id="td_ck">☀️ Я на смене</button>`}</div>`;
   h+=myShiftCard(mine,'Сегодня ты стоишь здесь');
   // завтра — когда ротация уже вышла
   const rot2=rt2.data?.data;
@@ -83,6 +83,7 @@ async function todayView(){
   $('#td_alert')?.addEventListener('click',alertSheet);$('#td_brief')?.addEventListener('click',()=>briefSheet());window.briefMount&&briefMount();window.pushBanner&&pushBanner();
   app.querySelectorAll('[data-go]').forEach(c=>c.onclick=()=>go(c.dataset.go));
   $('#td_fix').onclick=()=>{go('fix');setTimeout(()=>{if(window.fixForm)fixForm()},350)};
+  $('#td_ckx')&&($('#td_ckx').onclick=async e=>{if(!confirm('Отменить отметку «Я на смене»?'))return;e.target.disabled=true;const r=await sb.rpc('checkin_cancel',{p_user:null});if(r.error){e.target.disabled=false;return alert(r.error.message)}refreshUnread();todayView()});
   $('#td_ck')&&($('#td_ck').onclick=async e=>{e.target.disabled=true;const r=await sb.rpc('checkin_confirm');if(r.error){e.target.disabled=false;return alert(r.error.message)}refreshUnread();todayView()});
 }
 VIEWS.today=todayView;

@@ -931,3 +931,7 @@ html[data-dark="1"] .av.ini{color:var(--ink)}
 html[data-dark="1"] .dayph .phh{color:#5A3E30}html[data-dark="1"] .dayph .pht{color:#3B2A35}
 html[data-dark="1"] .wd.we small,html[data-dark="1"] .plr.plo .plb b{color:#FF8E84}
 html[data-dark="1"] .gmt small{color:var(--ink);opacity:.9}
+/* v103: чек-листы в светлой области зоны — тёмная карточка внутри не наследует тёмный текст */
+html[data-dark="1"] .ab .card:not([style*="background"]),html[data-dark="1"] .ab .card:not([style*="background"]) .shn,html[data-dark="1"] .ab .card:not([style*="background"]) label{color:var(--ink)}
+html[data-dark="1"] .ab .card:not([style*="background"]) .muted{color:var(--muted)}
+html[data-dark="1"] .sheet .card:not([style*="background"]){color:var(--ink)}
