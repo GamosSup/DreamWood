@@ -16,7 +16,7 @@
 ## 2. Как устроен код
 Сборки нет. Файлы подключаются обычными `<script>` в `index.html` в строгом порядке, глобальные переменные общие. Порядок важен:
 
-`config, logo, app, qc, dgx, ext1, ext2, ext3, ext4, today, roted, xlsx, rep, plan, grow, pet, game, gacha, gacha2, gacha3, prof, brief, fx, push, tour`
+`config, logo, app, qc, dgx, ext1, ext2, ext3, ext4, today, roted, xlsx, rep, plan, grow, pet, game, gacha, gacha2, gacha3, prof, pet3d, brief, fx, push, tour`
 
 | Файл | За что отвечает |
 |---|---|
@@ -32,6 +32,7 @@
 | `game.js` | достижения, опыт, уровни, профиль, каталог значков `GM_ACH` |
 | `gacha.js`, `gacha2.js`, `gacha3.js` | автомат с вещами, списки предметов, ежедневные задания (`dq*` в `gacha.js`) |
 | `prof.js` | профиль человека, приветственные окна |
+| `pet3d.js`, `vendor/three.min.js` | живые 3D-фоны питомца и их настройки в `cos.p3d`; Three.js загружается только для этих сцен |
 | `brief.js`, `fx.js`, `push.js` | брифинги, эффекты и подсказки, push-уведомления |
 | `styles.css` | все стили; тёмные темы и сезонные темы переопределяются в конце файла |
 | `sw.js` | service worker, кэш `dw-vN` |
