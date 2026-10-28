@@ -1,5 +1,6 @@
 // Главная «Сегодня»: моя смена, отметка выхода, быстрые кнопки, события дня, для руководителей — что требует внимания
 async function todayView(){
+  if(window.dqPre)dqPre();
   const me=S.me.id,t=iso(new Date()),mgr=isManager(),tm=(()=>{const x=new Date(t+'T12:00:00');x.setDate(x.getDate()+1);return iso(x)})(),ym=t.slice(0,7),ms=ym+'-01';
   const rnameP=S.rname===undefined?Promise.resolve(sb.rpc('my_roster_name')).then(r=>{S.rname=r.error?null:(r.data||null)},()=>{}):null;
   const cnt=(tb,f)=>{let q=sb.from(tb).select('id',{count:'exact',head:true});return f(q).then(r=>r.count||0,()=>0)};
@@ -39,7 +40,7 @@ async function todayView(){
   // статус дня
   if(K)h+=`<div class="card pad col" style="background:${K[1]}"><b style="font-size:18px">Сегодня у тебя: ${mk.data.kind==='do'?'день отдыха (ДО)':K[2].toLowerCase()}</b>${mk.data.note?`<div class="muted">${esc(mk.data.note)}</div>`:''}</div>`;
   else h+=`<div class="card pad col"><b style="font-size:18px">Сегодня рабочий день</b>${ck.data?`<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><div class="pill" style="background:#C9D4B0;color:#3B2A35">✅ Выход подтверждён в ${new Date(ck.data.at).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'})}</div>${mgr?'<button class="btn ghost" id="td_ckx" style="min-height:34px;padding:0 12px">↩️ Отменить</button>':''}</div>`:`<button class="btn" id="td_ck">☀️ Я на смене</button>`}</div>`;
-  h+='<div id="dqbox"></div>';
+  h+='<div id="dqbox">'+(window.dqBoxHtml?dqBoxHtml():'')+'</div>';
   h+=myShiftCard(mine,'Сегодня ты стоишь здесь');
   // завтра — когда ротация уже вышла
   const rot2=rt2.data?.data;

@@ -125,7 +125,7 @@ async function noteView(){
   const rr=()=>keepScroll(noteView);
   const get=id=>every.find(x=>x.id==id);
   const q=$('#nb_q');
-  const qadd=async()=>{const t=q.value.trim();if(!t)return;const row={body:t};if(P.tab==='day')row.due=P.sel;const r=await sb.from('todos').insert(row);if(r.error)return alert(r.error.message);toast('Добавлено ✅');rr()};
+  const qadd=async()=>{const t=q.value.trim();if(!t)return;const row={body:t};if(P.tab==='day')row.due=P.sel;const r=await sb.from('todos').insert(row);if(r.error)return alert(r.error.message);toast('Добавлено ✅');if(window.dqPing)dqPing('wtodo');rr()};
   $('#nb_qa').onclick=qadd;q.onkeydown=e=>{if(e.key==='Enter')qadd()};
   $('#nb_qm').onclick=()=>{P.prefill=q.value.trim();plEdit(null,P.tab==='day'?P.sel:null)};
   $('#wk_p').onclick=()=>{P.sel=addD(P.sel,-7);noteView()};$('#wk_n').onclick=()=>{P.sel=addD(P.sel,7);noteView()};
@@ -241,7 +241,7 @@ function plEdit(x,day){
         if(rp==='m'){const t0=new Date(d+'T12:00:00');t0.setMonth(t0.getMonth()+i+1);cur=iso(t0)}else cur=addD(cur,rp==='7'?7:1)}}
       const r=x?await sb.from('todos').update(row).eq('id',x.id):await sb.from('todos').insert(rows);
       if(r.error){e.target.disabled=false;return er.textContent='Не получилось: '+r.error.message}
-      if(d)S.pl.sel=d;toast(x?'Сохранено ✅':rows.length>1?`Добавлено: ${rows.length} ✅`:'Добавлено ✅');close(false);noteView()};
+      if(d)S.pl.sel=d;if(!x&&window.dqPing)dqPing('wtodo');toast(x?'Сохранено ✅':rows.length>1?`Добавлено: ${rows.length} ✅`:'Добавлено ✅');close(false);noteView()};
     box.querySelector('#pl_tm')?.addEventListener('click',async()=>{const base=x.due&&x.due>iso(new Date())?x.due:iso(new Date());const nd=addD(base,1);const r=await sb.from('todos').update({due:nd,done:false,done_at:null}).eq('id',x.id);if(r.error)return alert(r.error.message);S.pl.sel=nd;toast('Перенёс на '+dayLabel(nd));close(false);noteView()});
     box.querySelector('#pl_ar')?.addEventListener('click',async()=>{const r=await sb.from('todos').update({arch:!x.arch}).eq('id',x.id);if(r.error)return alert(r.error.message);toast(x.arch?'Вернул из архива':'В архиве 📦');close(false);noteView()});
     box.querySelector('#pl_x')?.addEventListener('click',async()=>{if(!confirm('Удалить запись?'))return;const r=await sb.from('todos').delete().eq('id',x.id);if(r.error)return alert(r.error.message);close(false);noteView()});

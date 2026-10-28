@@ -262,18 +262,48 @@ async function gmGachaTab(box){
 
 // ---------- ежедневные задания: 5 штук, за все — 4 билета ----------
 const DQ_LIST=[['chk','✅','Заполни чек-лист','Отметь хотя бы один пункт в чек-листе смены'],['ck','☀️','Отметься на смене','Нажми «Я на смене» (в выходной засчитывается сам)'],['rot','🔄','Загляни в ротацию','Открой вкладку «Ротации»'],['thx','💛','Скажи спасибо коллеге','Отправь благодарность в «Спасибо»'],['pet','🐾','Навести питомца','Открой свой профиль и поздоровайся с питомцем']];
+const DQ_REST=[['wtodo','📝','Запиши заметку','Добавь дело или мысль в «Мой блокнот»','todo'],['whab','🌱','Отметь привычку','Отметь любую привычку в блокноте или заведи новую','todo'],['wphoto','🌿','Выйди на природу','Сфотографируй что-нибудь красивое на улице и отправь фото. Игорь проверит'],['thx','💛','Скажи спасибо коллеге','Отправь благодарность в «Спасибо»','thanks'],['pet','🐾','Навести питомца','Открой свой профиль и поздоровайся с питомцем']];
 function dqPing(c){const k='dq:'+(S.me?S.me.id:'')+':'+c+':'+new Date().toDateString();try{if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1')}catch(e){}
   sb.rpc('dq_ping',{p_code:c}).then(r=>{if(!r.error&&window._dqS)window._dqS.done=(window._dqS.done||[]).concat([c])},()=>{})}
-async function dqFill(){
+// статус грузится параллельно с экраном «Сегодня» и кладётся в кэш, чтобы карточка появлялась сразу
+function dqKey(){return 'dw:dq:'+(S.me?S.me.id:'')}
+function dqPre(){if(!S.me)return;window._dqP=Promise.resolve(sb.rpc('dq_status')).then(r=>r,e=>({error:e}))}
+function dqCache(){try{const j=JSON.parse(localStorage.getItem(dqKey())||'null');return j&&j.d===iso(new Date())?j.s:null}catch(e){return null}}
+function dqHtml(s){
+  if(!s)return '<div class="card pad col dqc"><div style="display:flex;align-items:center;gap:8px"><b style="flex:1">🎯 Задания дня</b><span class="pill" style="background:#F6E3B0;color:#3B2A35">…</span></div><div class="pgb"><div class="pg" style="width:0"></div></div><div class="muted">Загружаю…</div></div>';
+  const rest=s.mode==='rest',L=rest?DQ_REST:DQ_LIST,dn=new Set(s.done||[]),n=L.filter(x=>dn.has(x[0])).length,ph=s.photo;
+  const row=x=>{const ok=dn.has(x[0]);let act='';
+    if(x[0]==='wphoto'&&!ok){act=ph==='pending'?'<div class="muted">⏳ Фото на проверке у Игоря</div>':`${ph==='rejected'?'<div class="muted">❌ Фото не подошло. Пришли другое</div>':''}<button class="btn gh dq_ph" type="button">📷 Отправить фото</button>`}
+    else if(x[4]&&!ok)act=`<button class="btn gh dq_go" data-go="${x[4]}" type="button" style="padding:6px 12px">Открыть</button>`;
+    return `<div class="dqr${ok?' ok':''}"><span class="dqi">${ok?'✅':x[1]}</span><div style="flex:1;min-width:0"><b>${x[2]}</b><div class="muted">${x[3]}</div>${act}</div></div>`};
+  const pend=(s.pend||[]).length?`<div class="col" style="gap:8px"><b>📸 Фото на проверке (${s.pend.length})</b>${s.pend.map(p=>`<div class="dqr"><img class="dqp" data-p="${esc(p.path)}" alt="" style="width:84px;height:84px;object-fit:cover;border-radius:12px;background:#0002"><div style="flex:1"><b>${esc(p.name||'Сотрудник')}</b><div style="display:flex;gap:6px;margin-top:6px"><button class="btn dq_rv" data-id="${p.id}" data-ok="1" type="button" style="padding:6px 12px">✅ Принять</button><button class="btn gh dq_rv" data-id="${p.id}" data-ok="0" type="button" style="padding:6px 12px">❌ Нет</button></div></div></div>`).join('')}</div>`:'';
+  return `<div class="card pad col dqc"><div style="display:flex;align-items:center;gap:8px"><b style="flex:1">${rest?'🌿 Задания выходного':'🎯 Задания дня'}</b><span class="pill" style="background:#F6E3B0;color:#3B2A35">${n} из 5</span></div>
+    ${rest?'<div class="muted">Сегодня нужно работать над собой, а не над парком 💛</div>':''}
+    <div class="pgb"><div class="pg" style="width:${n*20}%"></div></div>${L.map(row).join('')}
+    ${s.claimed?'<div class="muted">🎟 Награда за сегодня получена. Завтра будут новые задания.</div>':n===5?'<button class="btn" id="dq_claim" type="button">🎟 Забрать 4 билета</button>':'<div class="muted">Выполни все пять и получи 4 билета на крутку.</div>'}${pend}</div>`;
+}
+function dqBoxHtml(){return dqHtml(dqCache())}
+function dqWire(box){
+  box.querySelectorAll('.dq_go').forEach(b=>b.onclick=()=>{try{go(b.dataset.go)}catch(e){}});
+  const f=document.createElement('input');f.type='file';f.accept='image/*';f.style.display='none';box.appendChild(f);
+  const pb=box.querySelector('.dq_ph');if(pb){pb.onclick=()=>f.click();f.onchange=async()=>{const file=f.files&&f.files[0];if(!file)return;pb.disabled=true;pb.textContent='Отправляю…';
+    try{const sm=window.dgxShrink?await dgxShrink(file,1280):file,path=S.me.id+'/'+iso(new Date())+'-'+Date.now()+'.jpg';
+      const up=await sb.storage.from('dqp').upload(path,sm,{contentType:'image/jpeg'});if(up.error)throw up.error;
+      const r=await sb.rpc('dq_photo_submit',{p_path:path});if(r.error)throw r.error;toast('Фото отправлено на проверку 📸',2400);dqFill(true)}
+    catch(e){pb.disabled=false;pb.textContent='📷 Отправить фото';alert(e.message||'Не получилось отправить фото')}}}
+  const cb=box.querySelector('#dq_claim');if(cb)cb.onclick=async()=>{cb.disabled=true;const c=await sb.rpc('dq_claim');if(c.error){cb.disabled=false;return alert(c.error.message)}
+    try{dwParty()}catch(e){}toast('+4 билета 🎟',2200);gxS&&(gxS.info=null);dqFill(true)};
+  box.querySelectorAll('.dqp').forEach(async im=>{const r=await sb.storage.from('dqp').createSignedUrl(im.dataset.p,3600);if(!r.error)im.src=r.data.signedUrl;im.onclick=()=>{if(im.src)window.open(im.src,'_blank')}});
+  box.querySelectorAll('.dq_rv').forEach(b=>b.onclick=async()=>{b.disabled=true;const r=await sb.rpc('dq_photo_review',{p_id:+b.dataset.id,p_ok:b.dataset.ok==='1'});if(r.error){b.disabled=false;return alert(r.error.message)}toast(b.dataset.ok==='1'?'Принято ✅':'Отклонено',1600);dqFill(true)});
+}
+async function dqFill(fresh){
   const box=document.getElementById('dqbox');if(!box)return;
   try{
-    const r=await sb.rpc('dq_status');if(r.error||!r.data){if(!window._dqRetry){window._dqRetry=1;box.innerHTML='<div class="card pad col dqc"><b>🎯 Задания дня</b><div class="muted">Загружаю…</div></div>';setTimeout(()=>{window._dqRetry=0;dqFill()},3000)}return}
-    const s=window._dqS=r.data,dn=new Set(s.done||[]),n=DQ_LIST.filter(x=>dn.has(x[0])).length;
-    box.innerHTML=`<div class="card pad col dqc"><div style="display:flex;align-items:center;gap:8px"><b style="flex:1">🎯 Задания дня</b><span class="pill" style="background:#F6E3B0;color:#3B2A35">${n} из 5</span></div>
-      <div class="pgb"><div class="pg" style="width:${n*20}%"></div></div>
-      ${DQ_LIST.map(x=>`<div class="dqr${dn.has(x[0])?' ok':''}"><span class="dqi">${dn.has(x[0])?'✅':x[1]}</span><div><b>${x[2]}</b><div class="muted">${x[3]}</div></div></div>`).join('')}
-      ${s.claimed?`<div class="muted">🎟 Награда за сегодня получена. Завтра будут новые задания.</div>`:n===5?`<button class="btn" id="dq_go">🎟 Забрать 4 билета</button>`:`<div class="muted">Выполни все пять и получи 4 билета на крутку.</div>`}</div>`;
-    const b=box.querySelector('#dq_go');if(b)b.onclick=async()=>{b.disabled=true;const c=await sb.rpc('dq_claim');if(c.error){b.disabled=false;return alert(c.error.message)}
-      try{dwParty()}catch(e){}toast('+4 билета 🎟',2200);gxS&&(gxS.info=null);dqFill()};
+    let r=!fresh&&window._dqP?await window._dqP:await sb.rpc('dq_status');window._dqP=null;
+    if(r.error||!r.data){await new Promise(z=>setTimeout(z,800));r=await sb.rpc('dq_status')}
+    const bx=document.getElementById('dqbox');if(!bx)return;
+    if(r.error||!r.data){if(!dqCache())bx.innerHTML='<div class="card pad col dqc"><b>🎯 Задания дня</b><div class="muted">Не загрузилось. Потяни вниз, чтобы обновить.</div></div>';return}
+    window._dqS=r.data;try{localStorage.setItem(dqKey(),JSON.stringify({d:iso(new Date()),s:r.data}))}catch(e){}
+    bx.innerHTML=dqHtml(r.data);dqWire(bx);
   }catch(e){}
 }
