@@ -36,7 +36,7 @@ async function rotView(){
   const mine=myShift(rot);
   h+=myShiftCard(mine);
   const rimg=rot.images?.[S.team]||(rot.image&&(rot.imageTeams||['R','M']).includes(S.team)?rot.image:null);
-  const rcloud=!rimg&&['R','M'].includes(S.team)?`https://images.dreamwood.pages.dev/rotations/${S.day}.png`:null,rsrc=rimg||rcloud;
+  const rcloud=!rimg&&['R','M'].includes(S.team)?`https://images.dreamwood.pages.dev/rotations/${S.day}.png`:null,rsrc=rimg||(rcloud?`rotations/${S.day}.png`:null);
   if(rsrc)h+=`<button class="card rimg" id="rimg" aria-label="Увеличить картинку ротации"><img src="${esc(rsrc)}" alt="Ротация картинкой" loading="lazy"><span>🔍 Нажми, чтобы увеличить</span></button>`;
   h+=`<div class="tabs">${TEAMS.map(([k,n,c])=>`<button data-t="${k}" class="${S.team===k?'on':''}" style="background:${c}">${n}</button>`).join('')}</div>`;
   const secs=rot.teams?.[S.team]||[];
@@ -51,7 +51,7 @@ async function rotView(){
   const nt=await sb.from('rot_notes').select('note').eq('day',S.day).maybeSingle();
   h+=`<div class="card pad col"><b>📝 Моя пометка к этому дню</b><div class="muted">Видишь только ты.</div><textarea id="rn_t" placeholder="Например: взять рацию, поменяться с Таней обедом…">${esc(nt.data?.note||'')}</textarea><div class="muted" id="rn_s"></div></div>`;
   app.innerHTML=h;bindRot(rot);bindAreas(app);
-  const ri=$('#rimg');if(ri){ri.addEventListener('click',()=>rotZoom(rsrc));if(rcloud){const im=ri.querySelector('img');im.onerror=()=>ri.hidden=true;if(im.complete&&!im.naturalWidth)ri.hidden=true}}
+  const ri=$('#rimg');if(ri){const im=ri.querySelector('img');ri.addEventListener('click',()=>rotZoom(im.currentSrc||rsrc));if(rcloud){im.onerror=()=>{if(im.dataset.reserve){ri.remove();return}im.dataset.reserve='1';im.src=rcloud};if(im.complete&&!im.naturalWidth)im.onerror()}}
   let tm;const sv=async()=>{const r=await sb.from('rot_notes').upsert({day:S.day,note:$('#rn_t').value});$('#rn_s').textContent=r.error?'Не сохранилось: '+r.error.message:'Сохранено ✓'};
   $('#rn_t').oninput=()=>{$('#rn_s').textContent='…';clearTimeout(tm);tm=setTimeout(sv,900)};$('#rn_t').onblur=()=>{clearTimeout(tm);sv()};
 }
