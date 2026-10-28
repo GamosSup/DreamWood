@@ -236,7 +236,8 @@ function gmAbout(row,own){
   return `<div class="gabout">${mo?`<div class="gmotto">«${esc(mo)}»</div>`:''}${bio?`<div class="gbio">${esc(bio)}</div>`:''}${fav?`<div class="gfav">❤️ Люблю: ${esc(fav)}</div>`:''}</div>`;
 }
 const gmStage=(row,sz=190,cfg)=>{
-  const c=row.cos||{},pn=(c.pname||'').trim(),bg=c.bg||'bg_default',ok=cfg||(typeof petCfg==='function'&&petCfg(row));
+  if(typeof gmPet25DStage==='function')return gmPet25DStage(row,sz,cfg);
+  const c=row.cos||{},pn=(c.pname||'').trim(),bg=c.bg||'bg_meadow',ok=cfg||(typeof petCfg==='function'&&petCfg(row));
   const inner=ok?gmPet(row,sz,{bg:'',...(cfg?{cfg}:{})})+(pn?`<div class="pnm">${esc(pn)}</div>`:''):`<img src="stickers/mascot-hi.webp" alt="" width="120" height="120" style="object-fit:contain">`;
   return `<div class="pscene ${bg}" data-sc="${bg}">${typeof gmSceneDecor==='function'?gmSceneDecor(bg):''}<div class="pfloor"></div>${inner}</div>`;
 };
@@ -456,9 +457,11 @@ function gmPetTab(box){
       return `<button class="gop${on?' on':''}${ok?'':' lk'}" data-k="${k}" data-v="${esc(id)}" ${ok?'':'disabled'}>${v}<span class="gopn">${esc(n)}</span>${ok?'':`<span class="gopl">🔒 ${esc(gmReqName(req))}</span>`}</button>`;
     };
     box.innerHTML=`<div class="petpv2">${gmStage(me,150,cfg)}</div>
+    <button class="btn ghost" id="p25_open">✨ Настроить 2.5D-фон</button>
     <div class="card pad col"><b>🏷️ Имя питомца</b><div class="muted">Оно видно под питомцем в профиле, а если надеть «Бейдж парка» (раздел «Грудь»), то и на бейджике.</div><div style="display:flex;gap:8px"><input id="pn_i" maxlength="16" placeholder="Как его зовут?" value="${esc((me.cos||{}).pname||'')}" style="flex:1;min-width:0"><button class="btn" id="pn_s" style="flex:none">Сохранить</button></div>${cfg.ch==='c_badge'?'':'<button class="btn ghost" id="pn_b">🪪 Надеть бейдж с именем</button>'}</div>
-    <div class="card pad col"><b>Вид</b><div class="muted">Это твой питомец. Выбирай всё, что нравится, а результат виден в карточке вверху. Новые вещи открываются за достижения и события. Фон берётся из раздела «Мой образ».</div><div class="gops">${PET_SP.filter(x=>!x[3]||gmHas(me,x[3])).map(([k,n])=>`<button class="gop${cfg.sp===k?' on':''}" data-sp="${k}">${pv({...cfg,sp:k,bc:cfg.bc===petBcOf(cfg.sp)?petBcOf(k):cfg.bc},GM_PETCROP)}<span class="gopn">${n}</span></button>`).join('')}</div></div>`+
+    <div class="card pad col"><b>Вид</b><div class="muted">Это твой питомец. Выбирай всё, что нравится, а результат виден в карточке вверху. Новые вещи открываются за достижения и события. Живой фон настраивается кнопкой над этой карточкой.</div><div class="gops">${PET_SP.filter(x=>!x[3]||gmHas(me,x[3])).map(([k,n])=>`<button class="gop${cfg.sp===k?' on':''}" data-sp="${k}">${pv({...cfg,sp:k,bc:cfg.bc===petBcOf(cfg.sp)?petBcOf(k):cfg.bc},GM_PETCROP)}<span class="gopn">${n}</span></button>`).join('')}</div></div>`+
     PET_G.map(([k,ttl,L,kind,crop])=>`<div class="card pad col"><b>${ttl}</b><div class="gops">${L.map(it=>tile(k,kind,crop,it)).join('')}</div></div>`).join('');
+    box.querySelector('#p25_open').onclick=()=>gmPet25DStudio(me,draw);
     box.querySelector('#pn_s').onclick=async()=>{if(await gmSaveCos({pname:box.querySelector('#pn_i').value.trim()})){draw();window.scrollTo(0,keep)}};
     const pb=box.querySelector('#pn_b');if(pb)pb.onclick=async()=>{if(await gmPetSave({...cfg,ch:'c_badge'})){draw();window.scrollTo(0,keep)}};
     box.querySelectorAll('.gop[data-k]:not([disabled])').forEach(b=>b.onclick=async()=>{if(await gmPetSave({...cfg,[b.dataset.k]:b.dataset.v})){draw();window.scrollTo(0,keep)}});

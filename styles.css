@@ -981,3 +981,49 @@ html[data-dark="1"] .gnm.n_dawnn{background-image:linear-gradient(90deg,#7DE08F,
 .bg_mooncast{--bgv:radial-gradient(circle at 75% 25%,#FFF6C2 0 8%,rgba(255,246,194,.3) 12%,transparent 30%),linear-gradient(180deg,#1B2262,#3A2B7A)}
 .bg_fireworks{--bgv:radial-gradient(circle at 30% 35%,#FF6FA5 0 3%,transparent 12%),radial-gradient(circle at 70% 25%,#F6C945 0 3%,transparent 14%),radial-gradient(circle at 55% 60%,#7DF9FF 0 3%,transparent 12%),linear-gradient(180deg,#04051C,#1B1050)}
 .bg_lair{--bgv:radial-gradient(circle at 50% 100%,#FFB347 0 12%,#E5484D 30%,transparent 60%),linear-gradient(180deg,#1E0A0A,#5A1818)}
+
+/* v116: 2.5D-сцены — независимые слои фона, питомца и аксессуаров */
+.p25scene{isolation:isolate;touch-action:pan-y;user-select:none;padding:18px 0 12px;min-height:270px;background:#9DCFE2;perspective:800px}
+.p25scene .p25-layer{position:absolute;inset:-3%;width:106%;height:106%;max-width:none;pointer-events:none;transform-origin:50% 60%;transition:transform .18s ease-out;will-change:transform}
+.p25scene .p25-sky{z-index:0;transform:translate(calc(var(--sx) * var(--p25-depth) * -.08),calc(var(--sy) * var(--p25-depth) * -.08)) scale(1.05)}
+.p25scene .p25-far{z-index:1;transform:translate(calc(var(--sx) * var(--p25-depth) * -.2),calc(var(--sy) * var(--p25-depth) * -.16)) scale(1.06)}
+.p25scene .p25-mid{z-index:2;transform:translate(calc(var(--sx) * var(--p25-depth) * -.42),calc(var(--sy) * var(--p25-depth) * -.3)) scale(1.07)}
+.p25scene .p25-front{z-index:5;transform:translate(calc(var(--sx) * var(--p25-depth) * .62),calc(var(--sy) * var(--p25-depth) * .28)) scale(1.1)}
+.p25-pet{position:relative;z-index:4;line-height:0;filter:drop-shadow(0 9px 7px rgba(25,31,36,.18));transform:translate(calc(var(--sx) * var(--p25-depth) * .08),calc(var(--sy) * var(--p25-depth) * .05));transition:transform .18s ease-out}
+.d25pet{position:relative;display:block;max-width:100%;overflow:visible}
+.d25pet .d25-back,.d25pet .d25-base,.d25pet .d25-hand,.d25pet .d25-clothes,.d25pet .d25-glasses,.d25pet .d25-hat,.d25pet .d25-cm{position:absolute;inset:0;line-height:0;pointer-events:none}
+.d25pet .d25-back{z-index:0}.d25pet .d25-base{z-index:1}.d25pet .d25-hand{z-index:2}.d25pet .d25-clothes{z-index:3}.d25pet .d25-glasses{z-index:4}.d25pet .d25-hat{z-index:5}.d25pet .d25-cm{z-index:6}
+.d25pet .d25-layer{position:absolute;inset:0;display:block;overflow:visible}
+.p25scene .pnm{position:relative;z-index:7;flex:none;margin-top:5px;line-height:1.25}
+.p25-cloud{animation:p25cloud var(--p25-cloud) ease-in-out infinite alternate;animation-delay:var(--dl,0s)}
+.p25-float{animation:p25float var(--p25-float) ease-in-out infinite;animation-delay:var(--dl,0s)}
+.p25-fish{animation:p25fish var(--p25-sway) ease-in-out infinite alternate;animation-delay:var(--dl,0s)}
+.p25-wheel{transform-origin:100px 130px;animation:p25spin calc(var(--p25-cloud) * 2) linear infinite}
+.p25-aurora{animation:p25aurora var(--p25-sway) ease-in-out infinite alternate}
+.p25-fire{transform-origin:110px 180px;animation:p25fire 1.1s ease-in-out infinite alternate}
+.p25-spin{animation:p25float var(--p25-float) ease-in-out infinite}
+.p25-particles{position:absolute;inset:0;z-index:6;overflow:hidden;pointer-events:none}
+.p25-particles i{position:absolute;left:var(--x);top:var(--y);width:var(--sz);height:var(--sz);display:block;animation:p25fall var(--p25-sway) linear infinite;animation-delay:var(--dl);opacity:.8}
+.p25-snow i{border-radius:50%;background:#FFF;box-shadow:0 0 5px #FFF}
+.p25-rain i{width:2px;height:calc(var(--sz) * 2.8);border-radius:2px;background:#BDEAFF;animation-name:p25rain}
+.p25-leaves i{border-radius:80% 0 80% 0;background:#EAAF54;animation-name:p25leaf}
+.p25-bubbles i{border:1.5px solid rgba(220,250,255,.8);border-radius:50%;background:rgba(255,255,255,.08);animation-name:p25rise}
+.p25-stars i{border-radius:50%;background:#FFF1A8;box-shadow:0 0 8px #FFF1A8;animation-name:p25twinkle}
+.p25-confetti i{border-radius:2px;background:#FFD45E;animation-name:p25leaf}.p25-confetti i:nth-child(3n){background:#FF7B9E}.p25-confetti i:nth-child(3n+1){background:#73E4DB}
+.p25-stop .p25-layer *,.p25-stop .p25-particles i{animation-play-state:paused!important}
+#p25_stage .p25scene{margin:0 0 10px}.p25-tip{font-size:12px;text-align:center;margin-bottom:4px}
+#p25_stage~label,#p25_stage~.two{margin-top:10px}#p25_stage~label output{float:right;font-weight:800;color:var(--ink)}
+#p25_stage~label input[type=range]{width:100%;padding:0;min-height:30px}.p25-en{align-items:center}.p25-en input{flex:none}
+@keyframes p25cloud{from{translate:-12px 0}to{translate:16px 3px}}
+@keyframes p25float{0%,100%{translate:0 0}50%{translate:0 -9px}}
+@keyframes p25fish{from{translate:-10px 0}to{translate:14px -4px}}
+@keyframes p25spin{to{rotate:360deg}}
+@keyframes p25aurora{from{translate:-12px 0;opacity:.65}to{translate:18px 8px;opacity:1}}
+@keyframes p25fire{from{scale:.94 1;opacity:.8}to{scale:1.06 .92;opacity:1}}
+@keyframes p25fall{from{translate:0 -35px;rotate:0deg;opacity:0}12%{opacity:.85}to{translate:22px 300px;rotate:300deg;opacity:0}}
+@keyframes p25rain{from{translate:0 -50px;opacity:0}15%{opacity:.8}to{translate:-35px 310px;opacity:0}}
+@keyframes p25leaf{from{translate:0 -40px;rotate:0deg;opacity:0}12%{opacity:.9}to{translate:70px 300px;rotate:420deg;opacity:0}}
+@keyframes p25rise{from{translate:0 80px;scale:.6;opacity:0}15%{opacity:.8}to{translate:15px -300px;scale:1.2;opacity:0}}
+@keyframes p25twinkle{0%,100%{opacity:.15;scale:.6}50%{opacity:1;scale:1.3}}
+@media(max-width:420px){.p25scene{min-height:250px}.p25scene~.two,#p25_stage~.two{flex-wrap:wrap}#p25_stage~.two>label{flex-basis:100%}#p25_stage~.two>.btn{flex:1}}
+@media(prefers-reduced-motion:reduce){.p25scene .p25-layer *,.p25scene .p25-particles i{animation:none!important}.p25scene .p25-layer,.p25-pet{transition:none!important}}
