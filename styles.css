@@ -941,3 +941,5 @@ html[data-dark="1"] .sheet .card:not([style*="background"]){color:var(--ink)}
 .wlcp{display:flex;justify-content:center}.wlct{font-family:Alegreya,Georgia,serif;font-size:26px;font-weight:800;line-height:1.15}
 .wlcb{font-size:16px;line-height:1.45}.wlcg{display:flex;flex-direction:column;gap:6px;text-align:left;font-size:14px;background:rgba(255,255,255,.65);border-radius:16px;padding:10px 12px;width:100%}
 html[data-dark="1"] .wlcs,html[data-dark="1"] .wlcs *{color:#3B2A35}
+/* v105: задания дня */
+.dqc .dqr{display:flex;gap:10px;align-items:center;padding:6px 0;border-top:1px dashed var(--line)}.dqc .dqr.ok{opacity:.72}.dqc .dqr.ok b{text-decoration:line-through}.dqi{font-size:22px;width:30px;text-align:center}

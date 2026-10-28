@@ -29,6 +29,7 @@ async function gmFillThanks(){
 }
 function gmProfile(id){
   const row=S.gm&&S.gm.by[id];if(!row)return toast('Профиль не нашёлся',2200);
+  if(S.me&&id===S.me.id&&window.dqPing)dqPing('pet');
   const L=gmLv(row.xp);
   const real=(row.ach||[]).filter(a=>gmReal(a)&&!/^(adm|trn|spec|evt):/.test(a.c)).map(a=>gmDef(a));
   dgxSheet(esc(row.full_name||'Профиль'),(box)=>{

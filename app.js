@@ -211,6 +211,7 @@ const SUBG={req:'ap',fix:'ap',inc:'ap',wo:'ap',msg:'ap',news:'park',afisha:'park
 const onTab=k=>SUBG[k]?(S.tab===SUBG[k]&&S.sub[SUBG[k]]===k):S.tab===k;
 function go(t){if(SUBG[t]){S.sub[SUBG[t]]=t;t=SUBG[t]}if(!VIEWS[t]||(t==='dg'&&!isManager()))t='today';S.tab=t;S.offline=0;S.swapPending=1;document.body.dataset.tab=S.sub[t]||t;
   nav.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t||(b.dataset.tab==='more'&&MORE_TABS.includes(t))));window.scrollTo(0,0);app.scrollTop=0;
+  if(t==='rot'&&window.dqPing)dqPing('rot');
   clearTimeout(S.skT);S.vDone=false;
   S.skT=setTimeout(()=>{if(!S.vDone&&S.tab===t)app.innerHTML=SKEL},160); // если данные не пришли за 0,16 с, вместо старого экрана показываем заглушку
   const v=Promise.resolve(VIEWS[t]());

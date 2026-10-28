@@ -259,3 +259,21 @@ async function gmGachaTab(box){
   };
   paint();
 }
+
+// ---------- ежедневные задания: 5 штук, за все — 4 билета ----------
+const DQ_LIST=[['chk','✅','Заполни чек-лист','Отметь хотя бы один пункт в чек-листе смены'],['ck','☀️','Отметься на смене','Нажми «Я на смене» (в выходной засчитывается сам)'],['rot','🔄','Загляни в ротацию','Открой вкладку «Ротации»'],['thx','💛','Скажи спасибо коллеге','Отправь благодарность в «Спасибо»'],['pet','🐾','Навести питомца','Открой свой профиль и поздоровайся с питомцем']];
+function dqPing(c){const k='dq:'+(S.me?S.me.id:'')+':'+c+':'+new Date().toDateString();try{if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1')}catch(e){}
+  sb.rpc('dq_ping',{p_code:c}).then(r=>{if(!r.error&&window._dqS)window._dqS.done=(window._dqS.done||[]).concat([c])},()=>{})}
+async function dqFill(){
+  const box=document.getElementById('dqbox');if(!box)return;
+  try{
+    const r=await sb.rpc('dq_status');if(r.error||!r.data)return;
+    const s=window._dqS=r.data,dn=new Set(s.done||[]),n=DQ_LIST.filter(x=>dn.has(x[0])).length;
+    box.innerHTML=`<div class="card pad col dqc"><div style="display:flex;align-items:center;gap:8px"><b style="flex:1">🎯 Задания дня</b><span class="pill" style="background:#F6E3B0;color:#3B2A35">${n} из 5</span></div>
+      <div class="pgb"><div class="pg" style="width:${n*20}%"></div></div>
+      ${DQ_LIST.map(x=>`<div class="dqr${dn.has(x[0])?' ok':''}"><span class="dqi">${dn.has(x[0])?'✅':x[1]}</span><div><b>${x[2]}</b><div class="muted">${x[3]}</div></div></div>`).join('')}
+      ${s.claimed?`<div class="muted">🎟 Награда за сегодня получена. Завтра будут новые задания.</div>`:n===5?`<button class="btn" id="dq_go">🎟 Забрать 4 билета</button>`:`<div class="muted">Выполни все пять и получи 4 билета на крутку.</div>`}</div>`;
+    const b=box.querySelector('#dq_go');if(b)b.onclick=async()=>{b.disabled=true;const c=await sb.rpc('dq_claim');if(c.error){b.disabled=false;return alert(c.error.message)}
+      try{dwParty()}catch(e){}toast('+4 билета 🎟',2200);gxS&&(gxS.info=null);dqFill()};
+  }catch(e){}
+}
