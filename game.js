@@ -273,7 +273,7 @@ async function gameView(){
   gmPaint();
 }
 async function gmPaint(){
-  const box=$('#gm_body');if(!box)return;const t=gmTab();
+  const box=$('#gm_body');if(!box)return;if(gmPetIO){gmPetIO.disconnect();gmPetIO=null}const t=gmTab();
   if(t==='ach')await gmAchTab(box);else if(t==='pet')gmPetTab(box);else if(t==='look')gmLookTab(box);else if(t==='lv')gmLvTab(box);else if(t==='gx')await gmGachaTab(box);else if(t==='team')gmTeamTab(box);else gmMngTab(box);
 }
 
@@ -436,30 +436,35 @@ async function gmPetSave(cfg){return gmSaveCos({pet:petEnc(cfg)})}
 function gmPetChooser(onPick,sz=104){
   return `<div class="petch">${PET_SP.filter(x=>!x[3]||gmHas(gmMe(),x[3])).map(([k,n,c])=>`<button class="petc" data-sp="${k}"><span class="petcv">${gmPet({},sz,{cfg:{...PET_DEF,sp:k,bc:petBcOf(k)},vb:GM_PETCROP,bg:''})}</span><b>${n}</b></button>`).join('')}</div>`;
 }
+let gmPetIO;
 function gmPetTab(box){
   const me=gmMe();
   const draw=()=>{
+    if(gmPetIO){gmPetIO.disconnect();gmPetIO=null}
     const cfg=petCfg(me);
     if(!cfg){
       box.innerHTML=`<div class="card pad col" style="align-items:center;text-align:center"><b style="font-size:18px">Выбери себе питомца 🐾</b><div class="muted">У каждого в команде будет свой зверёк. Выбери того, кто нравится больше. Потом его можно будет одеть и раскрасить как угодно: цвет, глаза, улыбку, причёску, шапки, очки и многое другое.</div>${gmPetChooser()}</div>`;
       box.querySelectorAll('[data-sp]').forEach(b=>b.onclick=async()=>{if(await gmPetSave({...PET_DEF,sp:b.dataset.sp})){gmSay(`Отличный выбор, ${esc(gmFirst())}! Теперь вы вместе. Одень зверька как тебе нравится, а новые вещи будешь получать за достижения.`,{ms:6500});dwParty();gmParadeClaim();draw()}});
       return;
     }
-    const keep=window.scrollY,base={...cfg,ha:'',gl:'',nk:'',ch:'',bk:'',hd:'',hr:''};
+    const keep=window.scrollY,base={...cfg,ha:'',gl:'',nk:'',ch:'',bk:'',hd:'',hr:''},lazy=[];
+    const pv=(cfg,vb)=>{const n=lazy.length;lazy.push({cfg,vb});return `<span class="gopv" data-ppv="${n}"></span>`};
     const tile=(k,kind,crop,it)=>{
       const [id,n,req,val]=it,ok=gmHas(me,req);if(!ok&&(!gmSeeAll()||/^spec:/.test(req||'')))return '';
       const on=(cfg[k]||'')===id;
-      const v=kind==='sw'?`<span class="petsw" style="background:${gmPetSw(val)}"></span>`:gmPet({},78,{cfg:{...base,...(k==='ec'||k==='gz'?{ex:'x_n'}:{}),[k]:id},vb:crop||PET_VB,bg:''});
-      return `<button class="gop${on?' on':''}${ok?'':' lk'}" data-k="${k}" data-v="${esc(id)}" ${ok?'':'disabled'}><span class="gopv">${v}</span><span class="gopn">${esc(n)}</span>${ok?'':`<span class="gopl">🔒 ${esc(gmReqName(req))}</span>`}</button>`;
+      const v=kind==='sw'?`<span class="gopv"><span class="petsw" style="background:${gmPetSw(val)}"></span></span>`:pv({...base,...(k==='ec'||k==='gz'?{ex:'x_n'}:{}),[k]:id},crop||PET_VB);
+      return `<button class="gop${on?' on':''}${ok?'':' lk'}" data-k="${k}" data-v="${esc(id)}" ${ok?'':'disabled'}>${v}<span class="gopn">${esc(n)}</span>${ok?'':`<span class="gopl">🔒 ${esc(gmReqName(req))}</span>`}</button>`;
     };
     box.innerHTML=`<div class="petpv2">${gmStage(me,150,cfg)}</div>
     <div class="card pad col"><b>🏷️ Имя питомца</b><div class="muted">Оно видно под питомцем в профиле, а если надеть «Бейдж парка» (раздел «Грудь»), то и на бейджике.</div><div style="display:flex;gap:8px"><input id="pn_i" maxlength="16" placeholder="Как его зовут?" value="${esc((me.cos||{}).pname||'')}" style="flex:1;min-width:0"><button class="btn" id="pn_s" style="flex:none">Сохранить</button></div>${cfg.ch==='c_badge'?'':'<button class="btn ghost" id="pn_b">🪪 Надеть бейдж с именем</button>'}</div>
-    <div class="card pad col"><b>Вид</b><div class="muted">Это твой питомец. Выбирай всё, что нравится, а результат виден в карточке вверху. Новые вещи открываются за достижения и события. Фон берётся из раздела «Мой образ».</div><div class="gops">${PET_SP.filter(x=>!x[3]||gmHas(me,x[3])).map(([k,n])=>`<button class="gop${cfg.sp===k?' on':''}" data-sp="${k}"><span class="gopv">${gmPet({},78,{cfg:{...cfg,sp:k,bc:cfg.bc===petBcOf(cfg.sp)?petBcOf(k):cfg.bc},vb:GM_PETCROP,bg:''})}</span><span class="gopn">${n}</span></button>`).join('')}</div></div>`+
+    <div class="card pad col"><b>Вид</b><div class="muted">Это твой питомец. Выбирай всё, что нравится, а результат виден в карточке вверху. Новые вещи открываются за достижения и события. Фон берётся из раздела «Мой образ».</div><div class="gops">${PET_SP.filter(x=>!x[3]||gmHas(me,x[3])).map(([k,n])=>`<button class="gop${cfg.sp===k?' on':''}" data-sp="${k}">${pv({...cfg,sp:k,bc:cfg.bc===petBcOf(cfg.sp)?petBcOf(k):cfg.bc},GM_PETCROP)}<span class="gopn">${n}</span></button>`).join('')}</div></div>`+
     PET_G.map(([k,ttl,L,kind,crop])=>`<div class="card pad col"><b>${ttl}</b><div class="gops">${L.map(it=>tile(k,kind,crop,it)).join('')}</div></div>`).join('');
     box.querySelector('#pn_s').onclick=async()=>{if(await gmSaveCos({pname:box.querySelector('#pn_i').value.trim()})){draw();window.scrollTo(0,keep)}};
     const pb=box.querySelector('#pn_b');if(pb)pb.onclick=async()=>{if(await gmPetSave({...cfg,ch:'c_badge'})){draw();window.scrollTo(0,keep)}};
     box.querySelectorAll('.gop[data-k]:not([disabled])').forEach(b=>b.onclick=async()=>{if(await gmPetSave({...cfg,[b.dataset.k]:b.dataset.v})){draw();window.scrollTo(0,keep)}});
     box.querySelectorAll('.gop[data-sp]').forEach(b=>b.onclick=async()=>{const sp=b.dataset.sp;if(sp===cfg.sp)return;if(await gmPetSave({...cfg,sp,bc:cfg.bc===petBcOf(cfg.sp)?petBcOf(sp):cfg.bc})){draw();window.scrollTo(0,keep)}});
+    const show=el=>{const p=lazy[+el.dataset.ppv];if(!p)return;el.innerHTML=gmPet({},78,{cfg:p.cfg,vb:p.vb,bg:''});el.removeAttribute('data-ppv')},nodes=box.querySelectorAll('[data-ppv]');
+    if('IntersectionObserver' in window){const ob=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){ob.unobserve(e.target);show(e.target)}}),{rootMargin:'500px 0px'});gmPetIO=ob;nodes.forEach(el=>ob.observe(el))}else nodes.forEach(show);
   };
   draw();
 }
