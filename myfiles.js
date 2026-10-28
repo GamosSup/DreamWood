@@ -55,9 +55,15 @@ async function myUpload(list,folder){
     const f=list[i];if(st)st.textContent=`Загрузка ${i+1} из ${list.length}: ${f.name}`;
     if(f.size>95*1024*1024){S.my.error=`«${f.name}» больше 95 МБ`;break}
     const dv=await driveSend('my',S.me.id,f);
-    if(!dv.id){S.my.error=dv.err||'Облачное хранилище сейчас недоступно';break}
-    const r=await sb.from('my_files').insert({owner:S.me.id,folder_id:myFolder(folder),path:'drive:'+dv.id,name:f.name||'Файл',mime:f.type||'application/octet-stream',size:f.size});
-    if(r.error){S.my.error='Файл загружен, но не сохранён в списке: '+r.error.message;break}
+    let path=dv.id?'drive:'+dv.id:'';
+    if(!dv.id){
+      const ext=(String(f.name||'').match(/\.[A-Za-z0-9]{1,10}$/)||[''])[0].toLowerCase();
+      path=S.me.id+'/'+crypto.randomUUID()+ext;
+      const up=await sb.storage.from('my').upload(path,f,{contentType:f.type||'application/octet-stream'});
+      if(up.error){S.my.error='Не удалось сохранить файл в облаке: '+up.error.message;break}
+    }
+    const r=await sb.from('my_files').insert({owner:S.me.id,folder_id:myFolder(folder),path,name:f.name||'Файл',mime:f.type||'application/octet-stream',size:f.size});
+    if(r.error){if(!dv.id)await sb.storage.from('my').remove([path]);S.my.error='Файл загружен, но не сохранён в списке: '+r.error.message;break}
   }
   myFilesView();
 }
@@ -94,8 +100,11 @@ function myShare(f){
   },()=>{if(S.tab==='kb'&&S.kb.section==='my')myFilesView()});
 }
 async function myDelete(f){
-  if(!f.path.startsWith('drive:'))return'Неизвестный тип хранилища';
-  const ses=(await sb.auth.getSession()).data.session;if(!ses)return'Нужно снова войти в приложение';
-  try{const r=await fetch('/api/myfile?id='+encodeURIComponent(f.path.slice(6)),{method:'DELETE',headers:{authorization:'Bearer '+ses.access_token}}),j=await r.json().catch(()=>({}));if(!r.ok)return j.message||'Не удалось удалить файл из облака'}catch(e){return'Нет соединения с облаком'}
+  if(f.path.startsWith('drive:')){
+    const ses=(await sb.auth.getSession()).data.session;if(!ses)return'Нужно снова войти в приложение';
+    try{const r=await fetch('/api/myfile?id='+encodeURIComponent(f.path.slice(6)),{method:'DELETE',headers:{authorization:'Bearer '+ses.access_token}}),j=await r.json().catch(()=>({}));if(!r.ok)return j.message||'Не удалось удалить файл из облака'}catch(e){return'Нет соединения с облаком'}
+  }else{
+    const d=await sb.storage.from('my').remove([f.path]);if(d.error)return d.error.message;
+  }
   const r=await sb.from('my_files').delete().eq('id',f.id);return r.error?r.error.message:null;
 }

@@ -94,3 +94,33 @@ create policy "my shares delete" on public.my_shares for delete to authenticated
   using(is_approved() and public.my_file_owner(file_id));
 
 grant select,insert,update,delete on public.my_folders,public.my_files,public.my_shares to authenticated;
+
+-- Резервное хранилище для серверов без настройки Google Drive. Путь: <id владельца>/<uuid>.<расширение>.
+insert into storage.buckets(id,name,public,file_size_limit) values('my','my',false,100663296)
+on conflict(id) do update set file_size_limit=excluded.file_size_limit;
+
+-- Проверка доступа к конкретному объекту для владельца и коллег, которым файл отправлен.
+create or replace function public.my_path_access(p_path text) returns boolean
+language sql stable security definer set search_path=public as $$
+  select exists(
+    select 1 from public.my_files f
+    where f.path=p_path and (f.owner=auth.uid() or exists(
+      select 1 from public.my_shares s where s.file_id=f.id and s.to_user=auth.uid()
+    ))
+  )
+$$;
+revoke all on function public.my_path_access(text) from public;
+grant execute on function public.my_path_access(text) to authenticated;
+
+drop policy if exists "my obj read" on storage.objects;
+create policy "my obj read" on storage.objects for select to authenticated using(
+  bucket_id='my' and is_approved() and public.my_path_access(name)
+);
+drop policy if exists "my obj insert" on storage.objects;
+create policy "my obj insert" on storage.objects for insert to authenticated with check(
+  bucket_id='my' and is_approved() and (storage.foldername(name))[1]=auth.uid()::text
+);
+drop policy if exists "my obj delete" on storage.objects;
+create policy "my obj delete" on storage.objects for delete to authenticated using(
+  bucket_id='my' and is_approved() and (storage.foldername(name))[1]=auth.uid()::text
+);
