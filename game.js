@@ -346,67 +346,67 @@ function gmLvTab(box){
 
 // --- выдача значков (руководитель) ---
 async function gmMngTab(box){
-  const rows=(S.gm.rows||[]).slice().sort((a,b)=>(a.full_name||'').localeCompare(b.full_name||'','ru'));
-  const adm=isAdmin();
-  const st=S.gmM=S.gmM||{type:'adm',who:''};
-  let zones=S.gmZones;
-  if(!zones){zones=[];try{const r=await sb.from('rotations').select('data').order('day',{ascending:false}).limit(1).maybeSingle();const z=new Set();Object.values(r.data?.data?.teams||{}).forEach(secs=>secs.forEach(s=>(s.rows||[]).forEach(x=>x.zone&&z.add(x.zone))));zones=[...z].sort((a,b)=>a.localeCompare(b,'ru'))}catch(e){}S.gmZones=zones}
-  const TYPES=[['adm','🎟️ Допуск'],['trn','🎓 Обучение'],['evt','🎉 Событие'],...(adm?[['spec','⭐ Особый']]:[])];
-  const personOpts=rows.map(r=>`<option value="${esc(r.full_name||'')}"></option>`).join('');
-  box.innerHTML=`<div class="card pad col"><b>🎖 Выдать значок</b><div class="muted">Допуски на аттракционы, пройденные обучения и участие в событиях. Человеку придёт уведомление и бонус к очкам.</div>
-   <input id="gm_p" list="gm_pl" placeholder="Кому: начни вводить имя" value="${esc(st.who)}" autocomplete="off"><datalist id="gm_pl">${personOpts}</datalist>
-   <div class="seg">${TYPES.map(([k,n])=>`<button data-gty="${k}" class="${st.type===k?'on':''}">${n}</button>`).join('')}</div>
-   <div id="gm_f"></div><div class="err" id="gm_e"></div><button class="btn" id="gm_go">Выдать</button></div>
-   <div id="gm_given"></div>
-   ${adm?`<div class="card pad col"><b>Подпись вместо уровня (админ)</b><div class="muted">Например, «Невозможный». Пусто — вернуть обычный уровень.</div><input id="gm_lp" list="gm_pl" placeholder="Кому"><input id="gm_lt" maxlength="24" placeholder="Подпись"><button class="btn ghost" id="gm_ls">Сохранить подпись</button><div class="err" id="gm_le"></div></div>`:''}`;
-  const who=()=>{const v=$('#gm_p').value.trim().toLowerCase();return rows.find(r=>(r.full_name||'').toLowerCase()===v)};
+  await ensurePeople();
+  const meta=new Map((S.dg.people||[]).map(p=>[p.id,p]));
+  const rows=(S.gm.rows||[]).map(r=>({...meta.get(r.id),...r})).filter(r=>r.full_name&&r.full_name!=='Тест Системы').sort((a,b)=>a.full_name.localeCompare(b.full_name,'ru'));
+  const adm=isAdmin(),st=S.gmM=S.gmM||{type:'adm',users:[],items:[],q:'',iq:''};
+  st.users=(st.users||[]).filter(id=>rows.some(r=>r.id===id));st.items=st.items||[];
   const slug=s=>String(s).toLowerCase().replace(/ё/g,'е').replace(/[^a-zа-я0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,50);
-  const form=()=>{
-    const f=$('#gm_f'),t=st.type;
-    f.innerHTML=t==='adm'?`<input id="gm_t" list="gm_zl" placeholder="К какому аттракциону допущен" autocomplete="off"><datalist id="gm_zl">${zones.map(z=>`<option value="${esc(z)}"></option>`).join('')}</datalist>`
-     :t==='trn'?`<select id="gm_t">${GM_ACH.filter(a=>a.c.startsWith('trn:')).map(a=>`<option value="${a.c}">${esc(a.n)}</option>`).join('')}<option value="">Другое обучение…</option></select><input id="gm_o" placeholder="Название обучения" hidden>`
-     :t==='evt'?`<input id="gm_t" placeholder="Название события, например «Хэллоуин 2026»" autocomplete="off">`
-     :`<input id="gm_t" placeholder="Название значка" autocomplete="off">`;
-    const s=$('#gm_t');if(t==='trn'){s.onchange=()=>{$('#gm_o').hidden=!!s.value}}
+  const zones=new Set([...Object.keys(ZC),...Object.keys(STEPC).filter(z=>z.length<=30&&!/^(Ротация|Пс|Ос|Метро)$/.test(z))]);
+  try{
+    const [rr,kb]=await Promise.all([sb.from('rotations').select('data').order('day',{ascending:false}).limit(60),sb.from('kb_pages').select('title').eq('category','Аттракционы')]);
+    (rr.data||[]).forEach(row=>Object.values(row.data?.teams||{}).forEach(secs=>(secs||[]).forEach(s=>(s.rows||[]).forEach(x=>{if(x.zone)zones.add(x.zone);(x.steps||[]).forEach(v=>{const z=String(v[1]||'').trim();if(z&&!/^(Ос|Пс|О|П|Т|Ротация|Бриф)$/i.test(z))zones.add(z)})}))));
+    (kb.data||[]).forEach(p=>zones.add(p.title));
+  }catch(e){}
+  rows.forEach(r=>(r.ach||[]).filter(a=>a.c.startsWith('adm:')).forEach(a=>zones.add(String(a.l||a.c).replace(/^Допущен:\s*/,''))));
+  const TYPES=[['adm','🎟️ Допуски'],['trn','🎓 Обучения'],['evt','🎉 События'],...(adm?[['spec','⭐ Особые']]:[])];
+  const item=(type,name,code,bonus,ic)=>({code:code||type+':'+slug(name),label:type==='adm'?'Допущен: '+name:name,n:name,bonus,ic:ic||(type==='adm'?'🎟️':type==='trn'?'🎓':type==='evt'?'🎉':'⭐')});
+  const catalog=()=>{
+    if(st.type==='adm')return [...zones].filter(Boolean).sort((a,b)=>a.localeCompare(b,'ru')).map(z=>item('adm',z,'',100));
+    const pre=GM_ACH.filter(a=>a.c.startsWith(st.type+':')),out=pre.map(a=>({code:a.c,label:a.n,n:a.n,bonus:a.b||0,ic:a.ic})),have=new Set(out.map(x=>x.code));
+    rows.forEach(r=>(r.ach||[]).filter(a=>a.c.startsWith(st.type+':')&&!have.has(a.c)).forEach(a=>{const d=gmDef(a);out.push({code:a.c,label:d.n,n:d.n,bonus:a.b||({trn:200,evt:150,spec:500}[st.type]),ic:d.ic});have.add(a.c)}));
+    return out.sort((a,b)=>a.n.localeCompare(b.n,'ru'));
   };
-  const given=()=>{
-    const r=who(),g=$('#gm_given');if(!r){g.innerHTML='';return}
-    const man=(r.ach||[]).filter(a=>/^(adm|trn|evt|spec):/.test(a.c));
-    g.innerHTML=`<div class="card pad col"><b>Уже выдано: ${esc(shortName(r.full_name))}</b>${man.length?man.map(a=>{const d=gmDef(a);return `<div class="otr"><span>${gmIc(d.ic,20)} ${esc(d.n)}</span><button class="btn ghost" style="min-height:34px;padding:0 12px" data-rv="${esc(a.c)}">Забрать</button></div>`}).join(''):'<div class="muted">Пока ничего.</div>'}</div>`;
-    g.querySelectorAll('[data-rv]').forEach(b=>b.onclick=async()=>{if(!confirm('Забрать значок «'+b.closest('.otr').textContent.replace('Забрать','').trim()+'»?'))return;const x=await sb.rpc('ach_revoke',{p_user:r.id,p_code:b.dataset.rv});if(x.error)return alert(x.error.message);await gmLoad(true);gmMngTab(box)});
+  let items=catalog(),byCode=new Map(items.map(x=>[x.code,x]));
+  st.items=st.items.filter(c=>byCode.has(c));
+  const personOpts=rows.map(r=>`<option value="${esc(r.full_name)}"></option>`).join('');
+  const render=()=>{
+    box.innerHTML=`<div class="card pad col"><b>🎖 Пакетная выдача</b><div class="muted">Выбери несколько человек и несколько значков. Новые выдачи придут с уведомлениями; уже имеющиеся не дублируются.</div>
+      <div class="seg">${TYPES.map(([k,n])=>`<button data-gty="${k}" class="${st.type===k?'on':''}">${n}</button>`).join('')}</div>
+      <div class="gmb-grid"><section><div class="gmb-head"><b>1. Сотрудники · <span id="gm_un">${st.users.length}</span></b><input type="search" id="gm_q" placeholder="Найти" value="${esc(st.q||'')}"></div><div class="gmb-quick">${[['all','Все'],['managers','Руководители'],['employees','Сотрудники'],['R','Рейнджеры'],['K','Хранители'],['M','Метрополис'],['clear','Очистить']].map(([k,n])=>`<button data-ps="${k}">${n}</button>`).join('')}</div><div class="gmb-list" id="gm_people"></div></section>
+      <section><div class="gmb-head"><b>2. Значки · <span id="gm_in">${st.items.length}</span></b><input type="search" id="gm_iq" placeholder="Найти" value="${esc(st.iq||'')}"></div><div class="gmb-quick"><button data-is="all">Выбрать все</button><button data-is="clear">Очистить</button></div><div class="gmb-list" id="gm_items"></div><div class="gmb-custom"><input id="gm_custom" maxlength="70" placeholder="Другое значение…"><button class="btn ghost" id="gm_add">Добавить</button></div></section></div>
+      <div class="gmb-summary" id="gm_sum"></div><div class="err" id="gm_e"></div><button class="btn" id="gm_go">Выдать выбранное</button></div><div id="gm_given"></div>
+      ${adm?`<div class="card pad col"><b>Подпись вместо уровня (админ)</b><div class="muted">Например, «Невозможный». Пусто — вернуть обычный уровень.</div><input id="gm_lp" list="gm_pl" placeholder="Кому"><datalist id="gm_pl">${personOpts}</datalist><input id="gm_lt" maxlength="24" placeholder="Подпись"><button class="btn ghost" id="gm_ls">Сохранить подпись</button><div class="err" id="gm_le"></div></div>`:''}`;
+    const paintPeople=()=>{const q=(st.q||'').toLowerCase(),L=rows.filter(r=>!q||r.full_name.toLowerCase().includes(q));
+      box.querySelector('#gm_people').innerHTML=L.map(r=>`<label class="gmb-row"><input type="checkbox" data-u="${r.id}" ${st.users.includes(r.id)?'checked':''}><span><b>${esc(r.full_name)}</b><small>${esc(roleLbl(r))}${r.team?' · '+esc(TN[r.team]||r.team):''}</small></span><i class="tm-state">${st.users.includes(r.id)?'выбран':'в команде'}</i></label>`).join('')||'<div class="muted">Никого не найдено</div>';
+      box.querySelectorAll('[data-u]').forEach(c=>c.onchange=()=>{st.users=c.checked?[...new Set([...st.users,c.dataset.u])]:st.users.filter(x=>x!==c.dataset.u);const tag=c.closest('label').querySelector('.tm-state');if(tag)tag.textContent=c.checked?'выбран':'в команде';sync()})};
+    const paintItems=()=>{const q=(st.iq||'').toLowerCase(),L=items.filter(x=>!q||x.n.toLowerCase().includes(q));
+      box.querySelector('#gm_items').innerHTML=L.map(x=>`<label class="gmb-row"><input type="checkbox" data-i="${esc(x.code)}" ${st.items.includes(x.code)?'checked':''}><span><b>${gmIc(x.ic,18)} ${esc(x.n)}</b><small>${x.code}</small></span></label>`).join('')||'<div class="muted">Ничего не найдено</div>';
+      box.querySelectorAll('[data-i]').forEach(c=>c.onchange=()=>{st.items=c.checked?[...new Set([...st.items,c.dataset.i])]:st.items.filter(x=>x!==c.dataset.i);sync()})};
+    const sync=()=>{box.querySelector('#gm_un').textContent=st.users.length;box.querySelector('#gm_in').textContent=st.items.length;box.querySelector('#gm_sum').innerHTML=st.users.length&&st.items.length?`Будет проверено <b>${st.users.length*st.items.length}</b> выдач: ${st.users.length} чел. × ${st.items.length} знач.`:'Выбери людей и значки';given()};
+    const given=()=>{const g=box.querySelector('#gm_given'),r=rows.find(x=>st.users.includes(x.id));if(!r){g.innerHTML='';return}const man=(r.ach||[]).filter(a=>/^(adm|trn|evt|spec):/.test(a.c));
+      g.innerHTML=`<details class="card pad"><summary><b>Уже выдано: ${esc(shortName(r.full_name))} · ${man.length}</b></summary><div class="col" style="margin-top:10px">${man.map(a=>{const d=gmDef(a);return `<div class="otr"><span>${gmIc(d.ic,20)} ${esc(d.n)}</span><button class="btn ghost" data-rv="${esc(a.c)}" style="min-height:34px;padding:0 12px">Забрать</button></div>`}).join('')||'<div class="muted">Пока ничего.</div>'}</div></details>`;
+      g.querySelectorAll('[data-rv]').forEach(b=>b.onclick=async()=>{if(!confirm('Забрать этот значок?'))return;const x=await sb.rpc('ach_revoke',{p_user:r.id,p_code:b.dataset.rv});if(x.error)return alert(x.error.message);await gmLoad(true);gmMngTab(box)})};
+    box.querySelectorAll('[data-gty]').forEach(b=>b.onclick=()=>{st.type=b.dataset.gty;st.items=[];items=catalog();byCode=new Map(items.map(x=>[x.code,x]));render()});
+    box.querySelector('#gm_q').oninput=e=>{st.q=e.target.value;paintPeople()};box.querySelector('#gm_iq').oninput=e=>{st.iq=e.target.value;paintItems()};
+    box.querySelectorAll('[data-ps]').forEach(b=>b.onclick=()=>{const k=b.dataset.ps;st.users=k==='clear'?[]:rows.filter(r=>k==='all'||k==='managers'&&['manager','admin'].includes(r.role)||k==='employees'&&!['manager','admin'].includes(r.role)||['R','K','M'].includes(k)&&r.team===k).map(r=>r.id);paintPeople();sync()});
+    box.querySelectorAll('[data-is]').forEach(b=>b.onclick=()=>{st.items=b.dataset.is==='all'?items.map(x=>x.code):[];paintItems();sync()});
+    box.querySelector('#gm_add').onclick=()=>{const inp=box.querySelector('#gm_custom'),name=inp.value.trim();if(!name)return;const x=item(st.type,name,'',({adm:100,trn:200,evt:150,spec:500}[st.type]));if(!slug(name))return;byCode.set(x.code,x);if(!items.some(v=>v.code===x.code))items.push(x);st.items=[...new Set([...st.items,x.code])];inp.value='';paintItems();sync()};
+    box.querySelector('#gm_go').onclick=async e=>{const er=box.querySelector('#gm_e');er.textContent='';if(!st.users.length||!st.items.length)return er.textContent='Выбери хотя бы одного человека и один значок';
+      const payload=st.items.map(c=>{const x=byCode.get(c);return {code:x.code,label:x.label,bonus:x.bonus}});if(!confirm(`Выдать ${payload.length} знач. ${st.users.length} сотрудникам? Всего до ${payload.length*st.users.length} новых записей.`))return;
+      e.target.disabled=true;const r=await sb.rpc('ach_grant_many',{p_users:st.users,p_items:payload});e.target.disabled=false;
+      if(r.error)return er.textContent='Не получилось: '+r.error.message;const d=r.data||{};er.style.color='var(--ink)';er.textContent=`Готово: новых ${d.issued||0}, уже было ${d.skipped||0} ✅`;dwParty();await gmLoad(true);gmMngTab(box)};
+    if(adm)box.querySelector('#gm_ls').onclick=async e=>{const er=box.querySelector('#gm_le'),v=box.querySelector('#gm_lp').value.trim().toLowerCase(),r=rows.find(x=>x.full_name.toLowerCase()===v);if(!r)return er.textContent='Выбери человека из списка';e.target.disabled=true;const x=await sb.rpc('set_lvl_text',{p_user:r.id,p_text:box.querySelector('#gm_lt').value});e.target.disabled=false;if(x.error)return er.textContent=x.error.message;er.textContent='Готово ✅';await gmLoad(true);if(r.id===S.me.id)gameView()};
+    paintPeople();paintItems();sync();
   };
-  form();given();
-  box.querySelectorAll('[data-gty]').forEach(b=>b.onclick=()=>{st.type=b.dataset.gty;st.who=$('#gm_p').value;box.querySelectorAll('[data-gty]').forEach(x=>x.classList.toggle('on',x===b));form()});
-  $('#gm_p').oninput=()=>{st.who=$('#gm_p').value;given()};
-  $('#gm_go').onclick=async e=>{
-    const er=$('#gm_e');er.style.color='';er.textContent='';
-    const r=who();if(!r)return er.textContent='Выбери человека из списка';
-    const t=st.type;let code,label,bonus;
-    if(t==='trn'){const v=$('#gm_t').value;if(v){const a=GM_BY[v];code=v;label=a.n;bonus=a.b}else{const o=$('#gm_o').value.trim();if(!o)return er.textContent='Впиши название обучения';code='trn:'+slug(o);label=o;bonus=200}}
-    else{const v=$('#gm_t').value.trim();if(!v)return er.textContent='Впиши название';
-      if(t==='adm'){code='adm:'+slug(v);label='Допущен: '+v;bonus=100}else if(t==='evt'){code='evt:'+slug(v);label=v;bonus=150}else{code='spec:'+slug(v);label=v;bonus=500}}
-    if(!slug(label.replace(/^Допущен:\s*/,'')))return er.textContent='Название должно содержать буквы или цифры';
-    e.target.disabled=true;
-    const x=await sb.rpc('ach_grant',{p_user:r.id,p_code:code,p_label:label,p_bonus:bonus});
-    e.target.disabled=false;
-    if(x.error)return er.textContent='Не получилось: '+x.error.message;
-    er.style.color='var(--ink)';er.textContent='Выдано: '+label+' → '+shortName(r.full_name)+' ✅';dwParty();
-    await gmLoad(true);given();
-  };
-  if(adm)$('#gm_ls').onclick=async e=>{
-    const er=$('#gm_le');er.style.color='';const v=$('#gm_lp').value.trim().toLowerCase(),r=rows.find(x=>(x.full_name||'').toLowerCase()===v);
-    if(!r)return er.textContent='Выбери человека из списка';
-    e.target.disabled=true;const x=await sb.rpc('set_lvl_text',{p_user:r.id,p_text:$('#gm_lt').value});e.target.disabled=false;
-    if(x.error)return er.textContent='Не получилось: '+x.error.message;
-    er.style.color='var(--ink)';er.textContent='Готово ✅';await gmLoad(true);if(r.id===S.me.id)gameView();
-  };
+  render();
 }
 
 VIEWS.game=gameView;
 gmBoot();
 
 
-// ---------- Дримми: личные поздравления ----------
+// ---------- Пушок: личные поздравления ----------
 const gmFirst=()=>((S.me&&S.me.full_name)||'').trim().split(/\s+/)[0]||'друг';
 const GM_CHEER=['Ура!','Круто!','Вот это да!','Молодец!','Отлично!','Здорово!'];
 let GM_SQ=[],GM_SB=false;
@@ -414,7 +414,7 @@ function gmSay(html,opt={}){GM_SQ.push([html,opt]);gmSayNext()}
 function gmSayNext(){
   if(GM_SB||!GM_SQ.length)return;GM_SB=true;
   const [html,o]=GM_SQ.shift(),d=document.createElement('div');
-  d.className='dsay';d.innerHTML=`<img src="stickers/mascot-hi.webp" alt="" width="56" height="56"><div class="dsb">${html}</div>`;
+  d.className='dsay';d.innerHTML=`<img src="stickers/pushok.webp" alt="" width="56" height="56"><div class="dsb">${html}</div>`;
   document.body.appendChild(d);requestAnimationFrame(()=>d.classList.add('on'));
   let done=false;const end=()=>{if(done)return;done=true;d.classList.remove('on');setTimeout(()=>{d.remove();GM_SB=false;gmSayNext()},260)};
   d.onclick=end;setTimeout(end,o.ms||5500);

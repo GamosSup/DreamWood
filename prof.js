@@ -11,9 +11,10 @@ function gmShelf(row,opt={}){
   const adm=ach.filter(a=>a.c.startsWith('adm:')).map(a=>gmDef(a)).sort((a,b)=>String(a.n).localeCompare(String(b.n),'ru'));
   const oth=ach.filter(a=>/^(trn|spec|evt):/.test(a.c)).map(a=>gmDef(a));
   const chip=(d,cls)=>`<span class="bdg ${cls}" title="${esc(d.d||d.n)}"><i>${gmIc(d.ic,18)}</i><b>${esc(d.n)}</b></span>`;
-  let h='';
-  h+=`<div class="shelf"><div class="shl">🏆 Допуски${adm.length?` · ${adm.length}`:''}</div>${adm.length?`<div class="trofs">${adm.map(gmTrophy).join('')}</div>`:`<div class="muted">${opt.own?'Допуски к аттракционам выдаёт руководитель, они появятся здесь кубками':'Допусков пока нет'}</div>`}</div>`;
-  if(oth.length)h+=`<div class="shelf"><div class="shl">🎓 Обучения и особые значки · ${oth.length}</div><div class="bdgs">${oth.map(d=>chip(d,/^trn:/.test(d.c)?'trn':'spc')).join('')}</div></div>`;
+  const groups=byArea(adm,d=>GM_ADMN(d.n));
+  let h=`<div class="shelf"><div class="shl">🏆 Допуски${adm.length?` · ${adm.length}`:''}</div>${adm.length?groups.map(({a,items})=>`<details class="gm-cat" ${groups.length===1?'open':''}><summary>${esc(a.n)}<span>${items.length}</span></summary><div class="gm-cat-body"><div class="trofs">${items.map(gmTrophy).join('')}</div></div></details>`).join(''):`<div class="muted">${opt.own?'Допуски к аттракционам выдаёт руководитель, они появятся здесь кубками':'Допусков пока нет'}</div>`}</div>`;
+  const cats=[['trn','🎓 Обучения'],['evt','🎉 События'],['spec','⭐ Особые значки']].map(([k,n])=>[k,n,oth.filter(d=>d.c.startsWith(k+':'))]).filter(x=>x[2].length);
+  if(cats.length)h+=`<div class="shelf"><div class="shl">Обучения и особые значки · ${oth.length}</div>${cats.map(([k,n,items])=>`<details class="gm-cat" ${cats.length===1?'open':''}><summary>${n}<span>${items.length}</span></summary><div class="gm-cat-body"><div class="bdgs">${items.map(d=>chip(d,k==='trn'?'trn':'spc')).join('')}</div></div></details>`).join('')}</div>`;
   return h;
 }
 // благодарности коллег
@@ -50,7 +51,7 @@ function gmTeamTab(box){
     const k=q.trim().toLowerCase(),L=rows.filter(r=>!k||String(r.full_name).toLowerCase().includes(k));
     box.querySelector('#tm_l').innerHTML=L.map(r=>{
       const a=(r.ach||[]),na=a.filter(x=>x.c.startsWith('adm:')).length,nt=a.filter(x=>/^(trn|spec):/.test(x.c)).length;
-      return `<button class="card pad tmr" data-pid="${r.id}"><span>${av(r,44)}</span><span class="tmn">${gmName(r.full_name,r)}<span class="muted">${na?`🎟️ ${na}`:''}${na&&nt?' · ':''}${nt?`🎓 ${nt}`:''}${!na&&!nt?'Значков пока нет':''}</span></span></button>`}).join('')||'<div class="card pad muted">Никого не нашлось</div>';
+      return `<button class="card pad tmr" data-pid="${r.id}"><span>${av(r,44)}</span><span class="tmn">${gmName(r.full_name,r)}<span class="muted">${esc(roleLbl(r))}${r.team?' · '+esc(TN[r.team]||r.team):''}<br>${na?`🎟️ ${na}`:''}${na&&nt?' · ':''}${nt?`🎓 ${nt}`:''}${!na&&!nt?'Значков пока нет':''}</span></span><i class="tm-state">в команде</i></button>`}).join('')||'<div class="card pad muted">Никого не нашлось</div>';
   };
   box.innerHTML=`<div class="muted" style="margin:2px 2px 8px">Нажми на коллегу: увидишь его уровень, питомца, допуски и значки.</div><input type="search" id="tm_s" placeholder="🔍 Найти коллегу" autocomplete="off"><div id="tm_l" class="col" style="gap:8px;margin-top:8px"></div>`;
   paint('');box.querySelector('#tm_s').oninput=e=>paint(e.target.value);
@@ -85,9 +86,10 @@ function gmSceneDecor(bg){
     el.style.setProperty('--px',(Math.max(-1,Math.min(1,(cx-(r.left+r.width/2))/(r.width/2)))).toFixed(2));el.style.setProperty('--py',(Math.max(-1,Math.min(1,(cy-(r.top+r.height/2))/(r.height/2)))).toFixed(2))})};
   addEventListener('pointermove',e=>move(e.clientX,e.clientY),{passive:true});
   addEventListener('touchmove',e=>{const t=e.touches[0];t&&move(t.clientX,t.clientY)},{passive:true});
+  window.gmSceneBurst=(el,x,y)=>{if(!el||Date.now()-(el._scTap||0)<450)return;el._scTap=Date.now();burst(el,x,y)};
   document.addEventListener('click',e=>{const el=e.target.closest&&e.target.closest('.pscene');if(!el)return;
     const sd=e.target.closest('.sd');if(sd){sd.classList.remove('pop');void sd.offsetWidth;sd.classList.add('pop')}
-    burst(el,e.clientX,e.clientY)});
+    gmSceneBurst(el,e.clientX,e.clientY)});
 })();
 
 // ---- «О парке Дримвуд»: сводка по парку и приложению ----

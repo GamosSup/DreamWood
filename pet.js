@@ -237,19 +237,26 @@ function gmPet(row,sz=160,opt={}){
   let last=0;
   const look=(cx,cy)=>{last=Date.now();all().forEach(el=>{const r=el.getBoundingClientRect();if(!r.width)return;
     const dx=cx-(r.left+r.width/2),dy=cy-(r.top+r.height*.46),d=Math.hypot(dx,dy)||1,k=Math.min(1,d/160);gaze(el,dx/d*9*k,dy/d*8*k)})};
-  if(!rm){
-    addEventListener('pointermove',e=>look(e.clientX,e.clientY),{passive:true});
-    addEventListener('touchmove',e=>{const t=e.touches[0];t&&look(t.clientX,t.clientY)},{passive:true});
-    setInterval(()=>{if(Date.now()-last<4000)return;all().forEach(el=>{if(Math.random()<.35)gaze(el,0,0);else gaze(el,(Math.random()*2-1)*9,(Math.random()*2-1)*6)})},2600);
-  }
-  document.addEventListener('click',e=>{const el=e.target.closest&&e.target.closest('.drm.pan');if(!el)return;
-    const scene=el.closest('.p25scene[data-own="1"]');if(scene&&window.dqPing)dqPing('pet');if(rm)return;
+  const react=(el,cx,cy)=>{if(!el||Date.now()-(el._petTap||0)<450)return;el._petTap=Date.now();
+    const scene=el.closest('.p25scene[data-own="1"]');if(scene&&window.dqPing)dqPing('pet');look(cx,cy);if(rm)return;
     el.classList.remove('pjump');void el.offsetWidth;el.classList.add('pjump');
-    const r=el.getBoundingClientRect();look(e.clientX,e.clientY);
+    const r=el.getBoundingClientRect();
     for(let i=0;i<4;i++){const h=document.createElement('span');h.className='pheart';h.textContent=['💖','✨','💛','💕'][i%4];
       h.style.left=(r.left+r.width*(.3+Math.random()*.4))+'px';h.style.top=(r.top+r.height*.3)+'px';h.style.animationDelay=(i*90)+'ms';
       document.body.appendChild(h);setTimeout(()=>h.remove(),1500)}
-  });
+  };
+  window.petReact=react;
+  if(!rm){
+    addEventListener('pointermove',e=>look(e.clientX,e.clientY),{passive:true});
+    addEventListener('touchstart',e=>{const t=e.touches[0];t&&look(t.clientX,t.clientY)},{passive:true});
+    addEventListener('touchmove',e=>{const t=e.touches[0];t&&look(t.clientX,t.clientY)},{passive:true});
+    setInterval(()=>{if(Date.now()-last<4000)return;all().forEach(el=>{if(Math.random()<.35)gaze(el,0,0);else gaze(el,(Math.random()*2-1)*9,(Math.random()*2-1)*6)})},2600);
+  }
+  let tap=null;
+  document.addEventListener('pointerdown',e=>{look(e.clientX,e.clientY);tap={el:e.target.closest&&e.target.closest('.drm.pan'),x:e.clientX,y:e.clientY}},true);
+  document.addEventListener('pointerup',e=>{if(tap&&tap.el&&Math.hypot(e.clientX-tap.x,e.clientY-tap.y)<10&&e.target.closest&&e.target.closest('.drm.pan')===tap.el)react(tap.el,e.clientX,e.clientY);tap=null},true);
+  document.addEventListener('pointercancel',()=>tap=null,true);
+  document.addEventListener('click',e=>{const el=e.target.closest&&e.target.closest('.drm.pan');if(el)react(el,e.clientX,e.clientY)});
 })();
 // кепка таксиста для ламы
 PET_GEAR.h_taxi=`<path d="M108 208Q108 140 180 138Q252 142 254 208Z" fill="#F6C945" stroke="#8A6200" stroke-width="3"/>${Array.from({length:10},(_,i)=>`<rect x="${112+i*14}" y="${192}" width="14" height="8" fill="${i%2?'#1F1F28':'#fff'}"/><rect x="${112+i*14}" y="${200}" width="14" height="8" fill="${i%2?'#fff':'#1F1F28'}"/>`).join('')}<path d="M108 192Q112 150 180 146" fill="none" stroke="#8A6200" stroke-width="0"/><path d="M200 210Q268 202 292 224Q250 236 200 222Z" fill="#2A2A35" stroke="#111" stroke-width="3"/><rect x="156" y="146" width="48" height="18" rx="4" fill="#fff" stroke="#8A6200" stroke-width="2.4"/><text x="180" y="160" text-anchor="middle" font-family="Manrope,Arial,sans-serif" font-weight="800" font-size="13" fill="#1F1F28">TAXI</text>`;

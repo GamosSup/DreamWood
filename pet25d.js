@@ -126,7 +126,7 @@ function gmPet25DPet(row,sz=190,cfg){
   return`<div class="d25pet drm pan" style="width:${sz}px;height:${Math.round(sz*vb[3]/vb[2])}px">${back}${hand}<div class="d25-base">${petSvg(base,{vb,pn:(row.cos||{}).pname||''})}</div>${clothes}${glasses}${hat}${cm}</div>`;
 }
 function gmPet25DStage(row,sz=190,cfg){
-  const c=row.cos||{},pn=(c.pname||'').trim(),p=p25Cfg(row),own=window.S&&S.me&&row.id===S.me.id?' data-own="1"':'';
+  const c=row.cos||{},pn=(c.pname||'').trim(),p=p25Cfg(row),own=typeof S!=='undefined'&&S.me&&row.id===S.me.id?' data-own="1"':'';
   if(p.enabled===false){const bg=c.bg||'bg_meadow',inner=cfg||petCfg(row)?gmPet(row,sz,{bg:'',...(cfg?{cfg}:{})}):`<img src="stickers/mascot-hi.webp" alt="" width="120" height="120">`;return`<div class="pscene ${bg}" data-sc="${bg}"${own}>${typeof gmSceneDecor==='function'?gmSceneDecor(bg):''}<div class="pfloor"></div>${inner}${pn?`<div class="pnm">${esc(pn)}</div>`:''}</div>`}
   const bg=c.bg||'bg_meadow',speed=Math.max(.1,+p.speed||.7),style=`--p25-depth:${p25Clamp(+p.depth||0,0,1.5)};--p25-cloud:${(14/speed).toFixed(2)}s;--p25-float:${(5/speed).toFixed(2)}s;--p25-sway:${(7/speed).toFixed(2)}s;--sx:${(+p.shift||0)*28}px;--sy:0px`;
   return`<div class="pscene p25scene ${bg}${+p.speed<=0?' p25-stop':''}" data-sc="${bg}"${own} data-cfg="${esc(JSON.stringify(p))}" style="${style}">${p25Scene(bg,p)}<div class="p25-pet">${gmPet25DPet(row,sz,cfg)}</div>${pn?`<div class="pnm">${esc(pn)}</div>`:''}</div>`;
@@ -136,8 +136,8 @@ function gmPet25DScan(root=document){
   const nodes=[];if(root.matches&&root.matches('.p25scene'))nodes.push(root);root.querySelectorAll&&root.querySelectorAll('.p25scene').forEach(e=>nodes.push(e));
   nodes.forEach(el=>{if(el._p25)return;let cfg;try{cfg={...P25_DEF,...JSON.parse(el.dataset.cfg||'{}')} }catch(_){cfg={...P25_DEF}}let drag=null;const reduced=matchMedia('(prefers-reduced-motion: reduce)');
     const move=e=>{if(reduced.matches)return;if(drag){if(!drag.moved){if(Math.hypot(e.clientX-drag.x,e.clientY-drag.y)<5)return;drag.moved=true;el.setPointerCapture&&el.setPointerCapture(e.pointerId)}cfg.shift=p25Clamp(drag.shift+(e.clientX-drag.x)/180,-1,1);p25Apply(el,cfg);e.stopPropagation()}else if(matchMedia('(hover:hover)').matches){const r=el.getBoundingClientRect();el.style.setProperty('--sx',((e.clientX-r.left)/r.width-.5)*22*(+cfg.depth||0)+(+cfg.shift||0)*28+'px');el.style.setProperty('--sy',((e.clientY-r.top)/r.height-.5)*10*(+cfg.depth||0)+'px')}};
-    el.addEventListener('pointerdown',e=>{if(reduced.matches)return;drag={x:e.clientX,y:e.clientY,shift:+cfg.shift||0,moved:false};e.stopPropagation()});
-    el.addEventListener('pointermove',move);el.addEventListener('pointerup',e=>{drag=null;e.stopPropagation()});el.addEventListener('pointercancel',()=>drag=null);el.addEventListener('pointerleave',()=>{if(!drag){el.style.setProperty('--sy','0px');p25Apply(el,cfg)}});
+    el.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,at:Date.now(),shift:+cfg.shift||0,moved:false};e.stopPropagation()});
+    el.addEventListener('pointermove',move);el.addEventListener('pointerup',e=>{const d=drag;drag=null;if(d&&!d.moved&&Date.now()-d.at<700&&window.gmSceneBurst)gmSceneBurst(el,e.clientX,e.clientY);e.stopPropagation()});el.addEventListener('pointercancel',()=>drag=null);el.addEventListener('pointerleave',()=>{if(!drag){el.style.setProperty('--sy','0px');p25Apply(el,cfg)}});
     el._p25={get:()=>({...cfg}),update:patch=>{Object.assign(cfg,patch);p25Apply(el,cfg)}};p25Apply(el,cfg);
   });
 }

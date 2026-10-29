@@ -97,7 +97,7 @@ const clearCache=()=>{try{Object.keys(localStorage).filter(k=>k.startsWith('dw:'
 function startApp(){
   nav.hidden=false;nav.querySelectorAll('[data-mgr]').forEach(b=>b.hidden=!isManager());nav.querySelectorAll('[data-lead]').forEach(b=>b.hidden=!canMng());go(S.tab);
   const g=new URLSearchParams(location.search).get('go');if(g){history.replaceState(null,'',location.pathname);openLink(g)}
-  window.pushRefresh&&pushRefresh();window.tourMaybe&&tourMaybe();
+  window.pushRefresh&&pushRefresh();window.tourMaybe&&tourMaybe();window.companionBoot&&companionBoot();
 }
 // последняя сохранённая сессия: читаем прямо из памяти телефона, не дожидаясь сети
 function storedUid(){
@@ -331,17 +331,16 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
 const head=(h,sub)=>`<div class="top"><div class="brand"><span class="lg">${dwLogo()}</span><div class="hi">Привет, ${esc(firstName())}! 👋</div></div><div class="topr"><button class="avb" aria-label="Мой профиль" onclick="S.gmTab=null;go('game')">${av(S.me,40)}</button>${bell()}</div></div>${S.offline?`<div class="banner" style="background:#E6CC8F;color:#3B2A35;font-size:14px">📴 Нет сети — показаны сохранённые данные (от ${new Date(S.offline).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'})}). Менять что-либо пока нельзя.</div>`:''}${sub?`<div class="muted">${sub}</div>`:''}<h1>${h}</h1>`;
 const NI={brief:'📣',ach:'🏅',mentor:'🌱',thanks:'💛',news:'📰',rotation:'🔄',afisha:'🎟️',signup:'🧑‍💼',task:'📋',request:'📨',incident:'🚨',shift:'💬',checkin:'☀️',repair:'🛠',feedback:'💡'};
 const ago=d=>{const m=Math.round((Date.now()-new Date(d))/6e4);return m<1?'только что':m<60?m+' мин назад':m<1440?Math.floor(m/60)+' ч назад':new Date(d).toLocaleDateString('ru',{day:'numeric',month:'short'})};
-// две закреплённые плашки для руководителей: сколько вышло на смену и сколько локаций открыто (вместо уведомления на каждого сотрудника)
+// Спокойная сводка руководителя: одна панель вместо набора ярких уведомлений.
 async function bellPins(){
   if(!isManager())return '';
   try{
     const t=iso(new Date());await ensurePeople();
-    const [tm,ck,L,C]=await Promise.all([sb.from('marks').select('user_id').eq('day',t),sb.from('checkins').select('user_id').eq('day',t),sb.from('shift_lists').select('id,items').eq('active',true).eq('kind','open'),sb.from('shift_checks').select('list_id,item').eq('day',t)]);
+    const [tm,ck,L,C,R]=await Promise.all([sb.from('marks').select('user_id').eq('day',t),sb.from('checkins').select('user_id').eq('day',t),sb.from('shift_lists').select('id,items').eq('active',true).eq('kind','open'),sb.from('shift_checks').select('list_id,item').eq('day',t),sb.from('requests').select('id').eq('status','pending')]);
     const total=(S.dg.people||[]).length,absent=(tm.data||[]).length,ok=(ck.data||[]).length,work=Math.max(ok,total-absent);
     const lists=(L.data||[]).filter(l=>(l.items||[]).length),done=new Set((C.data||[]).map(c=>c.list_id+'|'+c.item));
-    const opened=lists.filter(l=>l.items.every(it=>done.has(l.id+'|'+it))).length;
-    const card=(ico,ttl,a,b,note,lnk)=>`<div class="nt pin" style="border-left:6px solid #C9D4B0;background:#FFFDF9"><div class="ni">${ico}</div><div class="nb"><b>📌 ${ttl}: ${a} из ${b}</b><div class="muted" style="margin-top:4px">${note}${lnk?` · <a href="#" class="lnk" data-l="${lnk}">открыть</a>`:''}</div></div></div>`;
-    return card('☀️','Вышли на смену',ok,work,'Подтвердили выход сегодня; обновляется само, когда открываешь уведомления')+card('🔓','Открыто локаций',opened,lists.length,'Зоны, где отмечены все пункты чек-листа открытия','shift');
+    const opened=lists.filter(l=>l.items.every(it=>done.has(l.id+'|'+it))).length,points=lists.reduce((n,l)=>n+l.items.length,0),donePoints=lists.reduce((n,l)=>n+l.items.filter(it=>done.has(l.id+'|'+it)).length,0),pct=points?Math.round(donePoints/points*100):0,pending=(R.data||[]).length;
+    return `<section class="quiet-panel" aria-label="Сводка смены"><div class="qp-head"><span>ПАРК · СЕЙЧАС</span><i>${pending?'нужны решения':'в норме'}</i></div><h3>${pending?'Есть что проверить':'Всё под контролем'}</h3><div class="qp-stats"><div><b>${work}</b><span>на смене</span></div><div><b>${opened}</b><span>зон открыто</span></div></div><div class="qp-progress"><span>✓</span><b>Чек-листы: ${pct}%</b><small>${points-donePoints?`осталось ${points-donePoints} из ${points}`:'все пункты отмечены'}</small><div><i style="width:${pct}%"></i></div></div><div class="qp-actions"><span>${pending?`<a href="#" class="lnk" data-l="req">Заявки: ${pending}</a>`:'Новых решений нет'}</span><a href="#" class="lnk" data-l="shift">Открыть смену →</a></div></section>`;
   }catch(e){return ''}
 }
 async function openBell(){

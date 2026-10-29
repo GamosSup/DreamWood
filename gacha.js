@@ -272,14 +272,14 @@ function dqPre(){if(!S.me)return;window._dqP=Promise.resolve(sb.rpc('dq_status')
 function dqCache(){try{const j=JSON.parse(localStorage.getItem(dqKey())||'null');return j&&j.d===iso(new Date())?j.s:null}catch(e){return null}}
 function dqHtml(s){
   if(!s)return '<div class="card pad col dqc"><div style="display:flex;align-items:center;gap:8px"><b style="flex:1">🎯 Задания дня</b><span class="pill" style="background:#F6E3B0;color:#3B2A35">…</span></div><div class="pgb"><div class="pg" style="width:0"></div></div><div class="muted">Загружаю…</div></div>';
-  const rest=s.mode==='rest',L=rest?DQ_REST:DQ_LIST,dn=new Set(s.done||[]),n=L.filter(x=>dn.has(x[0])).length,ph=s.photo;
+  const rest=s.mode==='rest',L0=rest?DQ_REST:DQ_LIST,low=+S.moodToday>0&&+S.moodToday<=2,priority=rest?['pet','thx','wtodo']:['pet','thx','rot'],L=low?L0.slice().sort((a,b)=>{const x=priority.indexOf(a[0]),y=priority.indexOf(b[0]);return (x<0?99:x)-(y<0?99:y)}):L0,dn=new Set(s.done||[]),n=L.filter(x=>dn.has(x[0])).length,ph=s.photo;
   const row=x=>{const ok=dn.has(x[0]);let act='';
     if(x[0]==='wphoto'&&!ok){act=ph==='pending'?'<div class="muted">⏳ Фото на проверке у Игоря</div>':`${ph==='rejected'?'<div class="muted">❌ Фото не подошло. Пришли другое</div>':''}<button class="btn gh dq_ph" type="button">📷 Отправить фото</button>`}
     else if(x[4]&&!ok)act=`<button class="btn gh dq_go" data-go="${x[4]}" type="button" style="padding:6px 12px">Открыть</button>`;
     return `<div class="dqr${ok?' ok':''}"><span class="dqi">${ok?'✅':x[1]}</span><div style="flex:1;min-width:0"><b>${x[2]}</b><div class="muted">${x[3]}</div>${act}</div></div>`};
   const pend=(s.pend||[]).length?`<div class="col" style="gap:8px"><b>📸 Фото на проверке (${s.pend.length})</b>${s.pend.map(p=>`<div class="dqr"><img class="dqp" data-p="${esc(p.path)}" alt="" style="width:84px;height:84px;object-fit:cover;border-radius:12px;background:#0002"><div style="flex:1"><b>${esc(p.name||'Сотрудник')}</b><div style="display:flex;gap:6px;margin-top:6px"><button class="btn dq_rv" data-id="${p.id}" data-ok="1" type="button" style="padding:6px 12px">✅ Принять</button><button class="btn gh dq_rv" data-id="${p.id}" data-ok="0" type="button" style="padding:6px 12px">❌ Нет</button></div></div></div>`).join('')}</div>`:'';
-  return `<div class="card pad col dqc"><div style="display:flex;align-items:center;gap:8px"><b style="flex:1">${rest?'🌿 Задания выходного':'🎯 Задания дня'}</b><span class="pill" style="background:#F6E3B0;color:#3B2A35">${n} из 5</span></div>
-    ${rest?'<div class="muted">Сегодня нужно работать над собой, а не над парком 💛</div>':''}
+  return `<div class="card pad col dqc"><div style="display:flex;align-items:center;gap:8px"><b style="flex:1">${rest?'🌿 Твои задания на выходной':'🎯 Твои задания на сегодня'}</b><span class="pill" style="background:#F6E3B0;color:#3B2A35">${n} из 5</span></div>
+    <div class="muted">${rest?'Сегодня нужно работать над собой, а не над парком 💛':low?'Поможем друг другу быть продуктивнее — начнём с малого, без гонки.':'Поможем друг другу быть продуктивнее.'}</div>
     <div class="pgb"><div class="pg" style="width:${n*20}%"></div></div>${L.map(row).join('')}
     ${s.claimed?'<div class="muted">🎟 Награда за сегодня получена. Завтра будут новые задания.</div>':n===5?'<button class="btn" id="dq_claim" type="button">🎟 Забрать 4 билета</button>':'<div class="muted">Выполни все пять и получи 4 билета на крутку.</div>'}${pend}</div>`;
 }

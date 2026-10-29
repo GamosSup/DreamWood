@@ -21,9 +21,12 @@ async function rotView(){
   });
   const days=[...new Set([...(lr.data||[]).map(x=>x.day),...(!archive&&!lr.hasToday?[todayIso]:[])])].sort();
   if(archive)days.reverse();
-  if(days.length&&(!S.day||!days.includes(S.day)))S.day=archive?days[0]:(days.includes(todayIso)?todayIso:days[days.length-1]);
+  if(archive&&days.length&&(!S.day||!days.includes(S.day)))S.day=days[0];
+  if(!S.day)S.day=days.includes(todayIso)?todayIso:(days[days.length-1]||todayIso);
+  const anchor=new Date(S.day+'T12:00:00'),mon=new Date(anchor);mon.setDate(anchor.getDate()-((anchor.getDay()+6)%7));
+  const week=archive?days:Array.from({length:7},(_,i)=>{const d=new Date(mon);d.setDate(mon.getDate()+i);return iso(d)}),has=new Set(days);
   let h=head(archive?'Ротации · Архив':'Ротации',archive?'Перенесённые вручную и старше 7 дней — записи и картинки сохранены':'Кто где стоит и когда перерыв');
-  h+=`<div class="tabs">${days.map(d=>`<button data-d="${d}" class="${d===S.day?'on':''}" style="background:var(--tab)">${!archive&&d===todayIso?'Сегодня':dayLabel(d)}${!archive&&d===todayIso?'<br><small>'+dayLabel(d)+'</small>':''}</button>`).join('')}<button data-a="${archive?0:1}" style="background:var(--tab)">${archive?'← Текущие':'Архив'}</button></div>`;
+  h+=`<div class="rot-cal"><button class="rot-nav" data-rw="-7" aria-label="Предыдущая неделя">←</button><div class="rot-week">${week.map(d=>{const dt=new Date(d+'T12:00:00');return `<button data-d="${d}" class="${d===S.day?'on':''} ${d===todayIso?'today':''}"><small>${dt.toLocaleDateString('ru',{weekday:'short'}).replace('.','')}</small><b>${dt.getDate()}</b><i>${has.has(d)?'●':'·'}</i></button>`}).join('')}</div><button class="rot-nav" data-rw="7" aria-label="Следующая неделя">→</button></div><div class="rot-month"><b>${anchor.toLocaleDateString('ru',{month:'long',year:'numeric'})}</b><button data-a="${archive?0:1}">${archive?'← Текущие':'Архив'}</button></div>`;
   if(archive&&!days.length){h+='<div class="card pad"><b>В архиве пока нет ротаций</b><div class="muted">Сюда попадают даты старше семи дней и дни, перенесённые руководителем вручную. Ничего не удаляется.</div></div>';app.innerHTML=h;return bindRot(null)}
   const dr=await cq('rot:'+S.day,()=>sb.from('rotations').select('*').eq('day',S.day).maybeSingle());
   const rot=dr.data?.data,mgr=isManager(),canArchive=mgr&&!archive&&dr.data&&'archived_at' in dr.data;
@@ -44,10 +47,16 @@ async function rotView(){
   const secs=rot.teams?.[S.team]||[];
   if(!secs.length)h+=`<div class="card pad"><b>Для этой команды ротации на этот день пока нет</b><div class="muted">Как только она появится, придёт уведомление.</div></div>`;
   h+=secs.filter(s=>s.note).map(s=>`<div class="n" style="background:${s.noteBg||'#E8B4B8'};padding:8px 12px;border-radius:12px;font-weight:700;font-size:13px">${esc(s.note)}</div>`).join('');
-  const order=[],byZone={};
-  secs.forEach(s=>{const range=parseRange(s.title);s.rows.forEach(r=>{if(!byZone[r.zone]){byZone[r.zone]=[];order.push(r.zone)}
-    byZone[r.zone].push({range,title:s.title==='Весь день'?'Весь день · 10:00–'+fmtH(S.dayEnd):s.title.replace(/^.*·\s*/,''),people:r.people,steps:r.steps})})});
-  h+=byArea(order,z=>z).map(({a,items})=>`<details class="area" data-ar="r${a.k}" ${S.areaOpen['r'+a.k]===false?'':'open'}>${areaHead(a,items.length+' '+(items.length===1?'зона':'зоны'))}<div class="ab" style="background:${a.d}">${items.map(z=>zoneCard(z,byZone[z],S.team==='W'?'#7E98AE':a.c)).join('')}</div></details>`).join('');
+  S.rotMode=S.rotMode||'timeline';
+  h+=`<div class="seg rot-modes"><button data-rmode="timeline" class="${S.rotMode==='timeline'?'on':''}">🕑 По времени</button><button data-rmode="zones" class="${S.rotMode==='zones'?'on':''}">🗂 По зонам</button></div>`;
+  if(S.rotMode==='timeline'){
+    const sorted=secs.slice().sort((a,b)=>parseRange(a.title)[0]-parseRange(b.title)[0]);
+    h+=`<div class="rot-schedule">${sorted.map(s=>{const range=parseRange(s.title),title=s.title==='Весь день'?'Весь день · 10:00–'+fmtH(S.dayEnd):s.title.replace(/^.*·\s*/,'');return `<section class="rot-slot"><div class="rot-time"><b>${fmtH(range[0])}</b><span>до ${fmtH(range[1])}</span></div><div class="rot-slot-body">${(s.rows||[]).map(r=>zoneCard(r.zone,[{range,title,people:r.people||[],steps:r.steps}],S.team==='W'?'#7E98AE':areaOf(r.zone).c)).join('')}</div></section>`}).join('')}</div>`;
+  }else{
+    const order=[],byZone={};
+    secs.forEach(s=>{const range=parseRange(s.title);s.rows.forEach(r=>{if(!byZone[r.zone]){byZone[r.zone]=[];order.push(r.zone)}byZone[r.zone].push({range,title:s.title==='Весь день'?'Весь день · 10:00–'+fmtH(S.dayEnd):s.title.replace(/^.*·\s*/,''),people:r.people,steps:r.steps})})});
+    h+=byArea(order,z=>z).map(({a,items})=>`<details class="area" data-ar="r${a.k}" ${S.areaOpen['r'+a.k]===false?'':'open'}>${areaHead(a,items.length+' '+(items.length===1?'зона':'зоны'))}<div class="ab" style="background:${a.d}">${items.map(z=>zoneCard(z,byZone[z],S.team==='W'?'#7E98AE':a.c)).join('')}</div></details>`).join('');
+  }
   if(rot.legend&&secs.length)h+=`<div class="card pad muted">${rot.legend.map(esc).join('<br>')}</div>`;
   // личная пометка
   const nt=await sb.from('rot_notes').select('note').eq('day',S.day).maybeSingle();
@@ -65,6 +74,8 @@ function myShift(rot){
 }
 function bindRot(rot){
   app.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{S.day=b.dataset.d;rotView()});
+  app.querySelectorAll('[data-rw]').forEach(b=>b.onclick=()=>{const d=new Date(S.day+'T12:00:00');d.setDate(d.getDate()+Number(b.dataset.rw));S.day=iso(d);rotView()});
+  app.querySelectorAll('[data-rmode]').forEach(b=>b.onclick=()=>{S.rotMode=b.dataset.rmode;rotView()});
   app.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{S.rotArchive=b.dataset.a==='1';rotView()});
   app.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{S.team=b.dataset.t;rotView()});
   $('#re_edit')?.addEventListener('click',()=>rotEditor(S.day,JSON.parse(JSON.stringify(rot)),false));
