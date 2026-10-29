@@ -86,8 +86,8 @@ async function todayView(){
   app.querySelectorAll('[data-go]').forEach(c=>c.onclick=()=>go(c.dataset.go));
   $('#td_fix').onclick=()=>{go('fix');setTimeout(()=>{if(window.fixForm)fixForm()},350)};
   if(window.dqFill)dqFill();
-  $('#td_ckx')&&($('#td_ckx').onclick=async e=>{if(!confirm('Отменить отметку «Я на смене»?'))return;e.target.disabled=true;const r=await sb.rpc('checkin_cancel',{p_user:null});if(r.error){e.target.disabled=false;return alert(r.error.message)}refreshUnread();todayView()});
-  $('#td_ck')&&($('#td_ck').onclick=async e=>{e.target.disabled=true;const r=await sb.rpc('checkin_confirm');if(r.error){e.target.disabled=false;return alert(r.error.message)}refreshUnread();todayView()});
+  $('#td_ckx')&&($('#td_ckx').onclick=async e=>{if(!confirm('Отменить отметку «Я на смене»?'))return;e.target.disabled=true;const r=await sb.rpc('checkin_cancel',{p_user:null});if(r.error){e.target.disabled=false;return alert(r.error.message)}if(window.dqInvalidate)dqInvalidate();refreshUnread();todayView()});
+  $('#td_ck')&&($('#td_ck').onclick=async e=>{e.target.disabled=true;const r=await sb.rpc('checkin_confirm');if(r.error){e.target.disabled=false;return alert(r.error.message)}if(window.dqInvalidate)dqInvalidate();refreshUnread();todayView()});
 }
 VIEWS.today=todayView;
 

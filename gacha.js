@@ -263,7 +263,8 @@ async function gmGachaTab(box){
 // ---------- ежедневные задания: 5 штук, за все — 4 билета ----------
 const DQ_LIST=[['chk','✅','Заполни чек-лист','Отметь хотя бы один пункт в чек-листе смены'],['ck','☀️','Отметься на смене','Нажми «Я на смене» (в выходной засчитывается сам)'],['rot','🔄','Загляни в ротацию','Открой вкладку «Ротации»'],['thx','💛','Скажи спасибо коллеге','Отправь благодарность в «Спасибо»'],['pet','🐾','Навести питомца','Открой свой профиль и поздоровайся с питомцем']];
 const DQ_REST=[['wtodo','📝','Запиши заметку','Добавь дело или мысль в «Мой блокнот»','todo'],['whab','🌱','Отметь привычку','Отметь любую привычку в блокноте или заведи новую','todo'],['wphoto','🌿','Выйди на природу','Сфотографируй что-нибудь красивое на улице и отправь фото. Игорь проверит'],['thx','💛','Скажи спасибо коллеге','Отправь благодарность в «Спасибо»','thanks'],['pet','🐾','Навести питомца','Открой свой профиль и поздоровайся с питомцем']];
-function dqPing(c){const k='dq:'+(S.me?S.me.id:'')+':'+c+':'+new Date().toDateString();try{if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1')}catch(e){}
+function dqInvalidate(){window._dqP=null;window._dqV=(window._dqV||0)+1}
+function dqPing(c){dqInvalidate();const k='dq:'+(S.me?S.me.id:'')+':'+c+':'+new Date().toDateString();try{if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1')}catch(e){}
   const retry=()=>{try{sessionStorage.removeItem(k)}catch(e){}};
   sb.rpc('dq_ping',{p_code:c}).then(r=>{if(r.error)return retry();if(window._dqS)window._dqS.done=[...new Set((window._dqS.done||[]).concat([c]))];dqFill(true)},retry)}
 // статус грузится параллельно с экраном «Сегодня» и кладётся в кэш, чтобы карточка появлялась сразу
@@ -298,11 +299,15 @@ function dqWire(box){
   box.querySelectorAll('.dq_rv').forEach(b=>b.onclick=async()=>{b.disabled=true;const r=await sb.rpc('dq_photo_review',{p_id:+b.dataset.id,p_ok:b.dataset.ok==='1'});if(r.error){b.disabled=false;return alert(r.error.message)}toast(b.dataset.ok==='1'?'Принято ✅':'Отклонено',1600);dqFill(true)});
 }
 async function dqFill(fresh){
+  if(fresh)dqInvalidate();
   const box=document.getElementById('dqbox');if(!box)return;
+  const version=window._dqV||0;
   try{
-    let r=!fresh&&window._dqP?await window._dqP:await sb.rpc('dq_status');window._dqP=null;
-    if(r.error||!r.data){await new Promise(z=>setTimeout(z,800));r=await sb.rpc('dq_status')}
-    const bx=document.getElementById('dqbox');if(!bx)return;
+    let r=!fresh&&window._dqP?await window._dqP:await sb.rpc('dq_status');
+    if(version!==(window._dqV||0))return;
+    window._dqP=null;
+    if(r.error||!r.data){await new Promise(z=>setTimeout(z,800));if(version!==(window._dqV||0))return;r=await sb.rpc('dq_status')}
+    const bx=document.getElementById('dqbox');if(!bx||version!==(window._dqV||0))return;
     if(r.error||!r.data){if(!dqCache())bx.innerHTML='<div class="card pad col dqc"><b>🎯 Задания дня</b><div class="muted">Не загрузилось. Потяни вниз, чтобы обновить.</div></div>';return}
     window._dqS=r.data;try{localStorage.setItem(dqKey(),JSON.stringify({d:iso(new Date()),s:r.data}))}catch(e){}
     bx.innerHTML=dqHtml(r.data);dqWire(bx);
