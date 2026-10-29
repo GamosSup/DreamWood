@@ -19,7 +19,7 @@ const GOLD_ACH=[
  ['gold:level:5','👑','Мастер золотой жилы','Достичь 5 уровня старателя'],
  ['event:first','🌟','Звезда события','Найти редкий камень во временном событии'],
  ['event:5','💫','Легенда жилы','Получить награды в пяти событиях']];
-const GOLD={tab:'care',st:null,run:null,raf:0,timer:0,loading:false};
+const GOLD={tab:'care',st:null,run:null,raf:0,timer:0,careTimer:0,stAt:0,stamp:null,loading:false};
 const goldAchDef=c=>GOLD_ACH.find(x=>x[0]===c)||['','✨','Новое достижение',c];
 function goldCfg(){const me=(typeof gmMe==='function'&&gmMe())||S.me;return typeof petCfg==='function'?petCfg(me):null}
 function goldPet(sz=160,vb=[0,-70,320,500]){const c=goldCfg();return c?gmPet({},sz,{cfg:c,vb,bg:''}):'<img class="gp-no-pet" src="stickers/mascot-hi.webp" alt="Питомец">'}
@@ -46,21 +46,29 @@ async function goldRefresh(){
 }
 function goldPaint(){
  const box=$('#gold_app');if(!box||!GOLD.st)return;
+ if(GOLD.stamp!==GOLD.st){GOLD.stamp=GOLD.st;GOLD.stAt=Date.now()}
+ clearInterval(GOLD.careTimer);GOLD.careTimer=0;
  box.innerHTML=goldTabs()+`<div class="gp-ticket">🎟 <b>${GOLD.st.tickets}</b></div>`;
  const body=GOLD.tab==='care'?goldCareHtml():GOLD.tab==='game'?goldGameHtml():GOLD.tab==='style'?'':goldAchHtml();box.insertAdjacentHTML('beforeend','<div id="gp_body">'+body+'</div>');
  box.querySelectorAll('[data-gold-tab]').forEach(b=>b.onclick=()=>{GOLD.tab=b.dataset.goldTab;goldPaint()});
- if(GOLD.tab==='care')box.querySelectorAll('[data-care]').forEach(b=>b.onclick=()=>goldCare(b.dataset.care));
+ if(GOLD.tab==='care'){box.querySelectorAll('[data-care]').forEach(b=>b.onclick=()=>goldCare(b.dataset.care));goldCareClock();GOLD.careTimer=setInterval(goldCareClock,1000)}
  if(GOLD.tab==='game'){const b=$('#gold_start');if(b)b.onclick=()=>goldStart()}
  if(GOLD.tab==='style')gmPetTab(box.querySelector('#gp_body'));
+}
+const goldClock=s=>`${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+function goldCareClock(){
+ if(GOLD.tab!=='care'||!GOLD.st)return;const elapsed=(Date.now()-(GOLD.stAt||Date.now()))/1000;
+ document.querySelectorAll('[data-care]').forEach(b=>{const a=b.dataset.care,left=Math.max(0,Math.ceil((GOLD.st.cooldowns?.[a]||0)-elapsed)),small=b.querySelector('[data-care-time]');b.disabled=GOLD.loading||left>0;if(small)small.textContent=left?`снова через ${goldClock(left)}`:small.dataset.desc||''});
 }
 function goldCareHtml(){
  const s=GOLD.st,food=s.care_level>=3?'🍰':s.care_level>=2?'🍪':'🍎',toy=s.care_level>=3?'🪁':'🧶';
  if(!goldCfg())return `<div class="card pad col gp-empty"><b>Сначала выбери питомца</b><div class="muted">После этого здесь появятся забота, игры и прокачка.</div><button class="btn" onclick="GOLD.tab='style';goldPaint()">Выбрать питомца</button></div>`;
  const stat=(ic,n,v)=>`<div class="gp-stat"><span>${ic} ${n}</span><b>${v}</b><div><i style="width:${v}%"></i></div></div>`;
+ const btn=(a,ic,n,d)=>`<button data-care="${a}"><span>${ic}</span><b>${n}</b><small data-care-time="${a}" data-desc="${d}">${d}</small></button>`;
  return `${goldLevelHtml('care')}<div class="gp-care-scene"><div class="gp-sun"></div><div class="gp-hill"></div><div class="gp-care-pet">${goldPet(190)}</div><div class="gp-care-fx" id="gp_care_fx"></div><div class="gp-name">${esc((gmMe()?.cos||{}).pname||'Твой питомец')}</div></div>
  <div class="gp-stats">${stat('🍎','Сытость',s.hunger)}${stat('🫧','Чистота',s.hygiene)}${stat('💛','Настроение',s.mood)}</div>
- <div class="gp-care-actions"><button data-care="feed"><span>${food}</span><b>Покормить</b><small>${s.care_level>=3?'Праздничный пирог':s.care_level>=2?'Свежее печенье':'Лесные яблоки'}</small></button><button data-care="wash"><span>🫧</span><b>Умыть</b><small>Пена и блёстки</small></button><button data-care="play"><span>${toy}</span><b>Поиграть</b><small>${s.care_level>=3?'Воздушный змей':'Любимая игрушка'}</small></button></div>
- <div class="gp-care-note">Опыт заботы: <b>${Math.min(9,s.care_actions)} / 9 действий сегодня</b>. ${s.care_actions>=9?'Сегодня весь опыт получен, но заботиться можно всегда.':'Каждое действие даёт 8 опыта.'} Забота даёт до +10% очков в игре.</div>
+ <div class="gp-care-actions">${btn('feed',food,'Покормить',s.care_level>=3?'Праздничный пирог':s.care_level>=2?'Свежее печенье':'Лесные яблоки')}${btn('wash','🫧','Умыть','Пена и блёстки')}${btn('play',toy,'Поиграть',s.care_level>=3?'Воздушный змей':'Любимая игрушка')}</div>
+ <div class="gp-care-note">Опыт заботы: <b>${Math.min(9,s.care_actions)} / 9 действий сегодня</b>. ${s.care_actions>=9?'Сегодня весь опыт получен.':'Каждое действие даёт 8 опыта.'} <b>Кормление, умывание и игра доступны раз в 15 минут каждое.</b> Забота даёт до +10% очков в игре.</div>
  <div class="gp-next-unlock">${s.care_level<2?'На 2 уровне появится печенье и +1 билет':s.care_level<3?'На 3 уровне появятся пирог и воздушный змей':'Новые уровни заботы усиливают бонус в Золотом лотке'}</div>`;
 }
 function goldGameHtml(){
@@ -69,15 +77,24 @@ function goldGameHtml(){
  return `${goldLevelHtml('gold')}${goldEnergyHtml()}${goldEventHtml()}<div class="gp-mine"><div class="gp-mine-lights"><i></i><i></i><i></i></div><div class="gp-mine-pet">${goldPet(135)}</div><div class="gp-pan-demo">〰️</div><div class="gp-mine-copy"><b>Золотой лоток</b><span>Двигай лоток, лови самоцветы и не хватай камни. Игра длится 30 секунд.</span></div></div>
  <button class="btn gp-start" id="gold_start">${s.energy?'Начать игру · −1 ⚡':'Энергия закончилась · к наставнику'}</button>
  <div class="gp-mentor-tip"><img src="stickers/gold/mentor.webp" alt="Наставник старателей"><div><b>Наставник старателей</b><span>Хороший старатель знает меру. Пять игр — и песок отправляется на просев, а ты — на отдых.</span></div></div>
- <div class="gp-collection-head"><b>Коллекция камней</b><span>${Object.keys(s.gems||{}).length} / 9 видов</span></div><div class="gp-collection">${GOLD_GEMS.map(([k,n],i)=>{const c=+(s.gems||{})[k]||0,ev=s.event&&s.event.gem===k;return `<div class="gp-gem ${c?'got':''} ${ev?'event':''}"><img src="stickers/gold/gem-${i+1}.webp" alt="${n}"><b>${n}</b><span>${ev?'✨ событие':c?c+' шт.':'ещё не найден'}</span></div>`}).join('')}</div>
+ <div class="gp-collection-head"><b>Коллекция камней</b><span>${Object.keys(s.gems||{}).length} / 9 видов</span></div><div class="gp-collection">${GOLD_GEMS.map(([k,n],i)=>{const c=+(s.gems||{})[k]||0,ev=s.event&&s.event.gem===k;return `<div class="gp-gem ${c?'got':''} ${ev?'event':''}"><img src="stickers/gold/gem-${i+1}.svg" alt="${n}"><b>${n}</b><span>${ev?'✨ событие':c?c+' шт.':'ещё не найден'}</span></div>`}).join('')}</div>
  <div class="gp-game-meta"><span>Лучший результат: <b>${s.best}</b></span><span>Игр сыграно: <b>${s.games}</b></span><span>Бонус заботы: <b>+${s.care_bonus}%</b></span></div>`;
 }
 function goldAchHtml(){const got=new Set(GOLD.st.ach||[]);return `<div class="card pad gp-ach-summary"><b>Получено ${GOLD_ACH.filter(x=>got.has(x[0])).length} из ${GOLD_ACH.length}</b><div class="muted">Уровни старателя приносят билеты, а достижения остаются в этой коллекции.</div></div><div class="gp-ach">${GOLD_ACH.map(([c,ic,n,d])=>`<div class="gp-ach-row ${got.has(c)?'got':''}"><span>${got.has(c)?ic:'🔒'}</span><div><b>${n}</b><small>${d}</small></div><i>${got.has(c)?'✓':'—'}</i></div>`).join('')}</div>`}
+function goldCareFx(action){
+ const fx=$('#gp_care_fx'),pet=document.querySelector('.gp-care-pet');if(!fx||!pet)return;
+ const food=GOLD.st.care_level>=3?'🍰':GOLD.st.care_level>=2?'🍪':'🍎',toy=GOLD.st.care_level>=3?'🪁':'🧶',hearts='<b class="gp-heart h1">♥</b><b class="gp-heart h2">♥</b><b class="gp-heart h3">♥</b>';
+ fx.className='gp-care-fx on '+action;pet.classList.add('gp-fx-'+action);
+ if(action==='feed')fx.innerHTML=`<i class="gp-food f1">${food}</i><i class="gp-food f2">${food}</i><i class="gp-food f3">${food}</i><b class="gp-mood-face">😋</b>${hearts}`;
+ else if(action==='wash')fx.innerHTML='<i class="gp-foam"></i>'+Array.from({length:10},(_,i)=>`<i class="gp-bubble b${i+1}"></i>`).join('')+'<b class="gp-spark s1">✦</b><b class="gp-spark s2">✦</b><b class="gp-spark s3">✦</b>';
+ else fx.innerHTML=`<i class="gp-toy">${toy}</i><i class="gp-toy-trail">✦</i>${hearts}`;
+ clearTimeout(fx._timer);fx._timer=setTimeout(()=>{fx.className='gp-care-fx';fx.innerHTML='';pet.classList.remove('gp-fx-'+action)},1900);
+}
 async function goldCare(action){
  if(GOLD.loading)return;GOLD.loading=true;document.querySelectorAll('[data-care]').forEach(b=>b.disabled=true);
- try{const r=await sb.rpc('pet_care_action',{p_action:action});if(r.error)throw r.error;GOLD.st=r.data;goldPaint();const fx=$('#gp_care_fx');if(fx){fx.className='gp-care-fx on '+action;fx.textContent=action==='feed'?'🍎 ✨ 😋':action==='wash'?'🫧 ✨ 🫧':'💛 🧶 💛'}
+ try{const r=await sb.rpc('pet_care_action',{p_action:action});if(r.error)throw r.error;GOLD.st=r.data;goldPaint();goldCareFx(action);
   const gain=r.data.care_gain||0;if(r.data.care_reward){toast(`Новый уровень заботы! +${r.data.care_reward} билет(а) 🎟`,3200);try{dwParty()}catch(e){}}else toast((action==='feed'?'Вкусно!':action==='wash'?'Чистота и блеск!':'Как весело!')+(gain?` +${gain} опыта заботы`:' Забота засчитана'),1600)}
- catch(e){toast('Не получилось: '+(e.message||e),2600)}finally{GOLD.loading=false}
+ catch(e){toast('Не получилось: '+(e.message||e),2600)}finally{GOLD.loading=false;goldCareClock()}
 }
 async function goldStart(){
  if(GOLD.run||GOLD.loading)return;if(!GOLD.st)await goldRefresh();if(GOLD.st&&GOLD.st.energy<1){goldTired();return}
@@ -96,8 +113,8 @@ function goldRunPaint(){
 function goldSpawn(){
  const R=GOLD.run,area=$('#gp_play');if(!R||!area)return;const rock=Math.random()<.17;let idx=Math.min(8,Math.floor(Math.pow(Math.random(),1.8)*9));
  if(!rock&&R.event&&Math.random()<.22){const featured=GOLD_GEMS.findIndex(x=>x[0]===R.event.gem);if(featured>=0)idx=featured}
- const el=document.createElement(rock?'div':'img');if(rock){el.className='gp-rock';el.textContent='🪨'}else{el.className='gp-fall-gem';el.src=`stickers/gold/gem-${idx+1}.webp`;el.alt=GOLD_GEMS[idx][1]}
- const x=25+Math.random()*Math.max(30,area.clientWidth-50);el.style.left=x+'px';el.style.top='-55px';$('#gp_falls').appendChild(el);R.objects.push({el,x,y:-55,vy:150+Math.random()*115,rock,idx});
+ const el=document.createElement(rock?'div':'img');if(rock){el.className='gp-rock';el.textContent='🪨'}else{el.className='gp-fall-gem';el.src=`stickers/gold/gem-${idx+1}.svg`;el.alt=GOLD_GEMS[idx][1]}
+ const x=25+Math.random()*Math.max(30,area.clientWidth-50);el.style.left=x+'px';el.style.top='-70px';$('#gp_falls').appendChild(el);R.objects.push({el,x,y:-70,vy:150+Math.random()*115,rock,idx});
 }
 function goldTick(now){
  const R=GOLD.run;if(!R||R.finished)return;const dt=Math.min(.04,(now-R.last)/1000);R.last=now;R.time-=dt;R.spawn-=dt;if(R.spawn<=0){goldSpawn();R.spawn=.48+Math.random()*.24}
@@ -128,5 +145,5 @@ function goldTired(){
  ov.innerHTML=`<div class="gp-tired-card"><div class="gp-tired-sand"></div><div class="gp-tired-actors"><img class="gp-tired-mentor" src="stickers/gold/mentor.webp" alt="Наставник"><i class="gp-arm"></i><i class="gp-hand"></i><div class="gp-tired-pet">${goldPet(118)}</div></div><div class="gp-tired-speech"><b>Наставник старателей</b><p>«Ты устал, а у нас из-за тебя кончился песок. Ждём техников»</p></div><div class="gp-tired-note">⚡ Энергия восстанавливается по 1 единице каждые 20 минут. Питомец тоже рад передышке.</div><button class="btn" id="gp_rest">Пойти отдыхать</button></div>`;
  document.body.appendChild(ov);$('#gp_rest').onclick=()=>{ov.classList.add('out');setTimeout(()=>ov.remove(),350);GOLD.tab='care';goldRefresh()};
 }
-function goldStop(){cancelAnimationFrame(GOLD.raf);cancelAnimationFrame(GOLD.run?.raf||0);clearTimeout(GOLD.timer);GOLD.timer=0;GOLD.run=null;GOLD.loading=false;document.querySelector('.gp-tired')?.remove()}
+function goldStop(){cancelAnimationFrame(GOLD.raf);cancelAnimationFrame(GOLD.run?.raf||0);clearTimeout(GOLD.timer);clearInterval(GOLD.careTimer);GOLD.timer=0;GOLD.careTimer=0;GOLD.run=null;GOLD.loading=false;document.querySelector('.gp-tired')?.remove()}
 VIEWS.pet=goldView;VIEWS.gold=goldView;
