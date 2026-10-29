@@ -359,7 +359,7 @@ async function openBell(){
     if(el.dataset.busy)return;el.dataset.busy=1;
     const r=await sb.rpc('checkin_confirm');if(r.error){alert('Не получилось подтвердить: '+r.error.message);delete el.dataset.busy;return}
     el.className='nt ckn done';el.removeAttribute('data-ck');el.querySelector('.ni').textContent='✅';el.querySelector('b').textContent='Выход на смену подтверждён';el.querySelector('.nbody').textContent='Подтверждено в '+tm(r.data||Date.now());
-    S.ckPending=false;paintBell()
+    S.ckPending=false;if(window.dqFill)dqFill(true);paintBell()
   });
   const fresh=list.filter(x=>!seen.has(x.id)).map(x=>({user_id:S.me.id,notif_id:x.id}));
   if(fresh.length){S.nl=[];S.unread=0;paintBell();paintBadges();await sb.from('notif_reads').upsert(fresh)}

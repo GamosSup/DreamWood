@@ -242,7 +242,8 @@ function gmPet(row,sz=160,opt={}){
     addEventListener('touchmove',e=>{const t=e.touches[0];t&&look(t.clientX,t.clientY)},{passive:true});
     setInterval(()=>{if(Date.now()-last<4000)return;all().forEach(el=>{if(Math.random()<.35)gaze(el,0,0);else gaze(el,(Math.random()*2-1)*9,(Math.random()*2-1)*6)})},2600);
   }
-  document.addEventListener('click',e=>{const el=e.target.closest&&e.target.closest('.drm.pan');if(!el||rm)return;
+  document.addEventListener('click',e=>{const el=e.target.closest&&e.target.closest('.drm.pan');if(!el)return;
+    const scene=el.closest('.p25scene[data-own="1"]');if(scene&&window.dqPing)dqPing('pet');if(rm)return;
     el.classList.remove('pjump');void el.offsetWidth;el.classList.add('pjump');
     const r=el.getBoundingClientRect();look(e.clientX,e.clientY);
     for(let i=0;i<4;i++){const h=document.createElement('span');h.className='pheart';h.textContent=['💖','✨','💛','💕'][i%4];

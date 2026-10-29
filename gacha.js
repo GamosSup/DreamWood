@@ -264,7 +264,8 @@ async function gmGachaTab(box){
 const DQ_LIST=[['chk','✅','Заполни чек-лист','Отметь хотя бы один пункт в чек-листе смены'],['ck','☀️','Отметься на смене','Нажми «Я на смене» (в выходной засчитывается сам)'],['rot','🔄','Загляни в ротацию','Открой вкладку «Ротации»'],['thx','💛','Скажи спасибо коллеге','Отправь благодарность в «Спасибо»'],['pet','🐾','Навести питомца','Открой свой профиль и поздоровайся с питомцем']];
 const DQ_REST=[['wtodo','📝','Запиши заметку','Добавь дело или мысль в «Мой блокнот»','todo'],['whab','🌱','Отметь привычку','Отметь любую привычку в блокноте или заведи новую','todo'],['wphoto','🌿','Выйди на природу','Сфотографируй что-нибудь красивое на улице и отправь фото. Игорь проверит'],['thx','💛','Скажи спасибо коллеге','Отправь благодарность в «Спасибо»','thanks'],['pet','🐾','Навести питомца','Открой свой профиль и поздоровайся с питомцем']];
 function dqPing(c){const k='dq:'+(S.me?S.me.id:'')+':'+c+':'+new Date().toDateString();try{if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1')}catch(e){}
-  sb.rpc('dq_ping',{p_code:c}).then(r=>{if(!r.error&&window._dqS)window._dqS.done=(window._dqS.done||[]).concat([c])},()=>{})}
+  const retry=()=>{try{sessionStorage.removeItem(k)}catch(e){}};
+  sb.rpc('dq_ping',{p_code:c}).then(r=>{if(r.error)return retry();if(window._dqS)window._dqS.done=[...new Set((window._dqS.done||[]).concat([c]))];dqFill(true)},retry)}
 // статус грузится параллельно с экраном «Сегодня» и кладётся в кэш, чтобы карточка появлялась сразу
 function dqKey(){return 'dw:dq:'+(S.me?S.me.id:'')}
 function dqPre(){if(!S.me)return;window._dqP=Promise.resolve(sb.rpc('dq_status')).then(r=>r,e=>({error:e}))}

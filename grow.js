@@ -165,7 +165,7 @@ function thanksSend(){
       if(!f.to)return er.textContent='Выбери коллегу из списка';if(!t)return er.textContent='Напиши пару слов';
       e.target.disabled=true;const r=await sb.from('thanks').insert({to_user:f.to,body:t,sticker:f.st});
       if(r.error){e.target.disabled=false;return er.textContent='Не получилось: '+r.error.message}
-      dwParty();toast('💛 Спасибо отправлено!');close(false);thanksView()};
+      dwParty();toast('💛 Спасибо отправлено!');if(window.dqFill)dqFill(true);close(false);thanksView()};
   },()=>thanksView());
 }
 VIEWS.newbie=newbieView;VIEWS.thanks=thanksView;

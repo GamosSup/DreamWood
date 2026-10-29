@@ -159,7 +159,7 @@ async function noteView(local){
     if(!on){dwBurstAt(b,16);L.add(k);logsBy[id]=L;const hh=habits.find(z=>z.id==id),st=hbStats(hh,L,today);
       if([3,7,14,21,30,60,100].includes(st.cur))toast(`🔥 ${st.cur} ${plural(st.cur,'день','дня','дней')} подряд! Так держать`);
       else if(P.tab==='day'&&dayDone()){dwParty();toast('🎉 На этот день всё сделано!')}}
-    rr()});
+    if(window.dqFill)dqFill(true);rr()});
   app.querySelectorAll('[data-he]').forEach(b=>b.onclick=()=>hbEdit(habits.find(x=>x.id==b.dataset.he)));
   $('#hb_add')?.addEventListener('click',()=>hbEdit(null));
   $('#pl_ov')?.addEventListener('click',async()=>{const r=await sb.from('todos').update({due:today}).eq('user_id',me).eq('done',false).lt('due',today);if(r.error)return alert(r.error.message);toast('Перенёс на сегодня');rr()});

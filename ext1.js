@@ -113,7 +113,7 @@ async function shiftView(){
   app.querySelectorAll('.shi input').forEach(b=>b.onchange=async()=>{
     const list_id=+b.dataset.l,item=b.dataset.i;b.disabled=true;
     const r=b.checked?await sb.from('shift_checks').insert({list_id,day,item}):await sb.from('shift_checks').delete().eq('list_id',list_id).eq('day',day).eq('item',item).eq('user_id',b.dataset.u||S.me.id);
-    if(r.error&&r.error.code!=='23505')alert(r.error.message);
+    if(r.error&&r.error.code!=='23505')alert(r.error.message);else if(window.dqFill)dqFill(true);
     keepScroll(shiftView);
   });
   app.querySelectorAll('.shv [data-sv]').forEach(b=>b.onclick=async()=>{
@@ -125,7 +125,7 @@ async function shiftView(){
     await sb.from('shift_checks').delete().eq('list_id',list_id).eq('day',day).eq('item',item).eq('user_id',S.me.id);
     const r=await sb.from('shift_checks').insert({list_id,day,item,val});
     if(r.error){alert(r.error.message.includes('val')?'Нужно обновить базу (колонка val): скажи админу':r.error.message);b.disabled=false;return}
-    keepScroll(shiftView);
+    if(window.dqFill)dqFill(true);keepScroll(shiftView);
   });
   app.querySelectorAll('[data-ns]').forEach(b=>b.onclick=async()=>{
     const id=+b.dataset.ns,t=app.querySelector(`[data-nt="${id}"]`),body=t.value.trim();if(!body)return t.focus();
