@@ -226,7 +226,7 @@ function gameCard(){
 }
 
 // ---------- экран «Мой профиль» ----------
-const gmTab=()=>S.gmTab||'ach';
+const gmTab=()=>S.gmTab==='pet'?'ach':S.gmTab||'ach';
 const gmSeeAll=()=>!!gmMe()?.lvl_text; // только у владельца приложения видны и закрытые достижения; у остальных — лишь открытые
 // сколько всего достижений можно получить: открытые каталожные (без секретных и выдаваемых вручную) + всё, что уже есть
 const gmCatTotal=row=>{const got=new Set((row.ach||[]).map(a=>a.c));return GM_ACH.filter(a=>got.has(a.c)||(!a.secret&&!a.man)).length+(row.ach||[]).filter(a=>gmReal(a)&&!GM_BY[a.c]).length};
@@ -256,15 +256,14 @@ async function gameView(){
   S.offline=0;
   await gmLoad(true);gmSync(30000);
   const me=gmMe();
-  let h=head('Мой профиль','Фото, уровень, достижения, питомец и автомат');
+  let h=head('Мой профиль','Фото, уровень, достижения и автомат');
   if(!me){
     h+=`<div class="card pad col"><b>Раздел почти готов 🙂</b><div class="muted">${S.gmErr&&!/does not exist|function|schema/i.test(S.gmErr)?esc(S.gmErr):'В базе ещё не включены уровни и достижения. Админ должен один раз запустить обновление базы, и всё заработает.'}</div></div>`;
     app.innerHTML=h;return;
   }
-  if(!S.gmTab&&!petCfg(me))S.gmTab='pet';
   h+=gmHero(me);
-  h+=`<button class="btn ghost" id="gm_set" style="margin-top:-4px">⚙️ Настройки приложения</button>`;
-  const tabs=[['ach','🏅 Достижения'],['pet','🐾 Мой питомец'],['gx','🎰 Автомат'],['look','🎨 Мой образ'],['team','👥 Коллеги'],['lv','📈 Уровни'],...(isManager()?[['mng','🎖 Выдать']]:[])];
+  h+=`<button class="btn ghost" id="gm_set">⚙️ Настройки приложения</button>`;
+  const tabs=[['ach','🏅 Достижения'],['gx','🎰 Автомат'],['look','🎨 Мой образ'],['team','👥 Коллеги'],['lv','📈 Уровни'],...(isManager()?[['mng','🎖 Выдать']]:[])];
   h+=`<div class="tabs gmtabs">${tabs.map(([k,n])=>`<button data-gt="${k}" class="${gmTab()===k?'on':''}" style="background:var(--tab)">${n}</button>`).join('')}</div><div id="gm_body"></div>`;
   setTimeout(()=>{const o=document.querySelector('.gmtabs .on');if(o&&o.scrollIntoView)o.scrollIntoView({inline:'center',block:'nearest'})},0);
   app.innerHTML=h;
@@ -275,7 +274,7 @@ async function gameView(){
 }
 async function gmPaint(){
   const box=$('#gm_body');if(!box)return;if(gmPetIO){gmPetIO.disconnect();gmPetIO=null}const t=gmTab();
-  if(t==='ach')await gmAchTab(box);else if(t==='pet')gmPetTab(box);else if(t==='look')gmLookTab(box);else if(t==='lv')gmLvTab(box);else if(t==='gx')await gmGachaTab(box);else if(t==='team')gmTeamTab(box);else gmMngTab(box);
+  if(t==='ach')await gmAchTab(box);else if(t==='look')gmLookTab(box);else if(t==='lv')gmLvTab(box);else if(t==='gx')await gmGachaTab(box);else if(t==='team')gmTeamTab(box);else gmMngTab(box);
 }
 
 // --- достижения ---
@@ -485,12 +484,12 @@ function gmPetPopup(tries=0){
   dgxSheet('🎃 Событие',(box,paint,close)=>{
     const has=!!cfg0;
     box.innerHTML=`<div class="evt"><div class="evb">🦇 🎃 🦇</div><div class="evk">Событие в парке</div><div class="evh">Парад кошмаров</div><div class="evs">Теперь мы — команда Дримвуд!</div>
-      <div class="evp">${has?'Парад начался, и твой зверёк уже в строю. Загляни в профиль: там можно сменить наряд, причёску, цвет и взгляд.':'В парке начался парад: вся команда превращается в зверят парка Дримвуд. Выбери себе питомца, того, кто нравится больше всех. Потом его можно одеть и раскрасить как угодно.'}</div>
+      <div class="evp">${has?'Парад начался, и твой зверёк уже в строю. Загляни во вкладку «Питомец»: там можно сменить наряд, причёску, цвет и взгляд.':'В парке начался парад: вся команда превращается в зверят парка Дримвуд. Выбери себе питомца, того, кто нравится больше всех. Потом его можно одеть и раскрасить как угодно.'}</div>
       ${has?`<div style="display:flex;justify-content:center">${gmPet(me,150,{cfg:cfg0,bg:''})}</div><button class="btn" id="ev_go">🐾 К моему питомцу</button>`:gmPetChooser(0,92)}
       <div class="evp" style="font-size:12px;opacity:.8">Новые вещи и рамки приходят за достижения и события парка.</div>
       <button class="btn ghost evx" id="ev_x">${has?'Круто!':'Выберу позже'}</button></div>`;
-    box.querySelectorAll('[data-sp]').forEach(b=>b.onclick=async()=>{if(await gmPetSave({...PET_DEF,sp:b.dataset.sp})){close(false);dwParty();gmSay(`Отличный выбор, ${esc(gmFirst())}! Теперь ты на параде вместе со зверьком. Загляни в «Мой профиль», там его можно одеть.`,{ms:6500})}});
-    const go1=$('#ev_go');if(go1)go1.onclick=()=>{close(false);S.gmTab='pet';go('game')};
+    box.querySelectorAll('[data-sp]').forEach(b=>b.onclick=async()=>{if(await gmPetSave({...PET_DEF,sp:b.dataset.sp})){close(false);dwParty();gmSay(`Отличный выбор, ${esc(gmFirst())}! Теперь ты на параде вместе со зверьком. Открой вкладку «Питомец», там его можно одеть.`,{ms:6500})}});
+    const go1=$('#ev_go');if(go1)go1.onclick=()=>{close(false);GOLD.tab='style';go('pet')};
     $('#ev_x').onclick=()=>close(false);
     setTimeout(dwParty,350);
   },()=>{},'drmsheet');
@@ -536,7 +535,7 @@ function gmParadePopup(tries=0){
       <button class="btn evtgo" id="ev_go" disabled>Выбери питомца</button><button class="tskip" id="ev_x">Выберу позже</button>`}
       </div>`;
     ev.querySelector('#ev_x').onclick=close;
-    const dr=ev.querySelector('#ev_dress');if(dr)dr.onclick=()=>{close();S.gmTab='pet';go('game')};
+    const dr=ev.querySelector('#ev_dress');if(dr)dr.onclick=()=>{close();GOLD.tab='style';go('pet')};
     ev.querySelectorAll('[data-sp]').forEach(b=>b.onclick=()=>{pick=b.dataset.sp;ev.querySelectorAll('[data-sp]').forEach(x=>x.classList.toggle('on',x===b));const g=ev.querySelector('#ev_go');g.disabled=false;g.textContent='Вступить в парад 🎃';setTimeout(()=>g.scrollIntoView({block:'nearest',behavior:'smooth'}),50)});
     const go_=ev.querySelector('#ev_go');
     if(go_)go_.onclick=async e=>{
@@ -552,7 +551,7 @@ function gmParadePopup(tries=0){
       <div class="evtbig">${gmPet({},180,{cfg:{...c,ha:'h_witch'},vb:[0,-70,320,500],bg:''})}</div>
       <div class="evtsay"><img src="stickers/mascot-hi.webp" alt="" width="64" height="64"><div class="dsb">Ура, ${esc(gmFirst())}! Теперь вы с питомцем в команде. Праздничные костюмы уже открыты: шляпа ведьмы, рожки, тыква и крылья летучей мыши. Примерь их!</div></div>
       <button class="btn evtgo" id="ev_dress">Одеть питомца 🎃</button><button class="tskip" id="ev_x2">Позже</button>`;
-    ev.querySelector('#ev_dress').onclick=()=>{close();S.gmTab='pet';go('game')};
+    ev.querySelector('#ev_dress').onclick=()=>{close();GOLD.tab='style';go('pet')};
     ev.querySelector('#ev_x2').onclick=close;
   };
   phase1();document.body.appendChild(ev);document.body.style.overflow='hidden';
