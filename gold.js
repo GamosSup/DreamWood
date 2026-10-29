@@ -33,9 +33,10 @@ function goldEventHtml(ev=GOLD.st.event){
  return `<div class="gp-event"><div class="gp-event-top"><span>✨ Событие дня</span><small>ещё ${hours} ч.</small></div><b>${esc(ev.name)}</b><p>Чаще падает: <strong>${esc(gem)}</strong>. Первая находка сегодня принесёт <strong>+${ev.reward||2} билета</strong>.</p></div>`;
 }
 function goldTabs(){return `<div class="tabs gp-tabs">${[['care','🐾 Забота'],['game','⛏️ Лоток'],['style','🎨 Образ'],['ach','🏅 Награды']].map(([k,n])=>`<button data-gold-tab="${k}" class="${GOLD.tab===k?'on':''}">${n}</button>`).join('')}</div>`}
-async function goldView(){
+function goldView(){
  goldStop();app.innerHTML=head('Питомец','Забота, наряд, живой фон и Золотой лоток')+'<div id="gold_app"><div class="card pad muted">Загружаем питомца и его рюкзак…</div></div>';
- gmLoad();await goldRefresh();
+ // Экран готов сразу: иначе общий скелетон go() через 160 мс удалит #gold_app до ответа RPC.
+ gmLoad();goldRefresh();
 }
 async function goldRefresh(){
  if(GOLD.loading)return;GOLD.loading=true;
